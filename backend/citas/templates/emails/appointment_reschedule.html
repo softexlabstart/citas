@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reprogramación de Cita</title>
+</head>
+<body>
+    <p>Hola {{ appointment.nombre }},</p>
+    <p>Te informamos que tu cita de <strong>{{ appointment.servicio.nombre }}</strong> ha sido reprogramada.</p>
+    <p>La nueva fecha y hora es: <strong>{{ appointment.fecha|date:"Y-m-d" }}</strong> a las <strong>{{ appointment.fecha|time:"H:i" }}</strong>.</p>
+    <p>¡Gracias!</p>
+    <p>Saludos,</p>
+    <p>Tu equipo de citas</p>
+</body>
+</html>

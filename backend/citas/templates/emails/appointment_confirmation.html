@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Confirmación de Cita</title>
+</head>
+<body>
+    <p>Hola {{ appointment.nombre }},</p>
+    <p>Tu cita de <strong>{{ appointment.servicio.nombre }}</strong> ha sido agendada para el <strong>{{ appointment.fecha|date:"Y-m-d" }}</strong> a las <strong>{{ appointment.fecha|time:"H:i" }}</strong>.</p>
+    <p>¡Gracias!</p>
+    <p>Saludos,</p>
+    <p>Tu equipo de citas</p>
+</body>
+</html>

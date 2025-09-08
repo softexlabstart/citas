@@ -1,0 +1,81 @@
+from django.db import models
+from django.contrib.auth.models import User
+from django.utils.translation import gettext_lazy as _
+from organizacion.models import Sede
+
+# Create your models here.
+
+class Horario(models.Model):
+    DIA_SEMANA_CHOICES = [
+        (0, _('Lunes')),
+        (1, _('Martes')),
+        (2, _('Miércoles')),
+        (3, _('Jueves')),
+        (4, _('Viernes')),
+        (5, _('Sábado')),
+        (6, _('Domingo')),
+    ]
+
+    recurso = models.ForeignKey('Recurso', on_delete=models.CASCADE, related_name='horarios')
+    dia_semana = models.IntegerField(choices=DIA_SEMANA_CHOICES)
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
+
+    def __str__(self):
+        return f"{self.recurso.nombre} - {self.get_dia_semana_display()} ({self.hora_inicio} - {self.hora_fin})"
+
+
+class Servicio(models.Model):
+    nombre = models.CharField(max_length=100)
+    descripcion = models.TextField(blank=True, null=True)
+    duracion_estimada = models.IntegerField(default=30) # Duration in minutes
+    precio = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text=_("Precio del servicio"))
+    metadata = models.JSONField(blank=True, null=True)
+    sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='servicios')
+
+    def __str__(self):
+        return self.nombre
+
+
+class Recurso(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='recursos')
+    nombre = models.CharField(max_length=100)
+    descripcion = models.TextField(blank=True, null=True)
+    metadata = models.JSONField(blank=True, null=True)
+    sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='recursos')
+
+    def __str__(self):
+        return self.nombre
+
+class Bloqueo(models.Model):
+    """Represents a block of time when a resource is unavailable for non-appointment reasons."""
+    recurso = models.ForeignKey(Recurso, on_delete=models.CASCADE, related_name='bloqueos')
+    sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='bloqueos')
+    motivo = models.CharField(max_length=100, help_text=_("Ej: Almuerzo, Reunión, Cita personal"))
+    fecha_inicio = models.DateTimeField()
+    fecha_fin = models.DateTimeField()
+
+    def __str__(self):
+        return f"Bloqueo de {self.recurso.nombre}: {self.motivo} ({self.fecha_inicio.strftime('%Y-%m-%d %H:%M')})"
+
+
+class Cita(models.Model):
+    ESTADO_CHOICES = [
+        ('Pendiente', _('Pendiente')),
+        ('Confirmada', _('Confirmada')),
+        ('Cancelada', _('Cancelada')),
+        ('Asistio', _('Asistió')),
+        ('No Asistio', _('No Asistió')),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='citas', null=True, blank=True)
+    nombre = models.CharField(max_length=100, db_index=True)
+    fecha = models.DateTimeField(db_index=True)
+    servicio = models.ForeignKey(Servicio, on_delete=models.CASCADE, related_name='citas')
+    recursos = models.ManyToManyField('Recurso', related_name='citas', blank=True)
+    confirmado = models.BooleanField(default=False)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente', db_index=True)
+    sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='citas')
+
+    def __str__(self):
+        return f"{self.nombre} - {self.fecha}"

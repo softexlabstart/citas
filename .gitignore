@@ -1,0 +1,55 @@
+# Python / Django
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+pip-log.txt
+pip-delete-this-directory.txt
+instance/
+db.sqlite3
+*.sqlite3
+.env
+
+# Node / Vue.js
+node_modules/
+dist/
+dist-ssr/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnp/
+.pnp.js
+.pnp.cjs
+coverage/
+*.log
+.env.local
+.env.*.local
+vite.config.ts.timestamp-*.mjs
+*.tsbuildinfo
+
+# Cypress
+/cypress/videos/
+/cypress/screenshots/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor & IDEs
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*~
+*.sw?
+*.suo
+*.ntvs*
+*.njsproj
+*.sln

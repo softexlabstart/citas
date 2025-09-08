@@ -1,0 +1,26 @@
+{% extends 'admin/base_site.html' %}
+{% load i18n admin_urls static admin_list %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" type="text/css" href="{% static 'admin/css/forms.css' %}">
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module">
+        <div class="change-form">
+            <fieldset class="module aligned">
+                <h2>Resultados del Informe de Citas</h2>
+                <pre>{{ report_data|json_script:"report_data" }}</pre>
+                <script>
+                    const reportData = JSON.parse(document.getElementById('report_data').textContent);
+                    // You can use this reportData JavaScript object to render charts or tables
+                    // For now, it's just displayed as preformatted text.
+                    // Example: document.getElementById('report_output').innerText = JSON.stringify(reportData, null, 2);
+                </script>
+                <p><a href="{% url 'admin:citas_report_form' %}">Volver al formulario de informe</a></p>
+            </fieldset>
+        </div>
+    </div>
+</div>
+{% endblock %}

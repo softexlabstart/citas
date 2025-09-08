@@ -1,0 +1,94 @@
+/* Estilos personalizados */
+:root {
+  --primary-hover-bg: #e9ecef;
+  --primary-hover-text: #0056b3;
+  --icon-color: #6c757d;
+  --text-color-soft: #495057;
+}
+
+.nav-link-custom {
+  font-size: 1.1rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.35rem;
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  color: var(--text-color-soft); /* Tono de gris más suave */
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* Espacio entre icono y texto */
+}
+
+.nav-link-custom:hover {
+  background-color: var(--primary-hover-bg); /* Un gris muy claro para el hover */
+  color: var(--primary-hover-text); /* Azul más oscuro para el texto en hover */
+}
+
+.nav-icon {
+  font-size: 1.3rem; /* Tamaño de los iconos */
+  color: var(--icon-color); /* Color de los iconos */
+}
+
+.nav-link-custom:hover .nav-icon {
+  color: var(--primary-hover-text); /* Color del icono en hover */
+}
+
+.offcanvas-custom {
+  border-right: 1px solid #dee2e6;
+}
+
+.offcanvas-header-custom {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.footer {
+  font-size: 0.9rem;
+}
+
+.bg-image > * {
+  position: relative;
+  z-index: 2;
+}
+
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.card-transparent {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(10px);
+}
+
+/* Custom styles for pill-style tabs to improve visibility */
+.nav-pills .nav-link {
+    color: #0d6efd;
+}
+
+.nav-pills .nav-link.active {
+    font-weight: 500;
+}
+
+/* Custom Navbar layout for robust centering */
+.navbar-container-custom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.navbar-section-left, .navbar-section-right {
+    flex: 1 1 0;
+}
+
+.navbar-section-right {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.navbar-section-right .dropdown-menu {
+    position: absolute;
+    min-width: max-content;
+}
