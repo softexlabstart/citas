@@ -9,14 +9,14 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+# Standard Python Libraries
+import os
 from pathlib import Path
+
+# Third-party libraries
+import dj_database_url
 from decouple import config
 from dotenv import load_dotenv
-import os
-import dj_database_url 
-from pathlib import Path
-
 
 # Load environment variables from .env file
 load_dotenv(Path(__file__).resolve().parent.parent / '.env')
