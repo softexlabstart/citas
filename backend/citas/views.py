@@ -13,7 +13,7 @@ from rest_framework.decorators import action
 from usuarios.models import PerfilUsuario
 from django.utils import timezone
 from .services import get_available_slots, find_next_available_slots
-from .permissions import IsAdminOrSedeAdminOrReadOnly
+from .permissions import IsAdminOrSedeAdminOrReadOnly, IsOwnerOrAdminForCita
 from .mixins import SedeFilteredMixin
 from .pagination import StandardResultsSetPagination
 from django.shortcuts import render
@@ -119,7 +119,7 @@ class BloqueoViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
 class CitaViewSet(viewsets.ModelViewSet):
     queryset = Cita.objects.all().order_by('fecha')
     serializer_class = CitaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrAdminForCita]
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
@@ -156,30 +156,6 @@ class CitaViewSet(viewsets.ModelViewSet):
 
         return queryset.order_by('fecha')
 
-    def _has_cita_permission(self, user, cita_instance):
-        # Staff users have full control
-        if user.is_staff:
-            return True
-        
-        # Check if the user is a sede administrator
-        is_sede_admin = False
-        try:
-            perfil = user.perfil
-            if perfil.sedes_administradas.exists():
-                is_sede_admin = True
-        except PerfilUsuario.DoesNotExist:
-            pass
-
-        # Sede administrators can manage appointments in their sedes (e.g., confirm, cancel)
-        if is_sede_admin and cita_instance.sede in perfil.sedes_administradas.all():
-            return True
-
-        # Regular users can modify their own appointments
-        if cita_instance.user == user:
-            return True
-
-        return False
-
     def perform_create(self, serializer):
         user = self.request.user
         sede = serializer.validated_data.get('sede')
@@ -205,10 +181,6 @@ class CitaViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        
-        if not self._has_cita_permission(request.user, instance):
-            raise PermissionDenied(_("No tienes permiso para modificar esta cita."))
-
         if instance.estado == 'Cancelada':
             raise PermissionDenied(_("No se puede modificar una cita cancelada."))
         return super().update(request, *args, **kwargs)
@@ -216,9 +188,6 @@ class CitaViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         original_instance = self.get_object()
         old_fecha = original_instance.fecha
-
-        if not self._has_cita_permission(request.user, original_instance):
-            raise PermissionDenied(_("No tienes permiso para modificar esta cita."))
 
         if original_instance.estado == 'Cancelada':
             raise PermissionDenied(_("No se puede modificar una cita cancelada."))
@@ -265,9 +234,6 @@ class CitaViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
 
-        if not self._has_cita_permission(request.user, instance):
-            raise PermissionDenied(_("No tienes permiso para cancelar esta cita."))
-
         # Store date before changing status, for the email
         original_fecha = instance.fecha
         instance.estado = 'Cancelada'
@@ -304,10 +270,6 @@ class CitaViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def confirmar(self, request, pk=None):
         cita = self.get_object()
-
-        # Allow Sede Admins to confirm appointments in their sedes
-        if not self._has_cita_permission(request.user, cita):
-            raise PermissionDenied(_("No tienes permiso para confirmar esta cita."))
 
         if cita.estado == 'Pendiente':
             cita.estado = 'Confirmada'

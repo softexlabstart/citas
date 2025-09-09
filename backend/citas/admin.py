@@ -1,32 +1,11 @@
 from django.contrib import admin
 from .models import Recurso, Servicio, Cita, Horario
-from django.http import HttpResponse
-import openpyxl
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.units import inch
 from django.contrib.admin.models import LogEntry
 from django.urls import path
 from .views import admin_report_view
-from django import forms
 from django.contrib.auth.models import User
-
-
-class HorarioAdminForm(forms.ModelForm):
-    TIME_CHOICES = [('', '---------')]
-    for i in range(24):
-        for j in [0, 30]:
-            time_str = f'{i:02d}:{j:02d}:00'
-            TIME_CHOICES.append((time_str, time_str.rsplit(':', 1)[0]))
-
-    hora_inicio = forms.ChoiceField(choices=TIME_CHOICES, required=True)
-    hora_fin = forms.ChoiceField(choices=TIME_CHOICES, required=True)
-
-    class Meta:
-        model = Horario
-        fields = '__all__'
-
+from .forms import HorarioAdminForm
+from .reports import generate_excel_report, generate_pdf_report
 
 @admin.register(Horario)
 class HorarioAdmin(admin.ModelAdmin):
@@ -80,49 +59,13 @@ class CitaAdmin(admin.ModelAdmin):
     marcar_no_asistio.short_description = "Marcar como no asistida"
 
     def export_to_excel(self, request, queryset):
-        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename=citas.xlsx'
-        workbook = openpyxl.Workbook()
-        sheet = workbook.active
-        sheet.title = 'Citas'
-
-        columns = ['Nombre', 'Fecha', 'Servicio', 'Confirmado', 'Estado']
-        sheet.append(columns)
-
-        for cita in queryset:
-            sheet.append([
-                cita.nombre,
-                cita.fecha.strftime('%Y-%m-%d %H:%M'),
-                cita.servicio.nombre,
-                'Sí' if cita.confirmado else 'No',
-                cita.estado
-            ])
-
-        workbook.save(response)
-        return response
+        optimized_queryset = queryset.select_related('servicio')
+        return generate_excel_report(optimized_queryset)
     export_to_excel.short_description = 'Exportar a Excel'
 
     def export_to_pdf(self, request, queryset):
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename=citas.pdf'
-
-        doc = SimpleDocTemplate(response, pagesize=letter)
-        styles = getSampleStyleSheet()
-        story = []
-
-        story.append(Paragraph("Reporte de Citas", styles['h1']))
-        story.append(Spacer(1, 0.2 * inch))
-
-        for cita in queryset:
-            story.append(Paragraph(f"<b>Nombre:</b> {cita.nombre}", styles['Normal']))
-            story.append(Paragraph(f"<b>Fecha:</b> {cita.fecha.strftime('%Y-%m-%d %H:%M')}", styles['Normal']))
-            story.append(Paragraph(f"<b>Servicio:</b> {cita.servicio.nombre}", styles['Normal']))
-            story.append(Paragraph(f"<b>Confirmado:</b> {'Sí' if cita.confirmado else 'No'}", styles['Normal']))
-            story.append(Paragraph(f"<b>Estado:</b> {cita.estado}", styles['Normal']))
-            story.append(Spacer(1, 0.2 * inch))
-
-        doc.build(story)
-        return response
+        optimized_queryset = queryset.select_related('servicio')
+        return generate_pdf_report(optimized_queryset)
     export_to_pdf.short_description = 'Exportar a PDF'
 
 

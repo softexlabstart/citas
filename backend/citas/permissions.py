@@ -24,3 +24,23 @@ class IsAdminOrSedeAdminOrReadOnly(BasePermission):
         except (AttributeError, PerfilUsuario.DoesNotExist):
             # Catches cases where user has no 'perfil' attribute or profile
             return False
+
+class IsOwnerOrAdminForCita(BasePermission):
+    """
+    Custom permission to only allow owners of a Cita or relevant admins to interact with it.
+    """
+    def has_object_permission(self, request, view, obj):
+        # Staff users have full control.
+        if request.user.is_staff:
+            return True
+
+        # Sede administrators can manage appointments in their sedes.
+        try:
+            perfil = request.user.perfil
+            if perfil.sedes_administradas.exists() and obj.sede in perfil.sedes_administradas.all():
+                return True
+        except (AttributeError, PerfilUsuario.DoesNotExist):
+            pass
+
+        # The user who booked the appointment can manage it.
+        return obj.user == request.user
