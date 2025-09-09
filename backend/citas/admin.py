@@ -2,8 +2,10 @@ from django.contrib import admin
 from .models import Recurso, Servicio, Cita, Horario
 from django.http import HttpResponse
 import openpyxl
-from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import inch
 from django.contrib.admin.models import LogEntry
 from django.urls import path
 from .views import admin_report_view
@@ -104,20 +106,22 @@ class CitaAdmin(admin.ModelAdmin):
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename=citas.pdf'
 
-        p = canvas.Canvas(response, pagesize=letter)
-        p.drawString(100, 750, "Reporte de Citas")
+        doc = SimpleDocTemplate(response, pagesize=letter)
+        styles = getSampleStyleSheet()
+        story = []
 
-        y = 700
+        story.append(Paragraph("Reporte de Citas", styles['h1']))
+        story.append(Spacer(1, 0.2 * inch))
+
         for cita in queryset:
-            p.drawString(100, y, f"Nombre: {cita.nombre}")
-            p.drawString(100, y - 20, f"Fecha: {cita.fecha.strftime('%Y-%m-%d %H:%M')}")
-            p.drawString(100, y - 40, f"Servicio: {cita.servicio.nombre}")
-            p.drawString(100, y - 60, f"Confirmado: {'Sí' if cita.confirmado else 'No'}")
-            p.drawString(100, y - 80, f"Estado: {cita.estado}")
-            y -= 100
+            story.append(Paragraph(f"<b>Nombre:</b> {cita.nombre}", styles['Normal']))
+            story.append(Paragraph(f"<b>Fecha:</b> {cita.fecha.strftime('%Y-%m-%d %H:%M')}", styles['Normal']))
+            story.append(Paragraph(f"<b>Servicio:</b> {cita.servicio.nombre}", styles['Normal']))
+            story.append(Paragraph(f"<b>Confirmado:</b> {'Sí' if cita.confirmado else 'No'}", styles['Normal']))
+            story.append(Paragraph(f"<b>Estado:</b> {cita.estado}", styles['Normal']))
+            story.append(Spacer(1, 0.2 * inch))
 
-        p.showPage()
-        p.save()
+        doc.build(story)
         return response
     export_to_pdf.short_description = 'Exportar a PDF'
 
