@@ -10,16 +10,27 @@ from .reports import generate_excel_report, generate_pdf_report
 @admin.register(Horario)
 class HorarioAdmin(admin.ModelAdmin):
     form = HorarioAdminForm
-    list_display = ('dia_semana', 'hora_inicio', 'hora_fin', 'recurso')
-    list_filter = ('dia_semana', 'recurso')
-    search_fields = ('recurso__nombre',)
+    list_display = ('recurso', 'get_sede', 'get_dia_semana_display_custom', 'hora_inicio', 'hora_fin')
+    list_filter = ('recurso__sede', 'dia_semana', 'recurso')
+    search_fields = ('recurso__nombre', 'recurso__sede__nombre')
+    list_select_related = ('recurso', 'recurso__sede')
 
+    @admin.display(description='Sede', ordering='recurso__sede__nombre')
+    def get_sede(self, obj):
+        if obj.recurso:
+            return obj.recurso.sede
+        return "N/A"
+
+    @admin.display(description='Día de la Semana', ordering='dia_semana')
+    def get_dia_semana_display_custom(self, obj):
+        return obj.get_dia_semana_display()
 
 @admin.register(Recurso)
 class RecursoAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'sede', 'descripcion')
     list_filter = ('sede',)
     search_fields = ('nombre', 'sede__nombre')
+    list_select_related = ('sede',)
 
 
 @admin.register(Servicio)
@@ -27,13 +38,15 @@ class ServicioAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'sede', 'duracion_estimada', 'precio')
     list_filter = ('sede',)
     search_fields = ('nombre', 'sede__nombre')
+    list_select_related = ('sede',)
 
 
 @admin.register(Cita)
 class CitaAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'fecha', 'servicio', 'confirmado', 'estado')
-    list_filter = ('confirmado', 'fecha', 'servicio', 'estado')
-    search_fields = ('nombre', 'servicio__nombre')
+    list_display = ('nombre', 'fecha', 'servicio', 'sede', 'confirmado', 'estado')
+    list_filter = ('sede', 'estado', 'confirmado', 'fecha', 'servicio')
+    search_fields = ('nombre', 'servicio__nombre', 'sede__nombre', 'user__username')
+    list_select_related = ('servicio', 'sede', 'user')
     list_editable = ('confirmado', 'estado')
     actions = ['confirmar_citas', 'cancelar_citas', 'export_to_excel', 'export_to_pdf', 'marcar_asistio', 'marcar_no_asistio']
 
@@ -73,6 +86,14 @@ class CitaAdmin(admin.ModelAdmin):
         optimized_queryset = queryset.select_related('servicio')
         return generate_pdf_report(optimized_queryset)
     export_to_pdf.short_description = 'Exportar a PDF'
+
+
+@admin.register(Bloqueo)
+class BloqueoAdmin(admin.ModelAdmin):
+    list_display = ('recurso', 'sede', 'motivo', 'fecha_inicio', 'fecha_fin')
+    list_filter = ('sede', 'recurso')
+    search_fields = ('motivo', 'recurso__nombre', 'sede__nombre')
+    date_hierarchy = 'fecha_inicio'
 
 
 @admin.register(LogEntry)

@@ -26,6 +26,15 @@ from django.template.loader import render_to_string
 from django.conf import settings
 
 
+class WelcomeView(APIView):
+    """A simple view to confirm the API is running."""
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        return Response({
+            "message": "Welcome to the Citas API!",
+            "status": "ok"
+        })
 
 class RecursoViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
     queryset = Recurso.objects.all()

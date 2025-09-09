@@ -6,8 +6,10 @@ from rest_framework_simplejwt.views import (
 )
 from django.conf import settings
 from django.conf.urls.static import static
+from citas.views import WelcomeView
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/', WelcomeView.as_view(), name='api-welcome'), # A welcome message for the API root
     path('api/citas/', include('citas.urls')),
     path('api/', include('usuarios.urls')),
     path('api/organizacion/', include('organizacion.urls')),
