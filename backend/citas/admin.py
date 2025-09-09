@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Recurso, Servicio, Cita, Horario
+from .models import Recurso, Servicio, Cita, Horario, Bloqueo
 from django.contrib.admin.models import LogEntry
 from django.urls import path
 from .views import admin_report_view
@@ -17,14 +17,16 @@ class HorarioAdmin(admin.ModelAdmin):
 
 @admin.register(Recurso)
 class RecursoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'descripcion')
-    search_fields = ('nombre',)
+    list_display = ('nombre', 'sede', 'descripcion')
+    list_filter = ('sede',)
+    search_fields = ('nombre', 'sede__nombre')
 
 
 @admin.register(Servicio)
 class ServicioAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'descripcion')
-    search_fields = ('nombre',)
+    list_display = ('nombre', 'sede', 'duracion_estimada', 'precio')
+    list_filter = ('sede',)
+    search_fields = ('nombre', 'sede__nombre')
 
 
 @admin.register(Cita)
@@ -43,19 +45,23 @@ class CitaAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def confirmar_citas(self, request, queryset):
-        queryset.update(confirmado=True, estado='Confirmada')
+        updated_count = queryset.update(confirmado=True, estado='Confirmada')
+        self.message_user(request, f"{updated_count} citas han sido confirmadas.")
     confirmar_citas.short_description = "Confirmar citas seleccionadas"
 
     def cancelar_citas(self, request, queryset):
-        queryset.update(confirmado=False, estado='Cancelada')
+        updated_count = queryset.update(confirmado=False, estado='Cancelada')
+        self.message_user(request, f"{updated_count} citas han sido canceladas.")
     cancelar_citas.short_description = "Cancelar citas seleccionadas"
 
     def marcar_asistio(self, request, queryset):
-        queryset.update(estado='Asistio')
+        updated_count = queryset.update(estado='Asistio')
+        self.message_user(request, f"{updated_count} citas han sido marcadas como 'Asistió'.")
     marcar_asistio.short_description = "Marcar como asistida"
 
     def marcar_no_asistio(self, request, queryset):
-        queryset.update(estado='No Asistio')
+        updated_count = queryset.update(estado='No Asistio')
+        self.message_user(request, f"{updated_count} citas han sido marcadas como 'No Asistió'.")
     marcar_no_asistio.short_description = "Marcar como no asistida"
 
     def export_to_excel(self, request, queryset):
