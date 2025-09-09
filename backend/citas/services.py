@@ -1,7 +1,7 @@
 
 from datetime import datetime, time, timedelta
 from django.utils import timezone
-from django.db.models import F
+from django.db.models import F, ExpressionWrapper, DateTimeField
 from rest_framework.exceptions import ValidationError
 from .models import Cita, Horario, Recurso, Servicio, Bloqueo
 from organizacion.models import Sede
@@ -43,12 +43,22 @@ def check_appointment_availability(sede, servicio, recursos, fecha, cita_id=None
             raise ValidationError(f"El recurso '{recurso.nombre}' no está disponible en el horario solicitado en esta sede.")
 
         # 2. Check for overlapping appointments
-        conflictos = Cita.objects.filter(
+        # Annotate existing appointments with their calculated end time for a precise overlap check.
+        existing_appointments = Cita.objects.annotate(
+            end_time=ExpressionWrapper(
+                F('fecha') + F('servicio__duracion_estimada') * timedelta(minutes=1),
+                output_field=DateTimeField()
+            )
+        )
+
+        # An overlap occurs if an existing appointment starts before the new one ends,
+        # AND it ends after the new one starts.
+        conflictos = existing_appointments.filter(
             recursos=recurso,
             sede=sede,
+            estado__in=['Pendiente', 'Confirmada'],
             fecha__lt=cita_end_time,
-            fecha__gte=cita_start_time - F('servicio__duracion_estimada') * timedelta(minutes=1),
-            estado__in=['Pendiente', 'Confirmada']
+            end_time__gt=cita_start_time
         ).exclude(id=cita_id)
 
         if conflictos.exists():
@@ -62,7 +72,7 @@ def check_appointment_availability(sede, servicio, recursos, fecha, cita_id=None
             fecha_fin__gt=cita_start_time
         )
         if bloqueos_conflictivos.exists():
-            raise ValidationError(f"El recurso '{recurso.nombre}' tiene un bloqueo de tiempo en el horario solicitado.")
+            raise ValidationError(f"El recurso '{recurso.nombre}' tiene un bloqueo de tiempo en el horario solicitado: {bloqueos_conflictivos.first().motivo}")
 
     return True
 
