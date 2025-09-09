@@ -2,6 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import PerfilUsuario
 from organizacion.models import Sede
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
 
 class SedeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -51,4 +53,12 @@ class UserSerializer(serializers.ModelSerializer):
         # is expected to handle the 'sede' field for PerfilUsuario.
         # For now, assuming PerfilUsuario is created by signal and can be updated later.
         return user
+
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        serializer = UserSerializer(self.user).data
+        data.update({'user': serializer})
+        return data
 

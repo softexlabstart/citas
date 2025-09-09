@@ -50,7 +50,6 @@ class Recurso(models.Model):
 class Bloqueo(models.Model):
     """Represents a block of time when a resource is unavailable for non-appointment reasons."""
     recurso = models.ForeignKey(Recurso, on_delete=models.CASCADE, related_name='bloqueos')
-    sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='bloqueos')
     motivo = models.CharField(max_length=100, help_text=_("Ej: Almuerzo, Reunión, Cita personal"))
     fecha_inicio = models.DateTimeField()
     fecha_fin = models.DateTimeField()

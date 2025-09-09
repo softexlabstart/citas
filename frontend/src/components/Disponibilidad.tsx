@@ -43,6 +43,7 @@ const Disponibilidad: React.FC = () => {
         navigate('/appointments', {
             state: {
                 prefill: {
+                    nombre: '', // Explicitly set name as empty for the user to fill
                     sede_id: selectedSede,
                     servicio_id: selectedServicio,
                     recurso_id: slot.recurso.id,

@@ -48,6 +48,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
   useEffect(() => {
     // This effect runs when the prefill data is available AND the dependent dropdowns have been loaded.
     if (prefillData && servicios.length > 0 && recursos.length > 0) {
+        setName(prefillData.nombre || ''); // Set the client's name from prefill data
         setSelectedServicio(String(prefillData.servicio_id));
         setSelectedRecurso(String(prefillData.recurso_id));
         setDate(prefillData.fecha?.split('T')[0] || '');

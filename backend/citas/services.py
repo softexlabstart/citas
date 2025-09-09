@@ -19,6 +19,14 @@ def check_appointment_availability(sede, servicio, recursos, fecha, cita_id=None
     cita_start_time = fecha
     cita_end_time = cita_start_time + timedelta(minutes=duracion_estimada)
 
+    # Annotate existing appointments once outside the loop for efficiency.
+    existing_appointments = Cita.objects.annotate(
+        end_time=ExpressionWrapper(
+            F('fecha') + F('servicio__duracion_estimada') * timedelta(minutes=1),
+            output_field=DateTimeField()
+        )
+    )
+
     for recurso in recursos:
         # 1. Check schedule
         dia_semana = fecha.weekday()
@@ -43,13 +51,6 @@ def check_appointment_availability(sede, servicio, recursos, fecha, cita_id=None
             raise ValidationError(f"El recurso '{recurso.nombre}' no está disponible en el horario solicitado en esta sede.")
 
         # 2. Check for overlapping appointments
-        # Annotate existing appointments with their calculated end time for a precise overlap check.
-        existing_appointments = Cita.objects.annotate(
-            end_time=ExpressionWrapper(
-                F('fecha') + F('servicio__duracion_estimada') * timedelta(minutes=1),
-                output_field=DateTimeField()
-            )
-        )
 
         # An overlap occurs if an existing appointment starts before the new one ends,
         # AND it ends after the new one starts.
@@ -67,7 +68,6 @@ def check_appointment_availability(sede, servicio, recursos, fecha, cita_id=None
         # 3. Check for overlapping blocks
         bloqueos_conflictivos = Bloqueo.objects.filter(
             recurso=recurso,
-            sede=sede,
             fecha_inicio__lt=cita_end_time,
             fecha_fin__gt=cita_start_time
         )
@@ -87,54 +87,72 @@ def get_available_slots(recurso_id, fecha_str):
         raise ValueError('Formato de fecha o ID de recurso inválido.')
 
     dia_semana = fecha.weekday()
-    horarios_recurso = Horario.objects.filter(recurso=recurso, dia_semana=dia_semana)
+    horarios_recurso = Horario.objects.filter(recurso=recurso, dia_semana=dia_semana).order_by('hora_inicio')
+    if not horarios_recurso.exists():
+        return []
+
     citas_del_dia = Cita.objects.filter(recursos=recurso, fecha__date=fecha, estado__in=['Pendiente', 'Confirmada']).order_by('fecha')
-    bloqueos_del_dia = Bloqueo.objects.filter(recurso=recurso, fecha_inicio__date=fecha).order_by('fecha_inicio')
-
-    slots_del_dia = []
-    intervalo_minutos = 30
-    start_of_day = datetime.combine(fecha, time(0, 0))
-    end_of_day = timezone.make_aware(datetime.combine(fecha, time(23, 59, 59)))
-
-    current_slot_start = timezone.make_aware(start_of_day)
-    while current_slot_start < end_of_day:
-        current_slot_end = current_slot_start + timedelta(minutes=intervalo_minutos)
-        slot_time = current_slot_start.time()
-
-        in_schedule = any(
-            horario.hora_inicio <= slot_time < horario.hora_fin
-            for horario in horarios_recurso
-        )
-
-        overlap = False
-        if in_schedule:
-            for cita in citas_del_dia:
-                cita_start = cita.fecha
-                cita_end = cita.fecha + timedelta(minutes=cita.servicio.duracion_estimada)
-                if not (current_slot_end <= cita_start or current_slot_start >= cita_end):
-                    overlap = True
-                    break
-            
-            # Also check for block overlap
-            if not overlap:
-                for bloqueo in bloqueos_del_dia:
-                    bloqueo_start = bloqueo.fecha_inicio
-                    bloqueo_end = bloqueo.fecha_fin
-                    if not (current_slot_end <= bloqueo_start or current_slot_start >= bloqueo_end):
-                        overlap = True
-                        break
-        
-        status = 'disponible' if in_schedule and not overlap else 'no disponible'
-
-        slots_del_dia.append({
-            'start': current_slot_start.isoformat(),
-            'end': current_slot_end.isoformat(),
-            'status': status
-        })
-        
-        current_slot_start = current_slot_end
     
-    return slots_del_dia
+    # Correctly filter for blocks that might overlap with the given date
+    day_start = timezone.make_aware(datetime.combine(fecha, time.min))
+    day_end = timezone.make_aware(datetime.combine(fecha, time.max))
+    bloqueos_del_dia = Bloqueo.objects.filter(
+        recurso=recurso,
+        fecha_inicio__lte=day_end,
+        fecha_fin__gte=day_start
+    ).order_by('fecha_inicio')
+    
+    available_slots = []
+    intervalo = timedelta(minutes=30)
+
+    for horario in horarios_recurso:
+        schedule_start = timezone.make_aware(datetime.combine(fecha, horario.hora_inicio))
+        schedule_end = timezone.make_aware(datetime.combine(fecha, horario.hora_fin))
+
+        # Handle schedules that cross midnight
+        if schedule_end <= schedule_start:
+            schedule_end += timedelta(days=1)
+
+        # Build a sorted list of busy intervals for the current schedule
+        busy_times = []
+        for cita in citas_del_dia:
+            start = cita.fecha
+            end = start + timedelta(minutes=cita.servicio.duracion_estimada)
+            # Consider only appointments within the current schedule window
+            if start < schedule_end and end > schedule_start:
+                busy_times.append((start, end))
+        for bloqueo in bloqueos_del_dia:
+            # Clamp the block to the current schedule's boundaries
+            start = max(bloqueo.fecha_inicio, schedule_start)
+            end = min(bloqueo.fecha_fin, schedule_end)
+            if start < end:
+                busy_times.append((start, end))
+        busy_times.sort()
+
+        # More efficient: find gaps between busy times instead of checking every slot
+        last_busy_end = schedule_start
+        for busy_start, busy_end in busy_times:
+            current_time = last_busy_end
+            while current_time + intervalo <= busy_start:
+                available_slots.append({
+                    'start': current_time.isoformat(),
+                    'end': (current_time + intervalo).isoformat(),
+                    'status': 'disponible'
+                })
+                current_time += intervalo
+            last_busy_end = max(last_busy_end, busy_end)
+
+        # Add slots in the final gap after the last busy interval
+        current_time = last_busy_end
+        while current_time + intervalo <= schedule_end:
+            available_slots.append({
+                'start': current_time.isoformat(),
+                'end': (current_time + intervalo).isoformat(),
+                'status': 'disponible'
+            })
+            current_time += intervalo
+            
+    return available_slots
 
 def find_next_available_slots(servicio_id, sede_id, limit=5):
     """

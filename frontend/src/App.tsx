@@ -1,40 +1,54 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
-import Home from './pages/Home';
-import Services from './components/Services';
-import Appointments from './components/Appointments';
-import AppointmentsCalendar from './components/AppointmentsCalendar';
+import { Spinner } from 'react-bootstrap'; // Import Spinner
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import PrivateRoute from './components/PrivateRoute';
-import Disponibilidad from './components/Disponibilidad';
-import ReportsPage from './pages/ReportsPage'; // Importar ReportsPage
-import { AuthProvider } from './contexts/AuthContext'; // Importar AuthProvider
-import AdminSettings from './components/AdminSettings';
-import UserGuide from './components/UserGuide';
+import { AuthProvider } from './contexts/AuthContext';
+
+// Lazy load components for code splitting
+const Home = lazy(() => import('./pages/Home'));
+const Services = lazy(() => import('./components/Services'));
+const Appointments = lazy(() => import('./components/Appointments'));
+const AppointmentsCalendar = lazy(() => import('./components/AppointmentsCalendar'));
+const Disponibilidad = lazy(() => import('./components/Disponibilidad'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
+const AdminSettings = lazy(() => import('./components/AdminSettings'));
+const UserGuide = lazy(() => import('./components/UserGuide'));
+
+// Centered spinner component for Suspense fallback
+const CenteredSpinner = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+    <Spinner animation="border" role="status">
+      <span className="visually-hidden">Cargando...</span>
+    </Spinner>
+  </div>
+);
 
 const App: React.FC = () => {
   return (
-    <AuthProvider> {/* Envolver la aplicación con AuthProvider */}
+    <AuthProvider> 
       <Router>
         <Layout>
           <ToastContainer />
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route element={<PrivateRoute />}>
-              <Route path="/" element={<Home />} />
-              <Route path="/services" element={<Services />} />
-              <Route path="/appointments" element={<Appointments />} />
-              <Route path="/calendar" element={<AppointmentsCalendar />} />
-              <Route path="/disponibilidad" element={<Disponibilidad />} />
-              <Route path="/reports" element={<ReportsPage />} /> {/*ruta para informes */}
-              <Route path="/admin-settings" element={<AdminSettings />} />
-              <Route path="/user-guide" element={<UserGuide />} />
-            </Route>
-          </Routes>
+          <Suspense fallback={<CenteredSpinner />}> {/* Use the new spinner component */}
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route element={<PrivateRoute />}>
+                <Route path="/" element={<Home />} />
+                <Route path="/services" element={<Services />} />
+                <Route path="/appointments" element={<Appointments />} />
+                <Route path="/calendar" element={<AppointmentsCalendar />} />
+                <Route path="/disponibilidad" element={<Disponibilidad />} />
+                <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/admin-settings" element={<AdminSettings />} />
+                <Route path="/user-guide" element={<UserGuide />} />
+              </Route>
+            </Routes>
+          </Suspense>
         </Layout>
       </Router>
     </AuthProvider>

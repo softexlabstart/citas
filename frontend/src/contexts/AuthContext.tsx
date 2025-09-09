@@ -17,13 +17,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [user, setUser] = useState<User | null>(null);
 
     const logout = useCallback((message?: string) => {
+        // Prevent multiple logout calls
+        if (!user) {
+            return;
+        }
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);
         if (message) {
             toast.info(message);
         }
-    }, []);
+    }, [user]); // Add user to dependency array
 
     const handleIdle = useCallback(() => {
         if (user) {

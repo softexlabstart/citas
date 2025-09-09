@@ -12,7 +12,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 from usuarios.models import PerfilUsuario
 from django.utils import timezone
-from .services import get_available_slots, find_next_available_slots
+from .services import get_available_slots, find_next_available_slots, check_appointment_availability
 from .permissions import IsAdminOrSedeAdminOrReadOnly, IsOwnerOrAdminForCita
 from .mixins import SedeFilteredMixin
 from .pagination import StandardResultsSetPagination
@@ -21,9 +21,7 @@ from django import forms
 from organizacion.models import Sede
 from django.db.models import Count, Case, When, IntegerField, Sum, Value, DecimalField, F
 from django.db.models.functions import Coalesce
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.conf import settings
+from .utils import send_appointment_email
 
 
 class WelcomeView(APIView):
@@ -167,26 +165,22 @@ class CitaViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        sede = serializer.validated_data.get('sede')
-
-        # Staff users can create any appointment
-        if user.is_staff:
-            serializer.save(user=user, sede=sede)
-            return
 
         # Check if the user is a sede administrator
         is_sede_admin = False
-        try:
-            is_sede_admin = user.perfil.is_sede_admin and user.perfil.sedes_administradas.exists()
-        except (AttributeError, PerfilUsuario.DoesNotExist):
-            pass
+        if not user.is_staff:
+            try:
+                is_sede_admin = user.perfil.is_sede_admin and user.perfil.sedes_administradas.exists()
+            except (AttributeError, PerfilUsuario.DoesNotExist):
+                pass
 
-        # If it's a sede administrator, deny creation via this endpoint
+        # Sede admins are not allowed to create appointments for users via this endpoint
         if is_sede_admin:
             raise PermissionDenied(_("Los administradores de sede no pueden crear citas para usuarios desde esta vista."))
         
-        # If it's a regular user (not staff, not sede admin), allow creation for themselves
-        serializer.save(user=user, sede=sede)
+        # For regular users or staff, associate the appointment with the logged-in user.
+        # The 'sede' is already handled by the serializer's 'sede_id' field.
+        serializer.save(user=user)
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -206,37 +200,11 @@ class CitaViewSet(viewsets.ModelViewSet):
         # After a successful update, check if the date has changed to send a notification
         updated_instance = self.get_object()
         if updated_instance.fecha != old_fecha:
-            subject = f"Reprogramación de Cita: {updated_instance.servicio.nombre}"
-            context = {'appointment': updated_instance}
-            html_message = render_to_string('emails/appointment_reschedule.html', context)
-            plain_message = f"Tu cita para {updated_instance.servicio.nombre} ha sido reprogramada para el {updated_instance.fecha.strftime('%Y-%m-%d a las %H:%M')}."
-            
-            recipient_list = []
-            if updated_instance.user and updated_instance.user.email:
-                recipient_list.append(updated_instance.user.email)
-
-            for recurso in updated_instance.recursos.all():
-                # Add email from linked user
-                if recurso.usuario and recurso.usuario.email:
-                    recipient_list.append(recurso.usuario.email)
-                
-                # Also add email from metadata
-                if isinstance(recurso.metadata, dict) and recurso.metadata.get("Correo"):
-                    recipient_list.append(recurso.metadata.get("Correo"))
-            
-            if recipient_list:
-                try:
-                    send_mail(
-                        subject,
-                        plain_message,
-                        settings.DEFAULT_FROM_EMAIL,
-                        list(set(recipient_list)),
-                        html_message=html_message,
-                        fail_silently=False,
-                    )
-                except Exception as e:
-                    # In a real application, you would log this error
-                    print(f"Error sending reschedule email for appointment {updated_instance.id}: {e}")
+            send_appointment_email(
+                appointment=updated_instance,
+                subject=f"Reprogramación de Cita: {updated_instance.servicio.nombre}",
+                template_name='appointment_reschedule'
+            )
 
         return response
 
@@ -248,31 +216,12 @@ class CitaViewSet(viewsets.ModelViewSet):
         instance.estado = 'Cancelada'
         instance.save()
 
-        # Send cancellation notification email
-        subject = f"Cancelación de Cita: {instance.servicio.nombre}"
-        context = {'appointment': instance, 'original_fecha': original_fecha} # Pass original date to template if needed
-        html_message = render_to_string('emails/appointment_cancellation.html', context)
-        plain_message = f"Tu cita para {instance.servicio.nombre} del {original_fecha.strftime('%Y-%m-%d a las %H:%M')} ha sido cancelada."
-
-        recipient_list = []
-        if instance.user and instance.user.email:
-            recipient_list.append(instance.user.email)
-
-        for recurso in instance.recursos.all():
-            # Add email from linked user
-            if recurso.usuario and recurso.usuario.email:
-                recipient_list.append(recurso.usuario.email)
-            
-            # Also add email from metadata
-            if isinstance(recurso.metadata, dict) and recurso.metadata.get("Correo"):
-                recipient_list.append(recurso.metadata.get("Correo"))
-
-        if recipient_list:
-            try:
-                send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, list(set(recipient_list)), html_message=html_message)
-            except Exception as e:
-                # In a real application, you would log this error
-                print(f"Error sending cancellation email for appointment {instance.id}: {e}")
+        send_appointment_email(
+            appointment=instance,
+            subject=f"Cancelación de Cita: {instance.servicio.nombre}",
+            template_name='appointment_cancellation',
+            context={'original_fecha': original_fecha}
+        )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -285,36 +234,11 @@ class CitaViewSet(viewsets.ModelViewSet):
             cita.confirmado = True
             cita.save()
 
-            # Send confirmation notification email
-            subject = f"Tu cita ha sido confirmada: {cita.servicio.nombre}"
-            # Using the same confirmation template, but you could create a new one
-            html_message = render_to_string('emails/appointment_confirmation.html', {'appointment': cita})
-            plain_message = f"Tu cita para {cita.servicio.nombre} el {cita.fecha.strftime('%Y-%m-%d a las %H:%M')} ha sido confirmada."
-
-            recipient_list = []
-            if cita.user and cita.user.email:
-                recipient_list.append(cita.user.email)
-
-            for recurso in cita.recursos.all():
-                # Add email from linked user
-                if recurso.usuario and recurso.usuario.email:
-                    recipient_list.append(recurso.usuario.email)
-                
-                # Also add email from metadata
-                if isinstance(recurso.metadata, dict) and recurso.metadata.get("Correo"):
-                    recipient_list.append(recurso.metadata.get("Correo"))
-
-            if recipient_list:
-                try:
-                    send_mail(
-                        subject,
-                        plain_message,
-                        settings.DEFAULT_FROM_EMAIL,
-                        list(set(recipient_list)),
-                        html_message=html_message
-                    )
-                except Exception as e:
-                    print(f"Error sending manual confirmation email for appointment {cita.id}: {e}")
+            send_appointment_email(
+                appointment=cita,
+                subject=f"Tu cita ha sido confirmada: {cita.servicio.nombre}",
+                template_name='appointment_confirmation'
+            )
 
             return Response({'status': 'cita confirmada'})
         else:
@@ -348,21 +272,13 @@ class DashboardSummaryView(APIView):
     def get(self, request, *args, **kwargs):
         user = request.user
         today = timezone.now().date()
-        
-        # Base queryset filtered by user permissions
-        if user.is_staff:
-            base_queryset = Cita.objects.all()
-        else:
-            try:
-                perfil = user.perfil
-                if perfil.sedes_administradas.exists():
-                    base_queryset = Cita.objects.filter(sede__in=perfil.sedes_administradas.all())
-                else:
-                    # Regular user
-                    base_queryset = Cita.objects.filter(user=user)
-            except PerfilUsuario.DoesNotExist:
-                # User without a profile
-                base_queryset = Cita.objects.filter(user=user)
+
+        # --- Refactor: Reuse the queryset logic from CitaViewSet ---
+        # This avoids repeating permission logic and keeps the code DRY.
+        cita_viewset = CitaViewSet()
+        cita_viewset.request = request # Provide the request context to the viewset
+        base_queryset = cita_viewset.get_queryset()
+        # -----------------------------------------------------------
 
         # Determine if the user is an admin (staff or sede admin)
         is_admin_user = user.is_staff
@@ -395,41 +311,23 @@ class DashboardSummaryView(APIView):
 class HorarioViewSet(viewsets.ModelViewSet):
     queryset = Horario.objects.all()
     serializer_class = HorarioSerializer
-    permission_classes = [IsAuthenticated] # Changed from AllowAny
+    permission_classes = [IsAdminOrSedeAdminOrReadOnly]
     
     def get_queryset(self):
         user = self.request.user
         if user.is_staff:
-            return Horario.objects.all()
+            return super().get_queryset()
         
         try:
             perfil = user.perfil
             if perfil.sedes_administradas.exists():
-                return Horario.objects.filter(sede__in=perfil.sedes_administradas.all())
+                # Corrected filter: Horario is linked to Sede via Recurso
+                return super().get_queryset().filter(recurso__sede__in=perfil.sedes_administradas.all())
         except PerfilUsuario.DoesNotExist:
             pass
         
         # Default to empty queryset if no permissions match
         return Horario.objects.none()
-
-    def perform_create(self, serializer):
-        # Add permission check for creation
-        user = self.request.user
-        if not user.is_staff:
-            try:
-                if not user.perfil.is_sede_admin:
-                    raise PermissionDenied(_("No tienes permiso para crear horarios."))
-            except (AttributeError, PerfilUsuario.DoesNotExist):
-                 raise PermissionDenied(_("No tienes permiso para crear horarios."))
-        serializer.save()
-    
-    def perform_update(self, serializer):
-        # Permissions are handled by IsAdminOrSedeAdminOrReadOnly on the ViewSet level
-        serializer.save()
-    
-    def perform_destroy(self, instance):
-        # Permissions are handled by IsAdminOrSedeAdminOrReadOnly on the ViewSet level
-        instance.delete()
 
 class AppointmentReportView(APIView):
     permission_classes = [IsAuthenticated] 

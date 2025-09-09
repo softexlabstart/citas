@@ -6,6 +6,7 @@ from .views import admin_report_view
 from django.contrib.auth.models import User
 from .forms import HorarioAdminForm
 from .reports import generate_excel_report, generate_pdf_report
+from .utils import send_appointment_email
 
 @admin.register(Horario)
 class HorarioAdmin(admin.ModelAdmin):
@@ -47,7 +48,9 @@ class CitaAdmin(admin.ModelAdmin):
     list_filter = ('sede', 'estado', 'confirmado', 'fecha', 'servicio')
     search_fields = ('nombre', 'servicio__nombre', 'sede__nombre', 'user__username')
     list_select_related = ('servicio', 'sede', 'user')
-    list_editable = ('confirmado', 'estado')
+    # 'list_editable' is removed for 'estado' and 'confirmado' to enforce using custom actions.
+    # This ensures that business logic, like sending email notifications, is always triggered
+    # when an appointment's status changes, preventing inconsistencies.
     actions = ['confirmar_citas', 'cancelar_citas', 'export_to_excel', 'export_to_pdf', 'marcar_asistio', 'marcar_no_asistio']
 
     def get_urls(self):
@@ -58,22 +61,56 @@ class CitaAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def confirmar_citas(self, request, queryset):
-        updated_count = queryset.update(confirmado=True, estado='Confirmada')
-        self.message_user(request, f"{updated_count} citas han sido confirmadas.")
+        updated_count = 0
+        for cita in queryset.filter(estado='Pendiente'):
+            cita.confirmado = True
+            cita.estado = 'Confirmada'
+            cita.save()
+            send_appointment_email(
+                appointment=cita,
+                subject=f"Tu cita ha sido confirmada: {cita.servicio.nombre}",
+                template_name='appointment_confirmation'
+            )
+            updated_count += 1
+        self.message_user(request, f"{updated_count} citas han sido confirmadas y notificadas.")
     confirmar_citas.short_description = "Confirmar citas seleccionadas"
 
     def cancelar_citas(self, request, queryset):
-        updated_count = queryset.update(confirmado=False, estado='Cancelada')
-        self.message_user(request, f"{updated_count} citas han sido canceladas.")
+        # Iterate to ensure business logic (like sending emails) is triggered for each cancellation.
+        # This is more consistent than a bulk .update() which bypasses model save methods and signals.
+        updated_count = 0
+        for cita in queryset.filter(estado__in=['Pendiente', 'Confirmada']):
+            original_fecha = cita.fecha
+            cita.estado = 'Cancelada'
+            cita.confirmado = False
+            cita.save()
+            send_appointment_email(
+                appointment=cita,
+                subject=f"Cancelación de Cita: {cita.servicio.nombre}",
+                template_name='appointment_cancellation',
+                context={'original_fecha': original_fecha}
+            )
+            updated_count += 1
+        self.message_user(request, f"{updated_count} citas han sido canceladas y notificadas.")
     cancelar_citas.short_description = "Cancelar citas seleccionadas"
 
     def marcar_asistio(self, request, queryset):
-        updated_count = queryset.update(estado='Asistio')
+        # Only mark confirmed appointments as attended for logical consistency
+        updated_count = 0
+        for cita in queryset.filter(estado='Confirmada'):
+            cita.estado = 'Asistio'
+            cita.save()
+            updated_count += 1
         self.message_user(request, f"{updated_count} citas han sido marcadas como 'Asistió'.")
     marcar_asistio.short_description = "Marcar como asistida"
 
     def marcar_no_asistio(self, request, queryset):
-        updated_count = queryset.update(estado='No Asistio')
+        # A 'No Show' can happen for pending or confirmed appointments
+        updated_count = 0
+        for cita in queryset.filter(estado__in=['Pendiente', 'Confirmada']):
+            cita.estado = 'No Asistio'
+            cita.save()
+            updated_count += 1
         self.message_user(request, f"{updated_count} citas han sido marcadas como 'No Asistió'.")
     marcar_no_asistio.short_description = "Marcar como no asistida"
 
@@ -90,10 +127,17 @@ class CitaAdmin(admin.ModelAdmin):
 
 @admin.register(Bloqueo)
 class BloqueoAdmin(admin.ModelAdmin):
-    list_display = ('recurso', 'sede', 'motivo', 'fecha_inicio', 'fecha_fin')
-    list_filter = ('sede', 'recurso')
-    search_fields = ('motivo', 'recurso__nombre', 'sede__nombre')
+    list_display = ('recurso', 'get_sede', 'motivo', 'fecha_inicio', 'fecha_fin')
+    list_filter = ('recurso__sede', 'recurso')
+    search_fields = ('motivo', 'recurso__nombre', 'recurso__sede__nombre')
     date_hierarchy = 'fecha_inicio'
+    list_select_related = ('recurso', 'recurso__sede')
+
+    @admin.display(description='Sede', ordering='recurso__sede__nombre')
+    def get_sede(self, obj):
+        if obj.recurso:
+            return obj.recurso.sede
+        return "N/A"
 
 
 @admin.register(LogEntry)

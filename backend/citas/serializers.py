@@ -35,22 +35,15 @@ class RecursoSerializer(serializers.ModelSerializer):
 class BloqueoSerializer(serializers.ModelSerializer):
     # For read operations, show the nested object
     recurso = RecursoSerializer(read_only=True)
-    sede = SedeSerializer(read_only=True)
 
     # For write operations, accept IDs
     recurso_id = serializers.PrimaryKeyRelatedField(
         queryset=Recurso.objects.all(), source='recurso', write_only=True
     )
-    sede_id = serializers.PrimaryKeyRelatedField(
-        queryset=Sede.objects.all(), source='sede', write_only=True
-    )
 
     class Meta:
         model = Bloqueo
-        fields = [
-            'id', 'recurso', 'sede', 'motivo', 'fecha_inicio', 'fecha_fin',
-            'recurso_id', 'sede_id'
-        ]
+        fields = ['id', 'recurso', 'motivo', 'fecha_inicio', 'fecha_fin', 'recurso_id']
 
 class CitaSerializer(serializers.ModelSerializer):
     servicio = ServicioSerializer(read_only=True)
