@@ -94,9 +94,8 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # The 'default' database is configured using the DATABASE_URL environment
 # variable. This is the standard for platforms like Render.
 DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL')
-    )
+    # dj_database_url will automatically read the DATABASE_URL environment variable.
+    'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
 }
 
 
