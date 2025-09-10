@@ -20,6 +20,7 @@ interface ServiceWithDetails extends Service {
 }
 
 interface RecursoWithDetails extends Recurso {
+    email: string;
     sede: Sede;
     metadata?: { [key: string]: any };
 }
@@ -68,7 +69,7 @@ const AdminSettings: React.FC = () => {
             const meta = item.metadata ? Object.entries(item.metadata).map(([key, value]) => ({ key, value: String(value) })) : [];
             setMetadata(meta);
         } else {
-            setFormData(type === 'service' ? { nombre: '', descripcion: '', duracion_estimada: 30, precio: 0.00, sede: '' } : { nombre: '', descripcion: '', sede: '' });
+            setFormData(type === 'service' ? { nombre: '', descripcion: '', duracion_estimada: 30, precio: 0.00, sede: '' } : { nombre: '', email: '', descripcion: '', sede: '' });
             setMetadata([]);
         }
         setShowModal(true);
@@ -176,10 +177,10 @@ const AdminSettings: React.FC = () => {
                 <Tab eventKey="resources" title={t('manage_resources')}>
                     <Button className="mb-3" onClick={() => handleOpenModal('resource')}>{t('new_resource')}</Button>
                     <Table striped bordered hover responsive>
-                        <thead><tr><th>{t('name')}</th><th>{t('description')}</th><th>{t('sede_label')}</th><th>{t('actions')}</th></tr></thead>
+                        <thead><tr><th>{t('name')}</th><th>{t('email')}</th><th>{t('description')}</th><th>{t('sede_label')}</th><th>{t('actions')}</th></tr></thead>
                         <tbody>
-                            {loadingRecursos ? (<tr><td colSpan={4} className="text-center"><Spinner animation="border" /></td></tr>) : (
-                                recursos?.map(r => (<tr key={r.id}><td>{r.nombre}</td><td>{r.descripcion}</td><td>{r.sede.nombre}</td><td><Button variant="warning" size="sm" onClick={() => handleOpenModal('resource', r)}>{t('edit')}</Button>{' '}<Button variant="danger" size="sm" onClick={() => handleDelete('resource', r.id)}>{t('delete')}</Button></td></tr>))
+                            {loadingRecursos ? (<tr><td colSpan={5} className="text-center"><Spinner animation="border" /></td></tr>) : (
+                                recursos?.map(r => (<tr key={r.id}><td>{r.nombre}</td><td>{r.email}</td><td>{r.descripcion}</td><td>{r.sede.nombre}</td><td><Button variant="warning" size="sm" onClick={() => handleOpenModal('resource', r)}>{t('edit')}</Button>{' '}<Button variant="danger" size="sm" onClick={() => handleDelete('resource', r.id)}>{t('delete')}</Button></td></tr>))
                             )}
                         </tbody>
                     </Table>
@@ -194,6 +195,7 @@ const AdminSettings: React.FC = () => {
                     <Modal.Header closeButton><Modal.Title>{editingItem ? t('edit') : t('new')}{' '}{modalType === 'service' ? t('service') : t('resource')}</Modal.Title></Modal.Header>
                     <Modal.Body>
                         <Form.Group className="mb-3"><Form.Label>{t('name')}</Form.Label><Form.Control type="text" name="nombre" value={formData.nombre || ''} onChange={handleFormChange} required /></Form.Group>
+                        {modalType === 'resource' && (<Form.Group className="mb-3"><Form.Label>{t('email')}</Form.Label><Form.Control type="email" name="email" value={formData.email || ''} onChange={handleFormChange} /></Form.Group>)}
                         <Form.Group className="mb-3"><Form.Label>{t('description')}</Form.Label><Form.Control as="textarea" name="descripcion" value={formData.descripcion || ''} onChange={handleFormChange} /></Form.Group>
                         {modalType === 'service' && (<Form.Group className="mb-3"><Form.Label>{t('duration')}</Form.Label><Form.Control type="number" name="duracion_estimada" value={formData.duracion_estimada || 30} onChange={handleFormChange} required /></Form.Group>)}
                         {modalType === 'service' && (<Form.Group className="mb-3"><Form.Label>{t('price')}</Form.Label><Form.Control type="number" name="precio" value={formData.precio || '0.00'} onChange={handleFormChange} step="0.01" required /></Form.Group>)}

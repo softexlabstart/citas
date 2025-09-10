@@ -17,6 +17,7 @@ const Disponibilidad = lazy(() => import('./components/Disponibilidad'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const AdminSettings = lazy(() => import('./components/AdminSettings'));
 const UserGuide = lazy(() => import('./components/UserGuide'));
+const RecursoDashboard = lazy(() => import('./components/RecursoDashboard'));
 
 // Centered spinner component for Suspense fallback
 const CenteredSpinner = () => (
@@ -46,6 +47,7 @@ const App: React.FC = () => {
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/admin-settings" element={<AdminSettings />} />
                 <Route path="/user-guide" element={<UserGuide />} />
+                <Route path="/recurso-dashboard" element={<RecursoDashboard />} />
               </Route>
             </Routes>
           </Suspense>

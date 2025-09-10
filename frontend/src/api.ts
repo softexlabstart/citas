@@ -223,7 +223,11 @@ export const downloadAppointmentsReportCSV = (startDate: string, endDate: string
 // Funciones para Autenticación
 export const login = async (username: string, password: string) => {
     const response = await api.post('/token/', { username, password });
-    return response.data;
+    const token = response.data.access;
+    const userResponse = await api.get('/auth/user/', {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return { ...response.data, user: userResponse.data };
 };
 
 export const register = async (user: RegisterUser) => {
@@ -239,3 +243,7 @@ export const getHorarios = () => api.get<Horario[]>('/citas/horarios/');
 export const addHorario = (horario: Horario) => api.post('/citas/horarios/', horario);
 export const updateHorario = (id: number, horario: Horario) => api.patch(`/citas/horarios/${id}/`, horario);
 export const deleteHorario = (id: number) => api.delete(`/citas/horarios/${id}/`);
+
+// Funciones para Recurso Dashboard
+export const getRecursoAppointments = () => api.get<Appointment[]>('/citas/recurso-citas/');
+export const marcarAsistencia = (id: number, asistio: boolean) => api.post(`/citas/recurso-citas/${id}/marcar_asistencia/`, { asistio });

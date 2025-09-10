@@ -30,7 +30,7 @@ class RecursoSerializer(serializers.ModelSerializer):
     sede_id = serializers.PrimaryKeyRelatedField(queryset=Sede.objects.all(), source='sede', write_only=True)
     class Meta:
         model = Recurso
-        fields = ['id', 'nombre', 'descripcion', 'metadata', 'sede', 'sede_id']
+        fields = ['id', 'nombre', 'email', 'descripcion', 'metadata', 'sede', 'sede_id']
 
 class BloqueoSerializer(serializers.ModelSerializer):
     # For read operations, show the nested object

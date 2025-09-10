@@ -21,9 +21,11 @@ def send_appointment_email(appointment, subject, template_name, context=None):
         recipient_list.append(appointment.user.email)
 
     for recurso in appointment.recursos.all():
-        if recurso.usuario and recurso.usuario.email:
+        if recurso.email:
+            recipient_list.append(recurso.email)
+        elif recurso.usuario and recurso.usuario.email:
             recipient_list.append(recurso.usuario.email)
-        if isinstance(recurso.metadata, dict) and recurso.metadata.get("Correo"):
+        elif isinstance(recurso.metadata, dict) and recurso.metadata.get("Correo"):
             recipient_list.append(recurso.metadata.get("Correo"))
 
     if recipient_list:

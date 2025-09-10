@@ -1,7 +1,10 @@
 # citas/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ServicioViewSet, CitaViewSet, HorarioViewSet, AppointmentReportView, DisponibilidadView, RecursoViewSet, SedeReportView, BloqueoViewSet, DashboardSummaryView, NextAvailabilityView
+from .views import (ServicioViewSet, CitaViewSet, HorarioViewSet, 
+                    AppointmentReportView, DisponibilidadView, RecursoViewSet, 
+                    SedeReportView, BloqueoViewSet, DashboardSummaryView, 
+                    NextAvailabilityView, RecursoCitaViewSet)
 
 router = DefaultRouter()
 router.register(r'servicios', ServicioViewSet)
@@ -9,6 +12,7 @@ router.register(r'citas', CitaViewSet)
 router.register(r'horarios', HorarioViewSet)
 router.register(r'recursos', RecursoViewSet)
 router.register(r'bloqueos', BloqueoViewSet)
+router.register(r'recurso-citas', RecursoCitaViewSet, basename='recurso-cita')
 
 urlpatterns = [
     path('reports/appointments/', AppointmentReportView.as_view(), name='appointment-reports'),

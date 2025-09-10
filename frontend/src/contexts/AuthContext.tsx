@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 interface AuthContextType {
-    user: User | null;
+    user: (User & { groups: string[] }) | null;
     login: (username: string, password: string) => Promise<void>;
     logout: (message?: string) => void;
 }
@@ -14,7 +14,7 @@ interface AuthContextType {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<(User & { groups: string[] }) | null>(null);
 
     const logout = useCallback((message?: string) => {
         // Prevent multiple logout calls

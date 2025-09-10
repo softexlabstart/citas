@@ -18,9 +18,10 @@ export interface User {
     last_name: string;
     is_staff: boolean;
     perfil: PerfilUsuario; // Add the perfil field
+    groups: string[];
 }
 
-export interface RegisterUser extends Omit<User, 'id' | 'is_staff' | 'perfil'> {
+export interface RegisterUser extends Omit<User, 'id' | 'is_staff' | 'perfil' | 'groups'> {
     password: string;
     timezone: string;
 }
