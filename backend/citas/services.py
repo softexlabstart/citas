@@ -3,12 +3,12 @@ from datetime import datetime, time, timedelta
 from django.utils import timezone
 from django.db.models import F, ExpressionWrapper, DateTimeField
 from rest_framework.exceptions import ValidationError
-from .models import Cita, Horario, Recurso, Servicio, Bloqueo
+from .models import Cita, Horario, Colaborador, Servicio, Bloqueo
 from organizacion.models import Sede
 
-def check_appointment_availability(sede, servicio, recursos, fecha, cita_id=None):
+def check_appointment_availability(sede, servicio, colaboradores, fecha, cita_id=None):
     """
-    Verifica la disponibilidad de una cita, incluyendo horarios de recursos y conflictos de citas.
+    Verifica la disponibilidad de una cita, incluyendo horarios de colaboradores y conflictos de citas.
     Lanza una ValidationError si no está disponible.
     """
     try:
@@ -27,16 +27,16 @@ def check_appointment_availability(sede, servicio, recursos, fecha, cita_id=None
         )
     )
 
-    for recurso in recursos:
+    for colaborador in colaboradores:
         # 1. Check schedule
         dia_semana = fecha.weekday()
-        horarios_recurso = Horario.objects.filter(recurso=recurso, dia_semana=dia_semana)
+        horarios_colaborador = Horario.objects.filter(colaborador=colaborador, dia_semana=dia_semana)
 
-        if not horarios_recurso.exists():
-            raise ValidationError(f"El recurso '{recurso.nombre}' no tiene horarios definidos para el día seleccionado en esta sede.")
+        if not horarios_colaborador.exists():
+            raise ValidationError(f"El colaborador '{colaborador.nombre}' no tiene horarios definidos para el día seleccionado en esta sede.")
 
         is_within_schedule = False
-        for horario in horarios_recurso:
+        for horario in horarios_colaborador:
             horario_start_same_day = timezone.make_aware(datetime.combine(cita_start_time.date(), horario.hora_inicio))
             horario_end_same_day = timezone.make_aware(datetime.combine(cita_start_time.date(), horario.hora_fin))
 
@@ -48,14 +48,14 @@ def check_appointment_availability(sede, servicio, recursos, fecha, cita_id=None
                 break
         
         if not is_within_schedule:
-            raise ValidationError(f"El recurso '{recurso.nombre}' no está disponible en el horario solicitado en esta sede.")
+            raise ValidationError(f"El colaborador '{colaborador.nombre}' no está disponible en el horario solicitado en esta sede.")
 
         # 2. Check for overlapping appointments
 
         # An overlap occurs if an existing appointment starts before the new one ends,
         # AND it ends after the new one starts.
         conflictos = existing_appointments.filter(
-            recursos=recurso,
+            colaboradores=colaborador,
             sede=sede,
             estado__in=['Pendiente', 'Confirmada'],
             fecha__lt=cita_end_time,
@@ -63,41 +63,41 @@ def check_appointment_availability(sede, servicio, recursos, fecha, cita_id=None
         ).exclude(id=cita_id)
 
         if conflictos.exists():
-            raise ValidationError(f"El recurso '{recurso.nombre}' ya tiene una cita agendada que se superpone con el horario solicitado.")
+            raise ValidationError(f"El colaborador '{colaborador.nombre}' ya tiene una cita agendada que se superpone con el horario solicitado.")
 
         # 3. Check for overlapping blocks
         bloqueos_conflictivos = Bloqueo.objects.filter(
-            recurso=recurso,
+            colaborador=colaborador,
             fecha_inicio__lt=cita_end_time,
             fecha_fin__gt=cita_start_time
         )
         if bloqueos_conflictivos.exists():
-            raise ValidationError(f"El recurso '{recurso.nombre}' tiene un bloqueo de tiempo en el horario solicitado: {bloqueos_conflictivos.first().motivo}")
+            raise ValidationError(f"El colaborador '{colaborador.nombre}' tiene un bloqueo de tiempo en el horario solicitado: {bloqueos_conflictivos.first().motivo}")
 
     return True
 
-def get_available_slots(recurso_id, fecha_str):
+def get_available_slots(colaborador_id, fecha_str):
     """
-    Obtiene los slots de tiempo disponibles para un recurso en una fecha específica.
+    Obtiene los slots de tiempo disponibles para un colaborador en una fecha específica.
     """
     try:
         fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-        recurso = Recurso.objects.get(id=recurso_id)
-    except (ValueError, Recurso.DoesNotExist):
-        raise ValueError('Formato de fecha o ID de recurso inválido.')
+        colaborador = Colaborador.objects.get(id=colaborador_id)
+    except (ValueError, Colaborador.DoesNotExist):
+        raise ValueError('Formato de fecha o ID de colaborador inválido.')
 
     dia_semana = fecha.weekday()
-    horarios_recurso = Horario.objects.filter(recurso=recurso, dia_semana=dia_semana).order_by('hora_inicio')
-    if not horarios_recurso.exists():
+    horarios_colaborador = Horario.objects.filter(colaborador=colaborador, dia_semana=dia_semana).order_by('hora_inicio')
+    if not horarios_colaborador.exists():
         return []
 
-    citas_del_dia = Cita.objects.filter(recursos=recurso, fecha__date=fecha, estado__in=['Pendiente', 'Confirmada']).order_by('fecha')
+    citas_del_dia = Cita.objects.filter(colaboradores=colaborador, fecha__date=fecha, estado__in=['Pendiente', 'Confirmada']).order_by('fecha')
     
     # Correctly filter for blocks that might overlap with the given date
     day_start = timezone.make_aware(datetime.combine(fecha, time.min))
     day_end = timezone.make_aware(datetime.combine(fecha, time.max))
     bloqueos_del_dia = Bloqueo.objects.filter(
-        recurso=recurso,
+        colaborador=colaborador,
         fecha_inicio__lte=day_end,
         fecha_fin__gte=day_start
     ).order_by('fecha_inicio')
@@ -105,7 +105,7 @@ def get_available_slots(recurso_id, fecha_str):
     available_slots = []
     intervalo = timedelta(minutes=30)
 
-    for horario in horarios_recurso:
+    for horario in horarios_colaborador:
         schedule_start = timezone.make_aware(datetime.combine(fecha, horario.hora_inicio))
         schedule_end = timezone.make_aware(datetime.combine(fecha, horario.hora_fin))
 
@@ -172,8 +172,8 @@ def find_next_available_slots(servicio_id, sede_id, limit=5):
     if servicio.sede.id != sede.id:
         raise ValueError(f"El servicio '{servicio.nombre}' (id={servicio.id}) pertenece a la sede '{servicio.sede.nombre}' (id={servicio.sede.id}), no a la sede seleccionada '{sede.nombre}' (id={sede.id}).")
 
-    recursos = Recurso.objects.filter(sede_id=sede_id)
-    if not recursos.exists():
+    colaboradores = Colaborador.objects.filter(sede_id=sede_id)
+    if not colaboradores.exists():
         return []
 
     found_slots = []
@@ -184,16 +184,16 @@ def find_next_available_slots(servicio_id, sede_id, limit=5):
         if len(found_slots) >= limit:
             break
 
-        for recurso in recursos:
+        for colaborador in colaboradores:
             if len(found_slots) >= limit:
                 break
             
             date_str = current_date.strftime('%Y-%m-%d')
-            daily_slots = get_available_slots(recurso.id, date_str)
+            daily_slots = get_available_slots(colaborador.id, date_str)
             
             for slot in daily_slots:
                 if slot['status'] == 'disponible' and datetime.fromisoformat(slot['start']) > timezone.now():
-                    found_slots.append({ 'recurso': { 'id': recurso.id, 'nombre': recurso.nombre }, 'start': slot['start'], 'end': slot['end'] })
+                    found_slots.append({ 'recurso': { 'id': colaborador.id, 'nombre': colaborador.nombre }, 'start': slot['start'], 'end': slot['end'] })
                     if len(found_slots) >= limit:
                         break
         

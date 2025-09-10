@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Recurso, Servicio, Cita, Horario, Bloqueo
+from .models import Colaborador, Servicio, Cita, Horario, Bloqueo
 from django.contrib.admin.models import LogEntry
 from django.urls import path
 from .views import admin_report_view
@@ -11,23 +11,23 @@ from .utils import send_appointment_email
 @admin.register(Horario)
 class HorarioAdmin(admin.ModelAdmin):
     form = HorarioAdminForm
-    list_display = ('recurso', 'get_sede', 'get_dia_semana_display_custom', 'hora_inicio', 'hora_fin')
-    list_filter = ('recurso__sede', 'dia_semana', 'recurso')
-    search_fields = ('recurso__nombre', 'recurso__sede__nombre')
-    list_select_related = ('recurso', 'recurso__sede')
+    list_display = ('colaborador', 'get_sede', 'get_dia_semana_display_custom', 'hora_inicio', 'hora_fin')
+    list_filter = ('colaborador__sede', 'dia_semana', 'colaborador')
+    search_fields = ('colaborador__nombre', 'colaborador__sede__nombre')
+    list_select_related = ('colaborador', 'colaborador__sede')
 
-    @admin.display(description='Sede', ordering='recurso__sede__nombre')
+    @admin.display(description='Sede', ordering='colaborador__sede__nombre')
     def get_sede(self, obj):
-        if obj.recurso:
-            return obj.recurso.sede
+        if obj.colaborador:
+            return obj.colaborador.sede
         return "N/A"
 
     @admin.display(description='Día de la Semana', ordering='dia_semana')
     def get_dia_semana_display_custom(self, obj):
         return obj.get_dia_semana_display()
 
-@admin.register(Recurso)
-class RecursoAdmin(admin.ModelAdmin):
+@admin.register(Colaborador)
+class ColaboradorAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'sede', 'descripcion')
     list_filter = ('sede',)
     search_fields = ('nombre', 'sede__nombre')
@@ -127,16 +127,16 @@ class CitaAdmin(admin.ModelAdmin):
 
 @admin.register(Bloqueo)
 class BloqueoAdmin(admin.ModelAdmin):
-    list_display = ('recurso', 'get_sede', 'motivo', 'fecha_inicio', 'fecha_fin')
-    list_filter = ('recurso__sede', 'recurso')
-    search_fields = ('motivo', 'recurso__nombre', 'recurso__sede__nombre')
+    list_display = ('colaborador', 'get_sede', 'motivo', 'fecha_inicio', 'fecha_fin')
+    list_filter = ('colaborador__sede', 'colaborador')
+    search_fields = ('motivo', 'colaborador__nombre', 'colaborador__sede__nombre')
     date_hierarchy = 'fecha_inicio'
-    list_select_related = ('recurso', 'recurso__sede')
+    list_select_related = ('colaborador', 'colaborador__sede')
 
-    @admin.display(description='Sede', ordering='recurso__sede__nombre')
+    @admin.display(description='Sede', ordering='colaborador__sede__nombre')
     def get_sede(self, obj):
-        if obj.recurso:
-            return obj.recurso.sede
+        if obj.colaborador:
+            return obj.colaborador.sede
         return "N/A"
 
 

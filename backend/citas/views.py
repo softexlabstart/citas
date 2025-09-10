@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated, AllowAny, BasePermission
-from .models import Cita, Servicio, Horario, Recurso, Bloqueo
-from .serializers import CitaSerializer, ServicioSerializer, HorarioSerializer, RecursoSerializer, BloqueoSerializer
+from .models import Cita, Servicio, Horario, Colaborador, Bloqueo
+from .serializers import CitaSerializer, ServicioSerializer, HorarioSerializer, ColaboradorSerializer, BloqueoSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from datetime import datetime, timedelta, time
@@ -19,7 +19,7 @@ from .pagination import StandardResultsSetPagination
 from django.shortcuts import render
 from django import forms
 from organizacion.models import Sede
-from django.db.models import Count, Case, When, IntegerField, Sum, Value, DecimalField, F
+from django.db.models import Count, Case, When, IntegerField, Sum, Value, DecimalField,F
 from django.db.models.functions import Coalesce
 from .utils import send_appointment_email
 
@@ -34,9 +34,9 @@ class WelcomeView(APIView):
             "status": "ok"
         })
 
-class RecursoViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
-    queryset = Recurso.objects.all()
-    serializer_class = RecursoSerializer
+class ColaboradorViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
+    queryset = Colaborador.objects.all()
+    serializer_class = ColaboradorSerializer
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
 
@@ -45,14 +45,14 @@ class DisponibilidadView(APIView):
 
     def get(self, request):
         fecha_str = request.query_params.get('fecha')
-        recurso_id = request.query_params.get('recurso_id')
+        colaborador_id = request.query_params.get('colaborador_id')
         sede_id = request.query_params.get('sede_id')
 
-        if not fecha_str or not recurso_id or not sede_id:
-            return Response({'error': _('Faltan parámetros de fecha, recurso o sede.')}, status=400)
+        if not fecha_str or not colaborador_id or not sede_id:
+            return Response({'error': _('Faltan parámetros de fecha, colaborador o sede.')}, status=400)
 
         try:
-            slots = get_available_slots(recurso_id, fecha_str)
+            slots = get_available_slots(colaborador_id, fecha_str)
             return Response({'disponibilidad': slots})
         except ValueError as e:
             return Response({'error': str(e)}, status=400)
@@ -321,8 +321,8 @@ class HorarioViewSet(viewsets.ModelViewSet):
         try:
             perfil = user.perfil
             if perfil.sedes_administradas.exists():
-                # Corrected filter: Horario is linked to Sede via Recurso
-                return super().get_queryset().filter(recurso__sede__in=perfil.sedes_administradas.all())
+                # Corrected filter: Horario is linked to Sede via Colaborador
+                return super().get_queryset().filter(colaborador__sede__in=perfil.sedes_administradas.all())
         except PerfilUsuario.DoesNotExist:
             pass
         
@@ -336,7 +336,7 @@ class AppointmentReportView(APIView):
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
         servicio_id = request.query_params.get('servicio_id')
-        recurso_id = request.query_params.get('recurso_id')
+        colaborador_id = request.query_params.get('colaborador_id')
         estado = request.query_params.get('estado')
         report_format = request.query_params.get('export', 'json') # Use 'export' to avoid conflict with DRF's 'format'
 
@@ -373,8 +373,8 @@ class AppointmentReportView(APIView):
 
         if servicio_id:
             queryset = queryset.filter(servicio_id=servicio_id)
-        if recurso_id:
-            queryset = queryset.filter(recursos__id=recurso_id)
+        if colaborador_id:
+            queryset = queryset.filter(colaboradores__id=colaborador_id)
         if estado:
             queryset = queryset.filter(estado=estado)
 
@@ -388,7 +388,7 @@ class AppointmentReportView(APIView):
 
             # Write data rows
             # Add 'sede' to select_related for performance optimization
-            for cita in queryset.select_related('servicio', 'user', 'sede').prefetch_related('recursos'):
+            for cita in queryset.select_related('servicio', 'user', 'sede').prefetch_related('colaboradores'):
                 writer.writerow([
                     cita.id,
                     cita.nombre,
@@ -437,7 +437,7 @@ class SedeReportView(APIView):
         end_date_str = request.query_params.get('end_date')
         specific_sede_id = request.query_params.get('sede_id')
         servicio_id = request.query_params.get('servicio_id')
-        recurso_id = request.query_params.get('recurso_id')
+        colaborador_id = request.query_params.get('colaborador_id')
         estado = request.query_params.get('estado')
 
         if not start_date_str or not end_date_str:
@@ -471,8 +471,8 @@ class SedeReportView(APIView):
         # Apply optional filters for service and resource to the base queryset
         if servicio_id:
             base_queryset = base_queryset.filter(servicio_id=servicio_id)
-        if recurso_id:
-            base_queryset = base_queryset.filter(recursos__id=recurso_id)
+        if colaborador_id:
+            base_queryset = base_queryset.filter(colaboradores__id=colaborador_id)
 
         # Calculate total revenue from the base queryset, before applying the status filter.
         # This ensures the total revenue reflects all attended appointments in the selected scope,
@@ -528,9 +528,9 @@ class SedeReportView(APIView):
         ).order_by('servicio__nombre')
 
         # Resources summary
-        resources_summary = queryset.values('recursos__nombre').annotate(
-            count=Count('recursos__nombre')
-        ).order_by('recursos__nombre')
+        resources_summary = queryset.values('colaboradores__nombre').annotate(
+            count=Count('colaboradores__nombre')
+        ).order_by('colaboradores__nombre')
 
         final_response = {
             'reporte_por_sede': response_data,
@@ -545,7 +545,7 @@ class ReportForm(forms.Form):
     start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), label=_("Fecha de Inicio"))
     end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), label=_("Fecha de Fin"))
     servicio = forms.ModelChoiceField(queryset=Servicio.objects.all(), required=False, label=_("Servicio"))
-    recurso = forms.ModelChoiceField(queryset=Recurso.objects.all(), required=False, label=_("Recurso"))
+    colaborador = forms.ModelChoiceField(queryset=Colaborador.objects.all(), required=False, label=_("Colaborador"))
     estado = forms.ChoiceField(choices=[('', _('Todos'))] + Cita.ESTADO_CHOICES, required=False, label=_("Estado"))
     report_format = forms.ChoiceField(choices=[('json', _('JSON (Resumen)')), ('csv', _('CSV (Detallado)'))], label=_("Formato de Reporte"))
 
@@ -574,7 +574,7 @@ def admin_report_view(request):
             start_date = form.cleaned_data['start_date']
             end_date = form.cleaned_data['end_date']
             servicio = form.cleaned_data['servicio']
-            recurso = form.cleaned_data['recurso']
+            colaborador = form.cleaned_data['colaborador']
             estado = form.cleaned_data['estado']
             report_format = form.cleaned_data['report_format']
 
@@ -591,8 +591,8 @@ def admin_report_view(request):
             }
             if servicio:
                 dummy_request.query_params['servicio_id'] = servicio.id
-            if recurso:
-                dummy_request.query_params['recurso_id'] = recurso.id
+            if colaborador:
+                dummy_request.query_params['colaborador_id'] = colaborador.id
             if estado:
                 dummy_request.query_params['estado'] = estado
 
@@ -610,20 +610,20 @@ def admin_report_view(request):
     
     return render(request, 'admin/citas/report_form.html', {'form': form})
 
-class IsRecursoUser(BasePermission):
+class IsColaboradorUser(BasePermission):
     def has_permission(self, request, view):
-        return request.user.groups.filter(name='Recurso').exists()
+        return request.user.groups.filter(name='Colaborador').exists()
 
-class RecursoCitaViewSet(viewsets.ReadOnlyModelViewSet):
+class ColaboradorCitaViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CitaSerializer
-    permission_classes = [IsAuthenticated, IsRecursoUser]
+    permission_classes = [IsAuthenticated, IsColaboradorUser]
 
     def get_queryset(self):
         user = self.request.user
         try:
-            recurso = Recurso.objects.get(usuario=user)
-            return Cita.objects.filter(recursos=recurso).order_by('fecha')
-        except Recurso.DoesNotExist:
+            colaborador = Colaborador.objects.get(usuario=user)
+            return Cita.objects.filter(colaboradores=colaborador).order_by('fecha')
+        except Colaborador.DoesNotExist:
             return Cita.objects.none()
 
     @action(detail=True, methods=['post'])
@@ -655,9 +655,9 @@ class RecursoCitaViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         user = self.request.user
         try:
-            recurso = Recurso.objects.get(usuario=user)
+            recurso = Colaborador.objects.get(usuario=user)
             return Cita.objects.filter(recursos=recurso).order_by('fecha')
-        except Recurso.DoesNotExist:
+        except Colaborador.DoesNotExist:
             return Cita.objects.none()
 
     @action(detail=True, methods=['post'])
@@ -689,9 +689,9 @@ class RecursoCitaViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         user = self.request.user
         try:
-            recurso = Recurso.objects.get(usuario=user)
+            recurso = Colaborador.objects.get(usuario=user)
             return Cita.objects.filter(recursos=recurso).order_by('fecha')
-        except Recurso.DoesNotExist:
+        except Colaborador.DoesNotExist:
             return Cita.objects.none()
 
     @action(detail=True, methods=['post'])
@@ -723,8 +723,8 @@ class WelcomeView(APIView):
         })
 
 class RecursoViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
-    queryset = Recurso.objects.all()
-    serializer_class = RecursoSerializer
+    queryset = Colaborador.objects.all()
+    serializer_class = ColaboradorSerializer
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
 
@@ -1233,7 +1233,7 @@ class ReportForm(forms.Form):
     start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), label=_("Fecha de Inicio"))
     end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), label=_("Fecha de Fin"))
     servicio = forms.ModelChoiceField(queryset=Servicio.objects.all(), required=False, label=_("Servicio"))
-    recurso = forms.ModelChoiceField(queryset=Recurso.objects.all(), required=False, label=_("Recurso"))
+    recurso = forms.ModelChoiceField(queryset=Colaborador.objects.all(), required=False, label=_("Recurso"))
     estado = forms.ChoiceField(choices=[('', _('Todos'))] + Cita.ESTADO_CHOICES, required=False, label=_("Estado"))
     report_format = forms.ChoiceField(choices=[('json', _('JSON (Resumen)')), ('csv', _('CSV (Detallado)'))], label=_("Formato de Reporte"))
 

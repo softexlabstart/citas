@@ -16,13 +16,13 @@ class Horario(models.Model):
         (6, _('Domingo')),
     ]
 
-    recurso = models.ForeignKey('Recurso', on_delete=models.CASCADE, related_name='horarios')
+    colaborador = models.ForeignKey('Colaborador', on_delete=models.CASCADE, related_name='horarios', null=True, blank=True)
     dia_semana = models.IntegerField(choices=DIA_SEMANA_CHOICES)
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
 
     def __str__(self):
-        return f"{self.recurso.nombre} - {self.get_dia_semana_display()} ({self.hora_inicio} - {self.hora_fin})"
+        return f"{self.colaborador.nombre} - {self.get_dia_semana_display()} ({self.hora_inicio} - {self.hora_fin})"
 
 
 class Servicio(models.Model):
@@ -37,26 +37,26 @@ class Servicio(models.Model):
         return self.nombre
 
 
-class Recurso(models.Model):
-    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='recursos')
+class Colaborador(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='colaboradores')
     nombre = models.CharField(max_length=100)
     email = models.EmailField(max_length=254, blank=True, null=True)
     descripcion = models.TextField(blank=True, null=True)
     metadata = models.JSONField(blank=True, null=True)
-    sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='recursos')
+    sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='colaboradores')
 
     def __str__(self):
         return self.nombre
 
 class Bloqueo(models.Model):
     """Represents a block of time when a resource is unavailable for non-appointment reasons."""
-    recurso = models.ForeignKey(Recurso, on_delete=models.CASCADE, related_name='bloqueos')
+    colaborador = models.ForeignKey(Colaborador, on_delete=models.CASCADE, related_name='bloqueos', null=True, blank=True)
     motivo = models.CharField(max_length=100, help_text=_("Ej: Almuerzo, Reunión, Cita personal"))
     fecha_inicio = models.DateTimeField()
     fecha_fin = models.DateTimeField()
 
     def __str__(self):
-        return f"Bloqueo de {self.recurso.nombre}: {self.motivo} ({self.fecha_inicio.strftime('%Y-%m-%d %H:%M')})"
+        return f"Bloqueo de {self.colaborador.nombre}: {self.motivo} ({self.fecha_inicio.strftime('%Y-%m-%d %H:%M')})"
 
 
 class Cita(models.Model):
@@ -72,7 +72,7 @@ class Cita(models.Model):
     nombre = models.CharField(max_length=100, db_index=True)
     fecha = models.DateTimeField(db_index=True)
     servicio = models.ForeignKey(Servicio, on_delete=models.CASCADE, related_name='citas')
-    recursos = models.ManyToManyField('Recurso', related_name='citas', blank=True)
+    colaboradores = models.ManyToManyField('Colaborador', related_name='citas', blank=True)
     confirmado = models.BooleanField(default=False)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente', db_index=True)
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='citas')
