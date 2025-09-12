@@ -51,11 +51,15 @@ def check_appointment_availability(sede, servicio, colaboradores, fecha, cita_id
             raise ValidationError(f"El colaborador '{colaborador.nombre}' no está disponible en el horario solicitado en esta sede.")
 
         # 2. Check for overlapping appointments
+        day_start = timezone.make_aware(datetime.combine(fecha.date(), time.min))
+        day_end = day_start + timedelta(days=1)
+
         potential_conflicts = Cita.objects.filter(
             colaboradores=colaborador,
             sede=sede,
             estado__in=['Pendiente', 'Confirmada'],
-            fecha__date=fecha.date()  # Check against the specific day
+            fecha__gte=day_start,
+            fecha__lt=day_end
         )
         if cita_id:
             potential_conflicts = potential_conflicts.exclude(id=cita_id)
