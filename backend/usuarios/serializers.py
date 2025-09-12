@@ -24,10 +24,14 @@ class PerfilUsuarioSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     perfil = PerfilUsuarioSerializer(read_only=True) # Nested serializer for PerfilUsuario
+    groups = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'is_staff', 'password', 'perfil') # Include 'perfil'
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'is_staff', 'password', 'perfil', 'groups') # Include 'perfil'
+
+    def get_groups(self, obj):
+        return [group.name for group in obj.groups.all()]
 
     def create(self, validated_data):
         # The 'sede' field was previously handled directly in UserSerializer,
