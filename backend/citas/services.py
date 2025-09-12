@@ -51,16 +51,15 @@ def check_appointment_availability(sede, servicio, colaboradores, fecha, cita_id
             raise ValidationError(f"El colaborador '{colaborador.nombre}' no está disponible en el horario solicitado en esta sede.")
 
         # 2. Check for overlapping appointments
-
-        # An overlap occurs if an existing appointment starts before the new one ends,
-        # AND it ends after the new one starts.
-        conflictos = existing_appointments.filter(
+        conflictos = Cita.objects.filter(
             colaboradores=colaborador,
             sede=sede,
             estado__in=['Pendiente', 'Confirmada'],
             fecha__lt=cita_end_time,
-            end_time__gt=cita_start_time
-        ).exclude(id=cita_id)
+            fecha__gte=ExpressionWrapper(cita_start_time - F('servicio__duracion_estimada') * timedelta(minutes=1), output_field=DateTimeField())
+        )
+        if cita_id:
+            conflictos = conflictos.exclude(id=cita_id)
 
         if conflictos.exists():
             raise ValidationError(f"El colaborador '{colaborador.nombre}' ya tiene una cita agendada que se superpone con el horario solicitado.")
