@@ -20,13 +20,13 @@ def send_appointment_email(appointment, subject, template_name, context=None):
     if appointment.user and appointment.user.email:
         recipient_list.append(appointment.user.email)
 
-    for recurso in appointment.recursos.all():
-        if recurso.email:
-            recipient_list.append(recurso.email)
-        elif recurso.usuario and recurso.usuario.email:
-            recipient_list.append(recurso.usuario.email)
-        elif isinstance(recurso.metadata, dict) and recurso.metadata.get("Correo"):
-            recipient_list.append(recurso.metadata.get("Correo"))
+    for colaborador in appointment.colaboradores.all():
+        if colaborador.email:
+            recipient_list.append(colaborador.email)
+        elif colaborador.usuario and colaborador.usuario.email:
+            recipient_list.append(colaborador.usuario.email)
+        elif isinstance(colaborador.metadata, dict) and colaborador.metadata.get("Correo"):
+            recipient_list.append(colaborador.metadata.get("Correo"))
 
     if recipient_list:
         try:
