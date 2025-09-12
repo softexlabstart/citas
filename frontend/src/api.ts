@@ -75,7 +75,7 @@ export interface CreateAppointmentPayload {
     nombre: string;
     fecha: string;
     servicio_id: number;
-    recursos_ids: number[];
+    colaboradores_ids: number[];
     sede_id: number;
     estado: 'Pendiente';
 }

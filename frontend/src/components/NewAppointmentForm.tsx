@@ -79,7 +79,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
       nombre: name,
       fecha: selectedSlot,
       servicio_id: parseInt(selectedServicio),
-      recursos_ids: [parseInt(selectedRecurso)],
+      colaboradores_ids: [parseInt(selectedRecurso)],
       sede_id: parseInt(selectedSede),
       estado: 'Pendiente' as const,
     };
