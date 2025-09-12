@@ -22,7 +22,8 @@ class Horario(models.Model):
     hora_fin = models.TimeField()
 
     def __str__(self):
-        return f"{self.colaborador.nombre} - {self.get_dia_semana_display()} ({self.hora_inicio} - {self.hora_fin})"
+        colaborador_nombre = self.colaborador.nombre if self.colaborador else _("Sin asignar")
+        return f"{colaborador_nombre} - {self.get_dia_semana_display()} ({self.hora_inicio} - {self.hora_fin})"
 
 
 class Servicio(models.Model):
@@ -56,7 +57,8 @@ class Bloqueo(models.Model):
     fecha_fin = models.DateTimeField()
 
     def __str__(self):
-        return f"Bloqueo de {self.colaborador.nombre}: {self.motivo} ({self.fecha_inicio.strftime('%Y-%m-%d %H:%M')})"
+        colaborador_nombre = self.colaborador.nombre if self.colaborador else _("Sin asignar")
+        return f"Bloqueo de {colaborador_nombre}: {self.motivo} ({self.fecha_inicio.strftime('%Y-%m-%d %H:%M')})"
 
 
 class Cita(models.Model):
