@@ -45,14 +45,14 @@ class DisponibilidadView(APIView):
 
     def get(self, request):
         fecha_str = request.query_params.get('fecha')
-        colaborador_id = request.query_params.get('colaborador_id')
+        recurso_id = request.query_params.get('recurso_id')
         sede_id = request.query_params.get('sede_id')
 
-        if not fecha_str or not colaborador_id or not sede_id:
-            return Response({'error': _('Faltan parámetros de fecha, colaborador o sede.')}, status=400)
+        if not fecha_str or not recurso_id or not sede_id:
+            return Response({'error': _('Faltan parámetros de fecha, recurso o sede.')}, status=400)
 
         try:
-            slots = get_available_slots(colaborador_id, fecha_str)
+            slots = get_available_slots(recurso_id, fecha_str)
             return Response({'disponibilidad': slots})
         except ValueError as e:
             return Response({'error': str(e)}, status=400)
