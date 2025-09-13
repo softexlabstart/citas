@@ -56,7 +56,7 @@ class CitaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cita
-        fields = ['id', 'nombre', 'fecha', 'servicio', 'servicio_id', 'confirmado', 'user', 'estado', 'colaboradores', 'colaboradores_ids', 'sede', 'sede_id']
+        fields = ['id', 'nombre', 'fecha', 'servicio', 'servicio_id', 'confirmado', 'user', 'estado', 'colaboradores', 'colaboradores_ids', 'sede', 'sede_id', 'comentario']
 
     def validate_fecha(self, value):
         if self.instance and self.instance.estado == 'Cancelada':

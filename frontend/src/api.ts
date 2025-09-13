@@ -246,4 +246,4 @@ export const deleteHorario = (id: number) => api.delete(`/citas/horarios/${id}/`
 
 // Funciones para Recurso Dashboard
 export const getRecursoAppointments = () => api.get<Appointment[]>('/citas/recurso-citas/');
-export const marcarAsistencia = (id: number, asistio: boolean) => api.post(`/citas/recurso-citas/${id}/marcar_asistencia/`, { asistio });
+export const marcarAsistencia = (id: number, asistio: boolean, comentario?: string) => api.post(`/citas/recurso-citas/${id}/marcar_asistencia/`, { asistio, comentario });

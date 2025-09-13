@@ -644,7 +644,10 @@ class ColaboradorCitaViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'])
     def marcar_asistencia(self, request, pk=None):
         cita = self.get_object()
+        if cita.estado == 'Cancelada':
+            raise PermissionDenied(_('No se puede cambiar el estado de una cita cancelada.'))
         asistio = request.data.get('asistio')
+        comentario = request.data.get('comentario')
 
         if asistio is None:
             return Response({'error': 'El campo "asistio" es requerido'}, status=status.HTTP_400_BAD_REQUEST)
@@ -653,6 +656,9 @@ class ColaboradorCitaViewSet(viewsets.ReadOnlyModelViewSet):
             cita.estado = 'Asistio'
         else:
             cita.estado = 'No Asistio'
+        
+        if comentario:
+            cita.comentario = comentario
         
         cita.save()
         return Response(CitaSerializer(cita).data)
@@ -676,7 +682,10 @@ class RecursoCitaViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'])
     def marcar_asistencia(self, request, pk=None):
         cita = self.get_object()
+        if cita.estado == 'Cancelada':
+            raise PermissionDenied(_('No se puede cambiar el estado de una cita cancelada.'))
         asistio = request.data.get('asistio')
+        comentario = request.data.get('comentario')
 
         if asistio is None:
             return Response({'error': 'El campo "asistio" es requerido'}, status=status.HTTP_400_BAD_REQUEST)
@@ -685,6 +694,9 @@ class RecursoCitaViewSet(viewsets.ReadOnlyModelViewSet):
             cita.estado = 'Asistio'
         else:
             cita.estado = 'No Asistio'
+        
+        if comentario:
+            cita.comentario = comentario
         
         cita.save()
         return Response(CitaSerializer(cita).data)

@@ -78,6 +78,7 @@ class Cita(models.Model):
     confirmado = models.BooleanField(default=False)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente', db_index=True)
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='citas')
+    comentario = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.nombre} - {self.fecha}"
