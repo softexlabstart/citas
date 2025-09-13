@@ -6,6 +6,7 @@ import { useApi } from '../hooks/useApi';
 import { getDashboardSummary, DashboardSummary, AdminDashboardSummary, UserDashboardSummary } from '../api';
 import AdminDashboard from '../components/AdminDashboard';
 import UserDashboard from '../components/UserDashboard';
+import RecursoDashboard from '../components/RecursoDashboard';
 
 const Home: React.FC = () => {
   const { t } = useTranslation();
@@ -26,6 +27,9 @@ const Home: React.FC = () => {
     }
     if (!data) {
       return null;
+    }
+    if (user?.groups.includes('Colaborador')) {
+      return <RecursoDashboard />;
     }
     if (user?.is_staff || user?.perfil?.is_sede_admin) {
       return <AdminDashboard data={data as AdminDashboardSummary} />;
