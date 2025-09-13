@@ -669,7 +669,7 @@ class RecursoCitaViewSet(viewsets.ReadOnlyModelViewSet):
         user = self.request.user
         try:
             recurso = Colaborador.objects.get(usuario=user)
-            return Cita.objects.filter(recursos=recurso).order_by('fecha')
+            return Cita.objects.filter(colaboradores=recurso).order_by('fecha')
         except Colaborador.DoesNotExist:
             return Cita.objects.none()
 
