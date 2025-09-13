@@ -192,5 +192,6 @@
   "next_available_slots": "Próximos Horarios Disponibles",
   "with_resource": "con",
   "schedule": "Agendar",
-  "no_available_slots_for_service": "No se encontraron horarios disponibles para el servicio seleccionado en los próximos 30 días."
+  "no_available_slots_for_service": "No se encontraron horarios disponibles para el servicio seleccionado en los próximos 30 días.",
+  "find_next_available": "Encontrar Próxima Disponibilidad"
 }
