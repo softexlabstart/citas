@@ -137,9 +137,9 @@ const Appointments: React.FC = () => {
   };
 
   const renderPagination = () => {
-    if (!paginatedData || paginatedData.count <= 25) return null;
+    if (!paginatedData || paginatedData.count <= 10) return null;
 
-    const totalPages = Math.ceil(paginatedData.count / 25);
+    const totalPages = Math.ceil(paginatedData.count / 10);
     let items = [];
     // Simple pagination for now, can be extended with ellipsis for many pages
     for (let number = 1; number <= totalPages; number++) {
