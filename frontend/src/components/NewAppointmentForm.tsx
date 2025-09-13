@@ -6,6 +6,7 @@ import { getDisponibilidad, addAppointment, getNextAvailableSlots, NextAvailable
 import { CreateAppointmentPayload } from '../api';
 import { useApi } from '../hooks/useApi';
 import { useAppointmentForm } from '../hooks/useAppointmentForm';
+import { useAuth } from '../hooks/useAuth';
 
 interface NewAppointmentFormProps {
   onAppointmentAdded: () => void;
@@ -14,6 +15,7 @@ interface NewAppointmentFormProps {
 
 const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAdded, prefillData }) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const {
     sedes,
     servicios,
@@ -34,7 +36,6 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
   const { loading: isSubmitting, request: submitAppointment, error: submitError } = useApi(addAppointment);
   const { data: nextAvailable, loading: nextAvailableLoading, request: fetchNextAvailable, error: nextAvailableError } = useApi<NextAvailableSlot[], [string, string]>(getNextAvailableSlots);
 
-  const [name, setName] = useState('');
   const [date, setDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
   const [showNextAvailableModal, setShowNextAvailableModal] = useState(false);
@@ -49,11 +50,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
 
   useEffect(() => {
     // This effect runs when the prefill data is available AND the dependent dropdowns have been loaded.
-    console.log('prefillData', prefillData);
-    console.log('servicios', servicios);
-    console.log('recursos', recursos);
     if (prefillData && servicios.length > 0 && recursos.length > 0) {
-        setName(prefillData.nombre || ''); // Set the client's name from prefill data
         setSelectedServicio(String(prefillData.servicio_id));
         setSelectedRecurso(String(prefillData.recurso_id));
         setDate(prefillData.fecha?.split('T')[0] || '');
@@ -84,7 +81,6 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
   };
 
   const resetForm = () => {
-    setName('');
     setDate('');
     setSelectedSede('');
     setSelectedServicio('');
@@ -94,8 +90,12 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+        toast.error(t('you_must_be_logged_in'));
+        return;
+    }
     const newAppointment = {
-      nombre: name,
+      nombre: user.username,
       fecha: selectedSlot,
       servicio_id: parseInt(selectedServicio),
       colaboradores_ids: [parseInt(selectedRecurso)],
@@ -126,11 +126,6 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
         {(formDependencyError || availabilityError || submitError || nextAvailableError) && (
           <Alert variant="danger">{t('error_processing_request')}</Alert>
         )}
-
-        <Form.Group className="mb-3">
-          <Form.Label>{t('client_name_label')}</Form.Label>
-          <Form.Control type="text" value={name} onChange={(e) => setName(e.target.value)} required />
-        </Form.Group>
 
         <Form.Group className="mb-3">
           <Form.Label>{t('sede_label')}</Form.Label>

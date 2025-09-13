@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getSedes, getServicios, getNextAvailableSlots, NextAvailableSlot } from '../api';
+import { getSedes, getServicios, getNextAvailableSlots, NextAvailableSlot, addAppointment } from '../api';
 import { Sede } from '../interfaces/Sede';
 import { Service } from '../interfaces/Service';
 import { Form, Button, Container, Row, Col, Card, Spinner, Alert, ListGroup } from 'react-bootstrap';
@@ -8,16 +8,19 @@ import { toast } from 'react-toastify';
 import { useApi } from '../hooks/useApi';
 import { useNavigate } from 'react-router-dom';
 import { CalendarPlus } from 'react-bootstrap-icons';
+import { useAuth } from '../hooks/useAuth';
 
 const Disponibilidad: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [selectedSede, setSelectedSede] = useState<string>('');
     const [selectedServicio, setSelectedServicio] = useState<string>('');
 
     const { data: sedes, loading: loadingSedes, request: fetchSedes } = useApi<Sede[], []>(getSedes);
     const { data: servicios, loading: loadingServicios, request: fetchServicios } = useApi<Service[], [string]>(getServicios);
     const { data: availableSlots, loading: loadingAvailability, error: errorAvailability, request: fetchNextSlots } = useApi<NextAvailableSlot[], [string, string]>(getNextAvailableSlots);
+    const { loading: isSubmitting, request: scheduleAppointment } = useApi(addAppointment);
 
     useEffect(() => {
         fetchSedes();
@@ -39,18 +42,29 @@ const Disponibilidad: React.FC = () => {
         fetchNextSlots(selectedServicio, selectedSede);
     };
 
-    const handleScheduleClick = (slot: NextAvailableSlot) => {
-        navigate('/appointments', {
-            state: {
-                prefill: {
-                    nombre: '', // Explicitly set name as empty for the user to fill
-                    sede_id: selectedSede,
-                    servicio_id: selectedServicio,
-                    recurso_id: slot.recurso.id,
-                    fecha: slot.start,
-                }
-            }
-        });
+    const handleScheduleAppointment = async (slot: NextAvailableSlot) => {
+        if (!user) {
+            toast.error(t('you_must_be_logged_in'));
+            return;
+        }
+
+        const newAppointment = {
+            nombre: user.username,
+            fecha: slot.start,
+            servicio_id: parseInt(selectedServicio),
+            colaboradores_ids: [slot.recurso.id],
+            sede_id: parseInt(selectedSede),
+            estado: 'Pendiente' as const,
+        };
+
+        const { success } = await scheduleAppointment(newAppointment);
+
+        if (success) {
+            toast.success(t('appointment_added_successfully'));
+            navigate('/appointments');
+        } else {
+            toast.error(t('error_adding_appointment'));
+        }
     };
 
     const anyError = errorAvailability;
@@ -119,8 +133,8 @@ const Disponibilidad: React.FC = () => {
                                                         <br />
                                                         <small className="text-muted">{t('with_resource')} {slot.recurso.nombre}</small>
                                                     </div>
-                                                    <Button variant="outline-success" size="sm" onClick={() => handleScheduleClick(slot)}>
-                                                        <CalendarPlus className="me-1" /> {t('schedule')}
+                                                    <Button variant="outline-success" size="sm" onClick={() => handleScheduleAppointment(slot)} disabled={isSubmitting}>
+                                                        {isSubmitting ? <Spinner as="span" animation="border" size="sm" /> : <><CalendarPlus className="me-1" /> {t('schedule')}</>}
                                                     </Button>
                                                 </ListGroup.Item>
                                             ))}
