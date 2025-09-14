@@ -13,7 +13,7 @@ export interface PaginatedResponse<T> {
     results: T[];
 }
 
-const API_URL = process.env.REACT_APP_API_URL || '/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://admin.softex-labs.xyz/api';
 
 const api = axios.create({
   baseURL: API_URL,
