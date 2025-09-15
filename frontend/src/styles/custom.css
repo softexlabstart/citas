@@ -1,11 +1,11 @@
 /* Estilos personalizados */
 :root {
-  --primary-color: #0d6efd;
-  --primary-darker: #0b5ed7;
   --primary-hover-bg: #e9ecef;
   --primary-hover-text: #0056b3;
   --icon-color: #6c757d;
   --text-color-soft: #495057;
+  --offcanvas-bg: #e9ecef;
+  --offcanvas-link-hover-bg: #dee2e6;
 }
 
 .nav-link-custom {
@@ -34,37 +34,16 @@
 }
 
 .offcanvas-custom {
-  background-color: var(--primary-color);
-  color: white;
+  background-color: var(--offcanvas-bg);
+  border-right: 1px solid #dee2e6;
 }
 
 .offcanvas-header-custom {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.offcanvas-custom .offcanvas-title {
-  color: white;
-}
-
-.offcanvas-custom .btn-close {
-  filter: invert(1) grayscale(100%) brightness(200%);
-}
-
-.offcanvas-custom .nav-link-custom {
-  color: white;
+  border-bottom: 1px solid #dee2e6;
 }
 
 .offcanvas-custom .nav-link-custom:hover {
-  background-color: var(--primary-darker);
-  color: white;
-}
-
-.offcanvas-custom .nav-icon {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.offcanvas-custom .nav-link-custom:hover .nav-icon {
-  color: white;
+  background-color: var(--offcanvas-link-hover-bg);
 }
 
 .footer {
