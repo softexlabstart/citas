@@ -61,6 +61,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
   const availableSlots = availability?.disponibilidad.filter(slot => slot.status === 'disponible') || [];
 
   useEffect(() => {
+    console.log('Checking availability with:', { date, selectedRecurso, selectedSede, selectedServicio });
     if (date && selectedRecurso && selectedSede && selectedServicio) {
       fetchAvailableSlots(date, parseInt(selectedRecurso, 10), selectedSede, selectedServicio);
     }
