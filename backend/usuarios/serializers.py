@@ -74,8 +74,13 @@ class ClientSerializer(serializers.ModelSerializer):
     fecha_nacimiento = serializers.DateField(source='perfil.fecha_nacimiento', required=False, allow_null=True)
 
     # Read-only fields (properties)
-    full_name = serializers.CharField(source='get_full_name', read_only=True)
+    full_name = serializers.SerializerMethodField()
     age = serializers.IntegerField(source='perfil.age', read_only=True)
+
+    def get_full_name(self, obj):
+        if obj.first_name and obj.last_name:
+            return f"{obj.first_name} {obj.last_name}".strip()
+        return obj.username
 
     class Meta:
         model = User

@@ -62,6 +62,6 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
 
         # Exclude users who are staff, in SedeAdmin group, or in Recurso group
         return User.objects.filter(is_staff=False)
-        exclude(groups=sede_admin_group)
-        exclude(groups=recurso_group)
-        select_related('perfil')
+            .exclude(groups=sede_admin_group)
+            .exclude(groups=recurso_group)
+            .select_related('perfil')
