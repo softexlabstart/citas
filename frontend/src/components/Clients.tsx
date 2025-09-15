@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Spinner, Alert, Button, Modal } from 'react-bootstrap'; // Added Button and Modal
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify'; // Added toast import
 import { useApi } from '../hooks/useApi';
 import { Client } from '../interfaces/Client';
 import { getClients, deleteClient } from '../api';
