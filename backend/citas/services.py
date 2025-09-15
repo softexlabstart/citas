@@ -82,15 +82,18 @@ def check_appointment_availability(sede, servicio, colaboradores, fecha, cita_id
 
     return True
 
-def get_available_slots(colaborador_id, fecha_str):
+def get_available_slots(colaborador_id, fecha_str, servicio_id):
     """
-    Obtiene los slots de tiempo disponibles para un colaborador en una fecha específica.
+    Obtiene los slots de tiempo disponibles para un colaborador en una fecha específica,
+    considerando la duración del servicio.
     """
     try:
         fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
         colaborador = Colaborador.objects.get(id=colaborador_id)
-    except (ValueError, Colaborador.DoesNotExist):
-        raise ValueError('Formato de fecha o ID de colaborador inválido.')
+        servicio = Servicio.objects.get(id=servicio_id)
+        intervalo = timedelta(minutes=servicio.duracion_estimada)
+    except (ValueError, Colaborador.DoesNotExist, Servicio.DoesNotExist):
+        raise ValueError('Formato de fecha, ID de colaborador o ID de servicio inválido.')
 
     dia_semana = fecha.weekday()
     horarios_colaborador = Horario.objects.filter(colaborador=colaborador, dia_semana=dia_semana).order_by('hora_inicio')
@@ -99,7 +102,6 @@ def get_available_slots(colaborador_id, fecha_str):
 
     citas_del_dia = Cita.objects.filter(colaboradores=colaborador, fecha__date=fecha, estado__in=['Pendiente', 'Confirmada']).order_by('fecha')
     
-    # Correctly filter for blocks that might overlap with the given date
     day_start = timezone.make_aware(datetime.combine(fecha, time.min))
     day_end = timezone.make_aware(datetime.combine(fecha, time.max))
     bloqueos_del_dia = Bloqueo.objects.filter(
@@ -109,33 +111,27 @@ def get_available_slots(colaborador_id, fecha_str):
     ).order_by('fecha_inicio')
     
     available_slots = []
-    intervalo = timedelta(minutes=30)
 
     for horario in horarios_colaborador:
         schedule_start = timezone.make_aware(datetime.combine(fecha, horario.hora_inicio))
         schedule_end = timezone.make_aware(datetime.combine(fecha, horario.hora_fin))
 
-        # Handle schedules that cross midnight
         if schedule_end <= schedule_start:
             schedule_end += timedelta(days=1)
 
-        # Build a sorted list of busy intervals for the current schedule
         busy_times = []
         for cita in citas_del_dia:
             start = cita.fecha
             end = start + timedelta(minutes=cita.servicio.duracion_estimada)
-            # Consider only appointments within the current schedule window
             if start < schedule_end and end > schedule_start:
                 busy_times.append((start, end))
         for bloqueo in bloqueos_del_dia:
-            # Clamp the block to the current schedule's boundaries
             start = max(bloqueo.fecha_inicio, schedule_start)
             end = min(bloqueo.fecha_fin, schedule_end)
             if start < end:
                 busy_times.append((start, end))
         busy_times.sort()
 
-        # More efficient: find gaps between busy times instead of checking every slot
         last_busy_end = schedule_start
         for busy_start, busy_end in busy_times:
             current_time = last_busy_end
@@ -148,7 +144,6 @@ def get_available_slots(colaborador_id, fecha_str):
                 current_time += intervalo
             last_busy_end = max(last_busy_end, busy_end)
 
-        # Add slots in the final gap after the last busy interval
         current_time = last_busy_end
         while current_time + intervalo <= schedule_end:
             available_slots.append({
@@ -195,7 +190,7 @@ def find_next_available_slots(servicio_id, sede_id, limit=5):
                 break
             
             date_str = current_date.strftime('%Y-%m-%d')
-            daily_slots = get_available_slots(colaborador.id, date_str)
+            daily_slots = get_available_slots(colaborador.id, date_str, servicio_id)
             
             for slot in daily_slots:
                 if slot['status'] == 'disponible' and datetime.fromisoformat(slot['start']) > timezone.now():
