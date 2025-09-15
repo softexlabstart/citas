@@ -2,17 +2,41 @@ from django.db import models
 from django.contrib.auth.models import User
 import pytz
 from organizacion.models import Sede
+from datetime import date
 
 class PerfilUsuario(models.Model):
     TIMEZONE_CHOICES = [(tz, tz) for tz in pytz.common_timezones]
+    GENERO_CHOICES = [
+        ('M', 'Masculino'),
+        ('F', 'Femenino'),
+        ('O', 'Otro'),
+    ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
     timezone = models.CharField(max_length=100, choices=TIMEZONE_CHOICES, default='UTC')
     sede = models.ForeignKey(Sede, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
     sedes_administradas = models.ManyToManyField(Sede, related_name='administradores', blank=True)
+    
+    # New fields for client data
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    ciudad = models.CharField(max_length=100, blank=True, null=True)
+    barrio = models.CharField(max_length=100, blank=True, null=True)
+    genero = models.CharField(max_length=1, choices=GENERO_CHOICES, blank=True, null=True)
+    fecha_nacimiento = models.DateField(blank=True, null=True)
 
     def __str__(self):
         return self.user.username
+
+    @property
+    def full_name(self):
+        return f"{self.user.first_name} {self.user.last_name}"
+
+    @property
+    def age(self):
+        if self.fecha_nacimiento:
+            today = date.today()
+            return today.year - self.fecha_nacimiento.year - ((today.month, today.day) < (self.fecha_nacimiento.month, self.fecha_nacimiento.day))
+        return None
 
 
 class Usuario(models.Model):

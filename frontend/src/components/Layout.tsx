@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import moment from 'moment';
-import { HouseDoor, Briefcase, CalendarCheck, CalendarWeek, BarChart, Gear, QuestionCircle, Search } from 'react-bootstrap-icons';
+import { HouseDoor, Briefcase, CalendarCheck, CalendarWeek, BarChart, Gear, QuestionCircle, Search, People } from 'react-bootstrap-icons';
 import '../styles/custom.css';
 
 interface LayoutProps {
@@ -83,6 +83,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <>
                       <hr className="my-2" />
                       <h6 className="text-muted ps-3 mt-2 mb-1">{t('admin_tools')}</h6>
+                      <Nav.Link as={Link} to="/clients" onClick={handleClose} className="nav-link-custom">
+                        <People className="nav-icon" /> {t('clients')}
+                      </Nav.Link>
                       <Nav.Link as={Link} to="/reports" onClick={handleClose} className="nav-link-custom">
                         <BarChart className="nav-icon" /> {t('reports')}
                       </Nav.Link>

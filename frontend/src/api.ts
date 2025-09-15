@@ -5,6 +5,7 @@ import { RegisterUser } from './interfaces/User';
 import { Service } from './interfaces/Service';
 import { Recurso } from './interfaces/Recurso';
 import { Sede } from './interfaces/Sede'; // Added Sede import
+import { Client } from './interfaces/Client';
 
 export interface PaginatedResponse<T> {
     count: number;
@@ -248,3 +249,6 @@ export const deleteHorario = (id: number) => api.delete(`/citas/horarios/${id}/`
 // Funciones para Recurso Dashboard
 export const getRecursoAppointments = () => api.get<Appointment[]>('/citas/recurso-citas/');
 export const marcarAsistencia = (id: number, asistio: boolean, comentario?: string) => api.post(`/citas/recurso-citas/${id}/marcar_asistencia/`, { asistio, comentario });
+
+// Funciones para Clientes
+export const getClients = () => api.get<Client[]>('/clients/');

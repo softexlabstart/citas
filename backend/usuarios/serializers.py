@@ -16,7 +16,7 @@ class PerfilUsuarioSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PerfilUsuario
-        fields = ('timezone', 'sede', 'sedes_administradas', 'is_sede_admin')
+        fields = ('timezone', 'sede', 'sedes_administradas', 'is_sede_admin', 'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento')
 
     def get_is_sede_admin(self, obj):
         return obj.sedes_administradas.exists()
@@ -57,6 +57,20 @@ class UserSerializer(serializers.ModelSerializer):
         # is expected to handle the 'sede' field for PerfilUsuario.
         # For now, assuming PerfilUsuario is created by signal and can be updated later.
         return user
+
+
+class ClientSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source='get_full_name')
+    email = serializers.CharField(source='email')
+    telefono = serializers.CharField(source='perfil.telefono')
+    ciudad = serializers.CharField(source='perfil.ciudad')
+    barrio = serializers.CharField(source='perfil.barrio')
+    genero = serializers.CharField(source='perfil.get_genero_display')
+    age = serializers.IntegerField(source='perfil.age')
+
+    class Meta:
+        model = User
+        fields = ('id', 'full_name', 'email', 'telefono', 'ciudad', 'barrio', 'genero', 'age')
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):

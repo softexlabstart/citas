@@ -195,5 +195,13 @@
   "no_available_slots_for_service": "No se encontraron horarios disponibles para el servicio seleccionado en los próximos 30 días.",
   "find_next_available": "Encontrar Próxima Disponibilidad",
   "error_processing_request": "Error procesando la solicitud.",
-  "searching": "Buscando..."
+  "searching": "Buscando...",
+  "clients": "Clientes",
+  "full_name": "Nombre Completo",
+  "email": "Correo Electrónico",
+  "phone": "Teléfono",
+  "city": "Ciudad",
+  "neighborhood": "Barrio",
+  "gender": "Género",
+  "age": "Edad"
 }

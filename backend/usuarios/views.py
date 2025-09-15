@@ -1,12 +1,13 @@
 from django.contrib.auth import authenticate, login
-from rest_framework import status, generics
+from rest_framework import status, generics, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import UserSerializer, MyTokenObtainPairSerializer
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from .serializers import UserSerializer, MyTokenObtainPairSerializer, ClientSerializer
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 import pytz
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.contrib.auth.models import User
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
@@ -41,3 +42,15 @@ class UserDetailView(APIView):
     def get(self, request, *args, **kwargs):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+class ClientViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    A viewset for viewing client data.
+    Only accessible to admin users.
+    """
+    serializer_class = ClientSerializer
+    permission_classes = [IsAdminUser]
+
+    def get_queryset(self):
+        # Return all non-staff users, as they are considered clients
+        return User.objects.filter(is_staff=False).select_related('perfil')

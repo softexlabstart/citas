@@ -9,9 +9,11 @@ class Command(BaseCommand):
     help = 'Sends email reminders for upcoming appointments.'
 
     def handle(self, *args, **options):
-        # Get appointments scheduled for tomorrow
-        tomorrow = timezone.now().date() + timedelta(days=1)
-        appointments = Cita.objects.filter(fecha__date=tomorrow, estado__in=['Pendiente', 'Confirmada'])
+        # Get appointments scheduled between 5 hours and 5 hours and 15 minutes from now
+        now = timezone.now()
+        reminder_start = now + timedelta(hours=5)
+        reminder_end = reminder_start + timedelta(minutes=15)
+        appointments = Cita.objects.filter(fecha__range=(reminder_start, reminder_end), estado__in=['Pendiente', 'Confirmada'])
 
         for appointment in appointments:
             subject = f"Recordatorio de Cita: {appointment.servicio.nombre}"
