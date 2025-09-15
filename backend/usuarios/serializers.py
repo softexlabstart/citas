@@ -120,6 +120,10 @@ class ClientSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         perfil_data = validated_data.pop('perfil', {})
 
+        # Prevent changes to is_staff and groups for clients
+        validated_data.pop('is_staff', None)
+        validated_data.pop('groups', None)
+
         # Update User instance
         instance.username = validated_data.get('username', instance.username)
         instance.first_name = validated_data.get('first_name', instance.first_name)
