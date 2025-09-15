@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 import pytz
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth.models import User
+from citas.permissions import IsAdminOrSedeAdminOrReadOnly
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
@@ -49,10 +50,10 @@ class UserDetailView(APIView):
 class ClientViewSet(viewsets.ReadOnlyModelViewSet):
     """
     A viewset for viewing client data.
-    Only accessible to admin users.
+    Accessible to admin users and sede administrators.
     """
     serializer_class = ClientSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
     def get_queryset(self):
         # Return all non-staff users, as they are considered clients

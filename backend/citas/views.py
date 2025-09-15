@@ -613,12 +613,10 @@ def admin_report_view(request):
 
             response = AppointmentReportView.as_view()(dummy_request)
 
-            # If it's a CSV response, return it directly
             if isinstance(response, HttpResponse) and response.get('Content-Type') == 'text/csv':
                 return response
             else:
-                # For JSON response, render it in a template
-                # You might want to format this JSON nicely for display
+                
                 return render(request, 'admin/citas/report_results.html', {'report_data': response.data})
     else:
         form = ReportForm()
