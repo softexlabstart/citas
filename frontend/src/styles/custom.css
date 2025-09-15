@@ -1,5 +1,7 @@
 /* Estilos personalizados */
 :root {
+  --primary-color: #0d6efd;
+  --primary-darker: #0b5ed7;
   --primary-hover-bg: #e9ecef;
   --primary-hover-text: #0056b3;
   --icon-color: #6c757d;
@@ -11,32 +13,58 @@
   padding: 0.75rem 1.5rem;
   border-radius: 0.35rem;
   transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
-  color: var(--text-color-soft); /* Tono de gris más suave */
+  color: var(--text-color-soft);
   display: flex;
   align-items: center;
-  gap: 0.75rem; /* Espacio entre icono y texto */
+  gap: 0.75rem;
 }
 
 .nav-link-custom:hover {
-  background-color: var(--primary-hover-bg); /* Un gris muy claro para el hover */
-  color: var(--primary-hover-text); /* Azul más oscuro para el texto en hover */
+  background-color: var(--primary-hover-bg);
+  color: var(--primary-hover-text);
 }
 
 .nav-icon {
-  font-size: 1.3rem; /* Tamaño de los iconos */
-  color: var(--icon-color); /* Color de los iconos */
+  font-size: 1.3rem;
+  color: var(--icon-color);
 }
 
 .nav-link-custom:hover .nav-icon {
-  color: var(--primary-hover-text); /* Color del icono en hover */
+  color: var(--primary-hover-text);
 }
 
 .offcanvas-custom {
-  border-right: 1px solid #dee2e6;
+  background-color: var(--primary-color);
+  color: white;
 }
 
 .offcanvas-header-custom {
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.offcanvas-custom .offcanvas-title {
+  color: white;
+}
+
+.offcanvas-custom .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.offcanvas-custom .nav-link-custom {
+  color: white;
+}
+
+.offcanvas-custom .nav-link-custom:hover {
+  background-color: var(--primary-darker);
+  color: white;
+}
+
+.offcanvas-custom .nav-icon {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.offcanvas-custom .nav-link-custom:hover .nav-icon {
+  color: white;
 }
 
 .footer {
@@ -62,7 +90,6 @@
   backdrop-filter: blur(10px);
 }
 
-/* Custom styles for pill-style tabs to improve visibility */
 .nav-pills .nav-link {
     color: #0d6efd;
 }
@@ -71,7 +98,6 @@
     font-weight: 500;
 }
 
-/* Custom Navbar layout for robust centering */
 .navbar-container-custom {
     display: flex;
     justify-content: space-between;
@@ -93,7 +119,6 @@
     min-width: max-content;
 }
 
-/* Custom styles for Navbar Toggle (Hamburger Icon) */
 .navbar-toggler {
   border: none !important;
   padding: 0.5rem 0.75rem;
