@@ -7,7 +7,7 @@ from .serializers import UserSerializer, MyTokenObtainPairSerializer, ClientSeri
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 import pytz
 from rest_framework_simplejwt.views import TokenObtainPairView
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group # Added Group
 from citas.permissions import IsAdminOrSedeAdmin
 
 class MyTokenObtainPairView(TokenObtainPairView):
@@ -56,5 +56,12 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
     permission_classes = [IsAdminOrSedeAdmin]
 
     def get_queryset(self):
-        # Return all non-staff users, as they are considered clients
-        return User.objects.filter(is_staff=False).select_related('perfil')
+        # Get the Group objects for 'SedeAdmin' and 'Recurso'
+        sede_admin_group = Group.objects.get(name='SedeAdmin')
+        recurso_group = Group.objects.get(name='Recurso')
+
+        # Exclude users who are staff, in SedeAdmin group, or in Recurso group
+        return User.objects.filter(is_staff=False)
+                           .exclude(groups=sede_admin_group)
+                           .exclude(groups=recurso_group)
+                           .select_related('perfil')
