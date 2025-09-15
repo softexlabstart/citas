@@ -47,9 +47,9 @@ class UserDetailView(APIView):
         serializer = UserSerializer(user)
         return Response(serializer.data)
 
-class ClientViewSet(viewsets.ReadOnlyModelViewSet):
+class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
     """
-    A viewset for viewing client data.
+    A viewset for viewing and managing client data.
     Accessible to admin users and sede administrators.
     """
     serializer_class = ClientSerializer

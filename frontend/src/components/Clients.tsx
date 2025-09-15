@@ -1,21 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Spinner, Alert } from 'react-bootstrap';
+import { Table, Spinner, Alert, Button, Modal } from 'react-bootstrap'; // Added Button and Modal
 import { useTranslation } from 'react-i18next';
 import { useApi } from '../hooks/useApi';
 import { Client } from '../interfaces/Client';
 import { getClients } from '../api';
+import ClientForm from './ClientForm'; // Import ClientForm
 
 const Clients: React.FC = () => {
     const { t } = useTranslation();
     const { data: clients, loading, error, request: fetchClients } = useApi(getClients);
+    const [showModal, setShowModal] = useState(false); // State for modal visibility
+    const [editingClient, setEditingClient] = useState<Client | null>(null); // State for client being edited
 
     useEffect(() => {
         fetchClients();
     }, [fetchClients]);
 
+    const handleAddClient = () => {
+        setEditingClient(null); // Clear any previous editing state
+        setShowModal(true);
+    };
+
+    const handleEditClient = (client: Client) => {
+        setEditingClient(client);
+        setShowModal(true);
+    };
+
+    const handleCloseModal = () => {
+        setShowModal(false);
+        setEditingClient(null); // Clear editing state on close
+    };
+
+    const handleSuccess = () => {
+        fetchClients(); // Refresh client list
+        handleCloseModal(); // Close modal
+    };
+
     return (
         <div>
-            <h2>{t('clients')}</h2>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+                <h2>{t('clients')}</h2>
+                <Button variant="primary" onClick={handleAddClient}>
+                    {t('add_client')}
+                </Button>
+            </div>
+            
             {loading && <Spinner animation="border" />}
             {error && <Alert variant="danger">{error}</Alert>}
             {clients && (
@@ -29,6 +58,7 @@ const Clients: React.FC = () => {
                             <th>{t('neighborhood')}</th>
                             <th>{t('gender')}</th>
                             <th>{t('age')}</th>
+                            <th>{t('actions')}</th> {/* Added actions column */}
                         </tr>
                     </thead>
                     <tbody>
@@ -41,11 +71,27 @@ const Clients: React.FC = () => {
                                 <td>{client.barrio}</td>
                                 <td>{client.genero}</td>
                                 <td>{client.age}</td>
+                                <td>
+                                    <Button variant="info" size="sm" onClick={() => handleEditClient(client)} className="me-2">
+                                        {t('edit')}
+                                    </Button>
+                                    {/* Add delete button later if needed */}
+                                </td>
                             </tr>
                         ))}
                     </tbody>
                 </Table>
             )}
+
+            {/* Client Form Modal */}
+            <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>{editingClient ? t('edit_client') : t('add_client')}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <ClientForm client={editingClient} onSuccess={handleSuccess} onCancel={handleCloseModal} />
+                </Modal.Body>
+            </Modal>
         </div>
     );
 };

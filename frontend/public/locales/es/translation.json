@@ -203,5 +203,18 @@
   "city": "Ciudad",
   "neighborhood": "Barrio",
   "gender": "Género",
-  "age": "Edad"
+  "age": "Edad",
+  "add_client": "Añadir Cliente",
+  "edit_client": "Editar Cliente",
+  "username": "Nombre de Usuario",
+  "first_name": "Nombre",
+  "last_name": "Apellido",
+  "date_of_birth": "Fecha de Nacimiento",
+  "select_gender": "Seleccionar Género",
+  "male": "Masculino",
+  "female": "Femenino",
+  "other": "Otro",
+  "save": "Guardar",
+  "client_saved_successfully": "Cliente guardado exitosamente.",
+  "error_saving_client": "Error al guardar el cliente."
 }
