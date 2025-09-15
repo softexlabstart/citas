@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import { useApi } from '../hooks/useApi';
 import { Client } from '../interfaces/Client';
-import { getClients } from '../api'; // Assuming getClients is used for fetching existing data
+import { getClients, createClient, updateClient } from '../api'; // Assuming getClients is used for fetching existing data
 
 interface ClientFormProps {
     client?: Client; // Optional: if editing an existing client
@@ -24,7 +24,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onSuccess, onCancel }) 
     const [genero, setGenero] = useState(client?.genero || '');
     const [fechaNacimiento, setFechaNacimiento] = useState(client?.fecha_nacimiento || '');
 
-    const { loading, error, request: saveClient } = useApi(client ? updateClient : createClient);
+        const { loading: createLoading, error: createError, request: callCreateClient } = useApi(createClient);
+    const { loading: updateLoading, error: updateError, request: callUpdateClient } = useApi(updateClient);
+
+    const loading = createLoading || updateLoading;
+    const error = createError || updateError;
 
     useEffect(() => {
         if (client) {
@@ -58,21 +62,25 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onSuccess, onCancel }) 
         };
 
         let success = false;
+        let currentError = null;
+
         if (client) {
             // Update existing client
-            const { success: updateSuccess } = await saveClient(client.id, clientData);
-            success = updateSuccess;
+            const result = await callUpdateClient(client.id, clientData);
+            success = result.success;
+            currentError = result.error;
         } else {
             // Create new client
-            const { success: createSuccess } = await saveClient(clientData);
-            success = createSuccess;
+            const result = await callCreateClient(clientData);
+            success = result.success;
+            currentError = result.error;
         }
 
         if (success) {
             toast.success(t('client_saved_successfully'));
             onSuccess();
-        } else if (error) {
-            toast.error(t('error_saving_client') + ": " + error);
+        } else if (currentError) {
+            toast.error(t('error_saving_client') + ": " + currentError);
         }
     };
 
