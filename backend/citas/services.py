@@ -92,6 +92,8 @@ def get_available_slots(colaborador_id, fecha_str, servicio_id):
         colaborador = Colaborador.objects.get(id=colaborador_id)
         servicio = Servicio.objects.get(id=servicio_id)
         intervalo = timedelta(minutes=servicio.duracion_estimada)
+        # Define a smaller step for generating potential slots
+        step = timedelta(minutes=15)
     except (ValueError, Colaborador.DoesNotExist, Servicio.DoesNotExist):
         raise ValueError('Formato de fecha, ID de colaborador o ID de servicio inválido.')
 
@@ -111,6 +113,7 @@ def get_available_slots(colaborador_id, fecha_str, servicio_id):
     ).order_by('fecha_inicio')
     
     available_slots = []
+    processed_slots = set()
 
     for horario in horarios_colaborador:
         schedule_start = timezone.make_aware(datetime.combine(fecha, horario.hora_inicio))
@@ -132,27 +135,35 @@ def get_available_slots(colaborador_id, fecha_str, servicio_id):
                 busy_times.append((start, end))
         busy_times.sort()
 
-        last_busy_end = schedule_start
-        for busy_start, busy_end in busy_times:
-            current_time = last_busy_end
-            while current_time + intervalo <= busy_start:
-                available_slots.append({
-                    'start': current_time.isoformat(),
-                    'end': (current_time + intervalo).isoformat(),
-                    'status': 'disponible'
-                })
-                current_time += intervalo
-            last_busy_end = max(last_busy_end, busy_end)
+        current_time = schedule_start
+        while current_time < schedule_end:
+            slot_start = current_time
+            slot_end = slot_start + intervalo
 
-        current_time = last_busy_end
-        while current_time + intervalo <= schedule_end:
-            available_slots.append({
-                'start': current_time.isoformat(),
-                'end': (current_time + intervalo).isoformat(),
-                'status': 'disponible'
-            })
-            current_time += intervalo
+            if slot_end > schedule_end:
+                break
+
+            is_available = True
+            for busy_start, busy_end in busy_times:
+                if slot_start < busy_end and slot_end > busy_start:
+                    is_available = False
+                    # Move current_time to the end of the busy slot to avoid redundant checks
+                    current_time = busy_end
+                    break
             
+            if is_available:
+                if slot_start not in processed_slots:
+                    available_slots.append({
+                        'start': slot_start.isoformat(),
+                        'end': slot_end.isoformat(),
+                        'status': 'disponible'
+                    })
+                    processed_slots.add(slot_start)
+                current_time += step
+            # If not available, current_time was already moved to the end of the conflict
+    
+    # Sort the final list of slots
+    available_slots.sort(key=lambda x: x['start'])
     return available_slots
 
 def find_next_available_slots(servicio_id, sede_id, limit=5):
