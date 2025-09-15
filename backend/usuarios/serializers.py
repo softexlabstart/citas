@@ -61,7 +61,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ClientSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='get_full_name')
-    email = serializers.CharField(source='email')
+    email = serializers.EmailField()
     telefono = serializers.CharField(source='perfil.telefono')
     ciudad = serializers.CharField(source='perfil.ciudad')
     barrio = serializers.CharField(source='perfil.barrio')
