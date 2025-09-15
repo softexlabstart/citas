@@ -7,7 +7,7 @@ import { Client } from '../interfaces/Client';
 import { getClients, createClient, updateClient } from '../api'; // Assuming getClients is used for fetching existing data
 
 interface ClientFormProps {
-    client?: Client; // Optional: if editing an existing client
+    client?: Client | null; // Optional: if editing an existing client
     onSuccess: () => void;
     onCancel: () => void;
 }
