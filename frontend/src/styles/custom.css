@@ -92,3 +92,22 @@
     position: absolute;
     min-width: max-content;
 }
+
+/* Custom styles for Navbar Toggle (Hamburger Icon) */
+.navbar-toggler {
+  border: none !important;
+  padding: 0.5rem 0.75rem;
+  font-size: 1.25rem;
+  line-height: 1;
+  background-color: transparent !important;
+  border-radius: 0.35rem;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.navbar-toggler:hover {
+  background-color: #f8f9fa !important;
+}
+
+.navbar-toggler:focus {
+    box-shadow: none;
+}

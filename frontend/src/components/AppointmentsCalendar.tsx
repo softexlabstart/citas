@@ -125,9 +125,9 @@ const AppointmentsCalendar: React.FC = () => {
                 </Col>
                 <Col md={4}>
                     <Form.Group>
-                        <Form.Label>{t('filter_by_resource')}</Form.Label>
+                        <Form.Label>{t('filtrar por colaborador')}</Form.Label>
                         <Form.Control as="select" value={selectedResourceId} onChange={(e) => setSelectedResourceId(e.target.value)} disabled={loadingRecursos}>
-                            <option value="">{t('all_resources')}</option>
+                            <option value="">{t('todos los colaboradores')}</option>
                             {recursos?.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
                         </Form.Control>
                     </Form.Group>
