@@ -88,11 +88,10 @@ class ServicioViewSet(viewsets.ModelViewSet):
         if sede_id:
             return queryset.filter(sede_id=sede_id)
 
-        if user.is_staff:
+        # If user is authenticated, they can see all services.
+        # Write permissions are handled by IsAdminOrSedeAdminOrReadOnly.
+        if user.is_authenticated:
             return queryset
-
-        if hasattr(user, 'perfil') and user.perfil and user.perfil.sedes_administradas.exists():
-            return queryset.filter(sede__in=user.perfil.sedes_administradas.all())
         
         return queryset.none()
 
