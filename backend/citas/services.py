@@ -188,27 +188,30 @@ def find_next_available_slots(servicio_id, sede_id, limit=5):
     if not colaboradores.exists():
         return []
 
-    found_slots = []
+    all_found_slots = []
     current_date = timezone.now().date()
-    days_to_check = 30 # Search limit to avoid infinite loops
+    days_to_check = 30
 
     for _ in range(days_to_check):
-        if len(found_slots) >= limit:
-            break
-
+        # Collect all slots for the current day
+        daily_slots_for_all_colaboradores = []
         for colaborador in colaboradores:
-            if len(found_slots) >= limit:
-                break
-            
             date_str = current_date.strftime('%Y-%m-%d')
             daily_slots = get_available_slots(colaborador.id, date_str, servicio_id)
             
             for slot in daily_slots:
                 if slot['status'] == 'disponible' and datetime.fromisoformat(slot['start']) > timezone.now():
-                    found_slots.append({ 'recurso': { 'id': colaborador.id, 'nombre': colaborador.nombre }, 'start': slot['start'], 'end': slot['end'] })
-                    if len(found_slots) >= limit:
-                        break
+                    daily_slots_for_all_colaboradores.append({ 'recurso': { 'id': colaborador.id, 'nombre': colaborador.nombre }, 'start': slot['start'], 'end': slot['end'] })
+
+        # Sort the day's slots and add them to the main list
+        daily_slots_for_all_colaboradores.sort(key=lambda x: x['start'])
+        all_found_slots.extend(daily_slots_for_all_colaboradores)
+
+        # If we have enough slots, we can stop
+        if len(all_found_slots) >= limit:
+            break
         
         current_date += timedelta(days=1)
 
-    return found_slots
+    # Return only the first 'limit' slots from the sorted list
+    return all_found_slots[:limit]
