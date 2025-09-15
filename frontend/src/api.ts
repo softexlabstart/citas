@@ -108,11 +108,12 @@ export const getRecursos = (sedeId?: string) => {
 export const addRecurso = (recurso: Partial<Recurso>) => api.post<Recurso>('/citas/recursos/', recurso);
 export const updateRecurso = (id: number, recurso: Partial<Recurso>) => api.patch<Recurso>(`/citas/recursos/${id}/`, recurso);
 export const deleteRecurso = (id: number) => api.delete(`/citas/recursos/${id}/`);
-export const getDisponibilidad = (fecha: string, recursoId: number, sedeId: string) => {
+export const getDisponibilidad = (fecha: string, recursoId: number, sedeId: string, servicioId: string) => {
     const params = new URLSearchParams({
         fecha,
         recurso_id: String(recursoId),
         sede_id: sedeId,
+        servicio_id: servicioId,
     });
     return api.get(`/citas/disponibilidad/?${params.toString()}`);
 };

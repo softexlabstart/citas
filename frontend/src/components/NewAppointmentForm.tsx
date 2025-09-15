@@ -32,7 +32,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
     setSelectedRecurso
   } = useAppointmentForm();
 
-  const { data: availability, loading: slotsLoading, request: fetchAvailableSlots, error: availabilityError } = useApi<{ disponibilidad: any[] }, [string, number, string]>(getDisponibilidad);
+  const { data: availability, loading: slotsLoading, request: fetchAvailableSlots, error: availabilityError } = useApi<{ disponibilidad: any[] }, [string, number, string, string]>(getDisponibilidad);
   const { loading: isSubmitting, request: submitAppointment, error: submitError } = useApi(addAppointment);
   const { data: nextAvailable, loading: nextAvailableLoading, request: fetchNextAvailable, error: nextAvailableError } = useApi<NextAvailableSlot[], [string, string]>(getNextAvailableSlots);
 
@@ -61,10 +61,10 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
   const availableSlots = availability?.disponibilidad.filter(slot => slot.status === 'disponible') || [];
 
   useEffect(() => {
-    if (date && selectedRecurso && selectedSede) {
-      fetchAvailableSlots(date, parseInt(selectedRecurso, 10), selectedSede);
+    if (date && selectedRecurso && selectedSede && selectedServicio) {
+      fetchAvailableSlots(date, parseInt(selectedRecurso, 10), selectedSede, selectedServicio);
     }
-  }, [date, selectedRecurso, selectedSede, fetchAvailableSlots]);
+  }, [date, selectedRecurso, selectedSede, selectedServicio, fetchAvailableSlots]);
 
   const handleFindNextAvailable = () => {
     if (selectedServicio && selectedSede) {
