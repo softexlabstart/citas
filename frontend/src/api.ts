@@ -254,3 +254,4 @@ export const marcarAsistencia = (id: number, asistio: boolean, comentario?: stri
 export const getClients = () => api.get<Client[]>('/clients/');
 export const createClient = (clientData: any) => api.post<Client>('/clients/', clientData);
 export const updateClient = (id: number, clientData: any) => api.patch<Client>(`/clients/${id}/`, clientData);
+export const deleteClient = (id: number) => api.delete(`/clients/${id}/`);

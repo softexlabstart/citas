@@ -3,14 +3,27 @@ import { Table, Spinner, Alert, Button, Modal } from 'react-bootstrap'; // Added
 import { useTranslation } from 'react-i18next';
 import { useApi } from '../hooks/useApi';
 import { Client } from '../interfaces/Client';
-import { getClients } from '../api';
+import { getClients, deleteClient } from '../api';
 import ClientForm from './ClientForm'; // Import ClientForm
 
 const Clients: React.FC = () => {
     const { t } = useTranslation();
     const { data: clients, loading, error, request: fetchClients } = useApi(getClients);
+    const { loading: deleteLoading, error: deleteError, request: callDeleteClient } = useApi(deleteClient);
     const [showModal, setShowModal] = useState(false); // State for modal visibility
     const [editingClient, setEditingClient] = useState<Client | null>(null); // State for client being edited
+
+    const handleDeleteClient = async (clientId: number) => {
+        if (window.confirm(t('confirm_delete_client'))) {
+            const { success } = await callDeleteClient(clientId);
+            if (success) {
+                toast.success(t('client_deleted_successfully'));
+                fetchClients(); // Refresh client list
+            } else if (deleteError) {
+                toast.error(t('error_deleting_client') + ": " + deleteError);
+            }
+        }
+    };
 
     useEffect(() => {
         fetchClients();
@@ -75,7 +88,9 @@ const Clients: React.FC = () => {
                                     <Button variant="info" size="sm" onClick={() => handleEditClient(client)} className="me-2">
                                         {t('edit')}
                                     </Button>
-                                    {/* Add delete button later if needed */}
+                                    <Button variant="danger" size="sm" onClick={() => handleDeleteClient(client.id)}>
+                                        {t('delete')}
+                                    </Button>
                                 </td>
                             </tr>
                         ))}
