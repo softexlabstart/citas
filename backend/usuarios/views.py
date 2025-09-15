@@ -40,7 +40,10 @@ class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        serializer = UserSerializer(request.user)
+        user = request.user
+        # Preload related data for the user's profile
+        user = User.objects.prefetch_related('perfil__sedes_administradas').get(pk=user.pk)
+        serializer = UserSerializer(user)
         return Response(serializer.data)
 
 class ClientViewSet(viewsets.ReadOnlyModelViewSet):
