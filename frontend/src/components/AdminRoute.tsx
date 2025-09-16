@@ -10,12 +10,12 @@ const AdminRoute: React.FC = () => {
         return <Navigate to="/login" />;
     }
 
-    if (!user.is_staff) {
-        // Logged in but not an admin, redirect to home page
+    if (!(user.is_staff || user.perfil?.is_sede_admin || user.groups?.includes('Recurso'))) {
+        // Logged in but not allowed, redirect to home page
         return <Navigate to="/" />;
     }
 
-    // Logged in and is an admin, render the child routes
+    // Logged in and has access, render the child routes
     return <Outlet />;
 };
 
