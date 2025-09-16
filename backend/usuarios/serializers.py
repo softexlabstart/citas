@@ -63,7 +63,7 @@ class ClientSerializer(serializers.ModelSerializer):
     telefono = serializers.CharField(source='perfil.telefono', required=False, allow_blank=True, allow_null=True)
     ciudad = serializers.CharField(source='perfil.ciudad', required=False, allow_blank=True, allow_null=True)
     barrio = serializers.CharField(source='perfil.barrio', required=False, allow_blank=True, allow_null=True)
-    genero = serializers.CharField(source='perfil.genero', required=False, allow_blank=True, allow_null=True)
+    genero = serializers.ChoiceField(choices=PerfilUsuario.GENERO_CHOICES, source='perfil.genero', required=False, allow_null=True)
     fecha_nacimiento = serializers.DateField(source='perfil.fecha_nacimiento', required=False, allow_null=True)
     full_name = serializers.SerializerMethodField()
     age = serializers.IntegerField(source='perfil.age', read_only=True)
@@ -84,20 +84,25 @@ class ClientSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
-        perfil_data = validated_data.pop('perfil', None)
+        perfil_data = validated_data.pop('perfil', {})
         
-        # Update User fields from validated_data
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-
-        # Update PerfilUsuario fields
+        # User fields
+        instance.username = validated_data.get('username', instance.username)
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.email = validated_data.get('email', instance.email)
+        
+        # Perfil fields
         if perfil_data:
             perfil = instance.perfil
-            for attr, value in perfil_data.items():
-                setattr(perfil, attr, value)
+            perfil.telefono = perfil_data.get('telefono', perfil.telefono)
+            perfil.ciudad = perfil_data.get('ciudad', perfil.ciudad)
+            perfil.barrio = perfil_data.get('barrio', perfil.barrio)
+            perfil.genero = perfil_data.get('genero', perfil.genero)
+            perfil.fecha_nacimiento = perfil_data.get('fecha_nacimiento', perfil.fecha_nacimiento)
             perfil.save()
 
+        instance.save()
         return instance
 
 
