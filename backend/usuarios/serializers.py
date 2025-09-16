@@ -66,12 +66,8 @@ class ClientSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(required=False, allow_blank=True)
     email = serializers.EmailField(required=True)
 
-    # Fields from PerfilUsuario model
-    telefono = serializers.CharField(source='perfil.telefono', required=False, allow_blank=True)
-    ciudad = serializers.CharField(source='perfil.ciudad', required=False, allow_blank=True)
-    barrio = serializers.CharField(source='perfil.barrio', required=False, allow_blank=True)
-    genero = serializers.CharField(source='perfil.genero', required=False, allow_blank=True) # Use 'genero' directly for writing
-    fecha_nacimiento = serializers.DateField(source='perfil.fecha_nacimiento', required=False, allow_null=True)
+    # Nested PerfilUsuario serializer
+    perfil = PerfilUsuarioSerializer()
 
     # Read-only fields (properties)
     full_name = serializers.SerializerMethodField()
@@ -86,7 +82,7 @@ class ClientSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'username', 'first_name', 'last_name', 'email',
-            'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento',
+            'perfil', # Include the nested perfil serializer
             'full_name', 'age'
         )
         read_only_fields = ('id',)
@@ -100,8 +96,6 @@ class ClientSerializer(serializers.ModelSerializer):
             email=validated_data['email'],
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', ''),
-            # No password for existing users, or generate a random one if needed
-            # For client management, we don't typically set passwords here
         )
 
         # Create or update PerfilUsuario instance
@@ -118,11 +112,7 @@ class ClientSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
-        # Extract PerfilUsuario related fields from validated_data
-        perfil_fields = [
-            'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento'
-        ]
-        perfil_data = {field: validated_data.pop(field, None) for field in perfil_fields}
+        perfil_data = validated_data.pop('perfil', {})
 
         # Prevent changes to is_staff and groups for clients
         validated_data.pop('is_staff', None)
@@ -137,9 +127,8 @@ class ClientSerializer(serializers.ModelSerializer):
 
         # Update PerfilUsuario instance
         perfil, created = PerfilUsuario.objects.get_or_create(user=instance)
-        for field, value in perfil_data.items():
-            if value is not None: # Only update if a value was provided in the request
-                setattr(perfil, field, value)
+        for attr, value in perfil_data.items():
+            setattr(perfil, attr, value)
         perfil.save()
 
         return instance
