@@ -60,71 +60,41 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class ClientSerializer(serializers.ModelSerializer):
-    # Fields from User model
-    username = serializers.CharField(required=True)
-    first_name = serializers.CharField(required=False, allow_blank=True)
-    last_name = serializers.CharField(required=False, allow_blank=True)
-    email = serializers.EmailField(required=True)
-
-    # Nested PerfilUsuario serializer
-    perfil = PerfilUsuarioSerializer()
-
-    # Read-only fields (properties)
+    telefono = serializers.CharField(source='perfil.telefono', required=False, allow_blank=True, allow_null=True)
+    ciudad = serializers.CharField(source='perfil.ciudad', required=False, allow_blank=True, allow_null=True)
+    barrio = serializers.CharField(source='perfil.barrio', required=False, allow_blank=True, allow_null=True)
+    genero = serializers.CharField(source='perfil.genero', required=False, allow_blank=True, allow_null=True)
+    fecha_nacimiento = serializers.DateField(source='perfil.fecha_nacimiento', required=False, allow_null=True)
     full_name = serializers.SerializerMethodField()
     age = serializers.IntegerField(source='perfil.age', read_only=True)
+
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento', 'full_name', 'age')
 
     def get_full_name(self, obj):
         if obj.first_name and obj.last_name:
             return f"{obj.first_name} {obj.last_name}".strip()
         return obj.username
 
-    class Meta:
-        model = User
-        fields = (
-            'id', 'username', 'first_name', 'last_name', 'email',
-            'perfil', # Include the nested perfil serializer
-            'full_name', 'age'
-        )
-        read_only_fields = ('id',)
-
     def create(self, validated_data):
         perfil_data = validated_data.pop('perfil', {})
-        
-        # Create User instance
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            first_name=validated_data.get('first_name', ''),
-            last_name=validated_data.get('last_name', ''),
-        )
-
-        # Create or update PerfilUsuario instance
-        PerfilUsuario.objects.update_or_create(
-            user=user,
-            defaults={
-                'telefono': perfil_data.get('telefono'),
-                'ciudad': perfil_data.get('ciudad'),
-                'barrio': perfil_data.get('barrio'),
-                'genero': perfil_data.get('genero'),
-                'fecha_nacimiento': perfil_data.get('fecha_nacimiento'),
-            }
-        )
+        user = User.objects.create_user(**validated_data)
+        PerfilUsuario.objects.create(user=user, **perfil_data)
         return user
 
     def update(self, instance, validated_data):
         perfil_data = validated_data.pop('perfil', {})
-
-        # Update User instance
+        
+        # Update User fields
         instance.username = validated_data.get('username', instance.username)
         instance.first_name = validated_data.get('first_name', instance.first_name)
         instance.last_name = validated_data.get('last_name', instance.last_name)
         instance.email = validated_data.get('email', instance.email)
         instance.save()
 
-        # Get or create PerfilUsuario instance
-        perfil, created = PerfilUsuario.objects.get_or_create(user=instance)
-
-        # Update PerfilUsuario instance
+        # Update PerfilUsuario fields
+        perfil = instance.perfil
         if perfil_data:
             perfil.telefono = perfil_data.get('telefono', perfil.telefono)
             perfil.ciudad = perfil_data.get('ciudad', perfil.ciudad)
