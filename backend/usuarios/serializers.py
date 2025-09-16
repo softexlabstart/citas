@@ -114,10 +114,6 @@ class ClientSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         perfil_data = validated_data.pop('perfil', {})
 
-        # Prevent changes to is_staff and groups for clients
-        validated_data.pop('is_staff', None)
-        validated_data.pop('groups', None)
-
         # Update User instance
         instance.username = validated_data.get('username', instance.username)
         instance.first_name = validated_data.get('first_name', instance.first_name)
@@ -126,11 +122,14 @@ class ClientSerializer(serializers.ModelSerializer):
         instance.save()
 
         # Update PerfilUsuario instance
-        perfil, created = PerfilUsuario.objects.get_or_create(user=instance)
-        print(f"Perfil data received in update: {perfil_data}") # Debug print
-        for attr, value in perfil_data.items():
-            setattr(perfil, attr, value)
-        perfil.save()
+        if hasattr(instance, 'perfil') and perfil_data:
+            perfil = instance.perfil
+            perfil.telefono = perfil_data.get('telefono', perfil.telefono)
+            perfil.ciudad = perfil_data.get('ciudad', perfil.ciudad)
+            perfil.barrio = perfil_data.get('barrio', perfil.barrio)
+            perfil.genero = perfil_data.get('genero', perfil.genero)
+            perfil.fecha_nacimiento = perfil_data.get('fecha_nacimiento', perfil.fecha_nacimiento)
+            perfil.save()
 
         return instance
 
