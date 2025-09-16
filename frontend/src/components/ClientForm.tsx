@@ -8,7 +8,7 @@ import { getClients, createClient, updateClient } from '../api'; // Assuming get
 
 interface ClientFormProps {
     client?: Client | null; // Optional: if editing an existing client
-    onSuccess: () => void;
+    onSuccess: (updatedClient?: Client) => void;
     onCancel: () => void;
 }
 
@@ -61,26 +61,24 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onSuccess, onCancel }) 
             },
         };
 
-        let success = false;
-        let currentError = null;
-
         if (client) {
             // Update existing client
             const result = await callUpdateClient(client.id, clientData);
-            success = result.success;
-            currentError = result.error;
+            if (result.success && result.data) {
+                toast.success(t('client_saved_successfully'));
+                onSuccess(result.data);
+            } else if (result.error) {
+                toast.error(t('error_saving_client') + ": " + result.error);
+            }
         } else {
             // Create new client
             const result = await callCreateClient(clientData);
-            success = result.success;
-            currentError = result.error;
-        }
-
-        if (success) {
-            toast.success(t('client_saved_successfully'));
-            onSuccess();
-        } else if (currentError) {
-            toast.error(t('error_saving_client') + ": " + currentError);
+            if (result.success) {
+                toast.success(t('client_saved_successfully'));
+                onSuccess();
+            } else if (result.error) {
+                toast.error(t('error_saving_client') + ": " + result.error);
+            }
         }
     };
 

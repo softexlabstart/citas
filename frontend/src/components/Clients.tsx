@@ -9,7 +9,7 @@ import ClientForm from './ClientForm'; // Import ClientForm
 
 const Clients: React.FC = () => {
     const { t } = useTranslation();
-    const { data: clients, loading, error, request: fetchClients } = useApi(getClients);
+    const { data: clients, loading, error, request: fetchClients, setData: setClients } = useApi(getClients);
     const { loading: deleteLoading, error: deleteError, request: callDeleteClient } = useApi(deleteClient);
     const [showModal, setShowModal] = useState(false); // State for modal visibility
     const [editingClient, setEditingClient] = useState<Client | null>(null); // State for client being edited
@@ -45,9 +45,19 @@ const Clients: React.FC = () => {
         setEditingClient(null); // Clear editing state on close
     };
 
-    const handleSuccess = () => {
-        fetchClients(); // Refresh client list
-        handleCloseModal(); // Close modal
+    const handleSuccess = (updatedClient?: Client) => {
+        if (updatedClient) {
+            // Update existing client in the list
+            setClients(
+                clients?.map((client) =>
+                    client.id === updatedClient.id ? updatedClient : client
+                ) || null
+            );
+        } else {
+            // New client was added, so we need to refetch the whole list
+            fetchClients();
+        }
+        handleCloseModal();
     };
 
     return (

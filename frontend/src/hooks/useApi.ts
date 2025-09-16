@@ -26,5 +26,9 @@ export const useApi = <T, P extends any[]>(apiFunc: (...args: P) => Promise<{ da
         }
     }, [apiFunc]);
 
-    return { ...state, request };
+    const setData = (data: T) => {
+        setState(prevState => ({ ...prevState, data }));
+    };
+
+    return { ...state, request, setData };
 };
