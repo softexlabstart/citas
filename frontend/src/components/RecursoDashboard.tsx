@@ -45,7 +45,28 @@ const RecursoDashboard = () => {
 
     return (
         <div>
-            <h1>Mis Citas</h1>
+            <h1>Panel de Recurso</h1>
+            <div className="d-flex flex-wrap gap-4 mb-4">
+                <a href="/reports" className="text-decoration-none">
+                    <div className="card shadow-sm p-4 text-center dashboard-card-hover">
+                        <h5>Informes</h5>
+                        <p>Accede a los reportes de citas y servicios.</p>
+                    </div>
+                </a>
+                <a href="/clients" className="text-decoration-none">
+                    <div className="card shadow-sm p-4 text-center dashboard-card-hover">
+                        <h5>Clientes</h5>
+                        <p>Consulta y gestiona los clientes.</p>
+                    </div>
+                </a>
+                <a href="/marketing" className="text-decoration-none">
+                    <div className="card shadow-sm p-4 text-center dashboard-card-hover">
+                        <h5>Marketing</h5>
+                        <p>Envía campañas y comunicaciones.</p>
+                    </div>
+                </a>
+            </div>
+            <h2>Mis Citas</h2>
             <Table striped bordered hover responsive>
                 <thead>
                     <tr>
