@@ -127,6 +127,7 @@ class ClientSerializer(serializers.ModelSerializer):
 
         # Update PerfilUsuario instance
         perfil, created = PerfilUsuario.objects.get_or_create(user=instance)
+        print(f"Perfil data received in update: {perfil_data}") # Debug print
         for attr, value in perfil_data.items():
             setattr(perfil, attr, value)
         perfil.save()
