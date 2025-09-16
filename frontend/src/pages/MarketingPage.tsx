@@ -22,7 +22,15 @@ const MarketingPage: React.FC = () => {
                 const response = await fetchClientsApi();
                 // Assuming getClients returns PaginatedResponse<Client>
                 // Adjust if getClients returns Client[] directly
-                setClients(response.data.results || response.data);
+                type PaginatedResponse<T> = { results: T[] };
+                const data = response.data as Client[] | PaginatedResponse<Client>;
+                if (Array.isArray(data)) {
+                    setClients(data);
+                } else if ('results' in data && Array.isArray(data.results)) {
+                    setClients(data.results);
+                } else {
+                    setClients([]);
+                }
             } catch (err) {
                 console.error('Error fetching clients:', err);
                 toast.error(t('error_fetching_clients'));
