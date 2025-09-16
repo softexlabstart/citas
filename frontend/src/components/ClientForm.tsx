@@ -52,13 +52,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onSuccess, onCancel }) 
             first_name: firstName,
             last_name: lastName,
             email,
-            perfil: {
-                telefono,
-                ciudad,
-                barrio,
-                genero,
-                fecha_nacimiento: fechaNacimiento,
-            },
+            telefono,
+            ciudad,
+            barrio,
+            genero,
+            fecha_nacimiento: fechaNacimiento,
         };
 
         if (client) {

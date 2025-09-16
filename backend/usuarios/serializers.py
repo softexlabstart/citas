@@ -60,37 +60,67 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class ClientSerializer(serializers.ModelSerializer):
-    telefono = serializers.CharField(source='perfil.telefono', required=False, allow_blank=True, allow_null=True)
-    ciudad = serializers.CharField(source='perfil.ciudad', required=False, allow_blank=True, allow_null=True)
-    barrio = serializers.CharField(source='perfil.barrio', required=False, allow_blank=True, allow_null=True)
-    genero = serializers.ChoiceField(choices=PerfilUsuario.GENERO_CHOICES, source='perfil.genero', required=False, allow_null=True)
-    fecha_nacimiento = serializers.DateField(source='perfil.fecha_nacimiento', required=False, allow_null=True)
-    full_name = serializers.SerializerMethodField()
+    # Perfil fields (now flat)
+    telefono = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    ciudad = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    barrio = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    genero = serializers.ChoiceField(choices=PerfilUsuario.GENERO_CHOICES, required=False, allow_null=True)
+    fecha_nacimiento = serializers.DateField(required=False, allow_null=True)
+
+    # Read-only fields
+    full_name = serializers.SerializerMethodField(read_only=True)
     age = serializers.IntegerField(source='perfil.age', read_only=True)
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento', 'full_name', 'age')
+        fields = (
+            'id', 'username', 'first_name', 'last_name', 'email',
+            'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento',
+            'full_name', 'age'
+        )
 
     def get_full_name(self, obj):
         if obj.first_name and obj.last_name:
             return f"{obj.first_name} {obj.last_name}".strip()
         return obj.username
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        perfil = instance.perfil
+        if perfil:
+            representation['telefono'] = perfil.telefono
+            representation['ciudad'] = perfil.ciudad
+            representation['barrio'] = perfil.barrio
+            representation['genero'] = perfil.genero
+            representation['fecha_nacimiento'] = perfil.fecha_nacimiento
+        return representation
+
     def create(self, validated_data):
-        perfil_data = validated_data.pop('perfil', {})
+        perfil_fields = ['telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento']
+        perfil_data = {field: validated_data.pop(field) for field in perfil_fields if field in validated_data}
+        
         user = User.objects.create_user(**validated_data)
         PerfilUsuario.objects.create(user=user, **perfil_data)
         return user
 
     def update(self, instance, validated_data):
-        perfil_data = validated_data.pop('perfil', {})
+        perfil = instance.perfil
         
-        if perfil_data and 'barrio' in perfil_data:
-            perfil = instance.perfil
-            perfil.barrio = perfil_data.get('barrio')
-            perfil.save()
-
+        # User fields
+        instance.username = validated_data.get('username', instance.username)
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.email = validated_data.get('email', instance.email)
+        
+        # Perfil fields
+        perfil.telefono = validated_data.get('telefono', perfil.telefono)
+        perfil.ciudad = validated_data.get('ciudad', perfil.ciudad)
+        perfil.barrio = validated_data.get('barrio', perfil.barrio)
+        perfil.genero = validated_data.get('genero', perfil.genero)
+        perfil.fecha_nacimiento = validated_data.get('fecha_nacimiento', perfil.fecha_nacimiento)
+        
+        perfil.save()
+        instance.save()
         return instance
 
 
