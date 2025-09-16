@@ -86,23 +86,11 @@ class ClientSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         perfil_data = validated_data.pop('perfil', {})
         
-        # User fields
-        instance.username = validated_data.get('username', instance.username)
-        instance.first_name = validated_data.get('first_name', instance.first_name)
-        instance.last_name = validated_data.get('last_name', instance.last_name)
-        instance.email = validated_data.get('email', instance.email)
-        
-        # Perfil fields
-        if perfil_data:
+        if perfil_data and 'barrio' in perfil_data:
             perfil = instance.perfil
-            perfil.telefono = perfil_data.get('telefono', perfil.telefono)
-            perfil.ciudad = perfil_data.get('ciudad', perfil.ciudad)
-            perfil.barrio = perfil_data.get('barrio', perfil.barrio)
-            perfil.genero = perfil_data.get('genero', perfil.genero)
-            perfil.fecha_nacimiento = perfil_data.get('fecha_nacimiento', perfil.fecha_nacimiento)
+            perfil.barrio = perfil_data.get('barrio')
             perfil.save()
 
-        instance.save()
         return instance
 
 
