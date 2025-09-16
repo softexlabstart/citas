@@ -5,7 +5,9 @@ import { toast } from 'react-toastify'; // Added toast import
 import { useApi } from '../hooks/useApi';
 import { Client } from '../interfaces/Client';
 import { getClients, deleteClient } from '../api';
+import ClientForm from './ClientForm'; // Import ClientForm
 import ClientHistoryModal from './ClientHistoryModal'; // Import ClientHistoryModal
+
 
 const Clients: React.FC = () => {
     const { t } = useTranslation();
