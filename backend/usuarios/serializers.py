@@ -118,7 +118,11 @@ class ClientSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
-        perfil_data = validated_data.pop('perfil', {})
+        # Extract PerfilUsuario related fields from validated_data
+        perfil_fields = [
+            'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento'
+        ]
+        perfil_data = {field: validated_data.pop(field, None) for field in perfil_fields}
 
         # Prevent changes to is_staff and groups for clients
         validated_data.pop('is_staff', None)
@@ -133,11 +137,9 @@ class ClientSerializer(serializers.ModelSerializer):
 
         # Update PerfilUsuario instance
         perfil, created = PerfilUsuario.objects.get_or_create(user=instance)
-        perfil.telefono = perfil_data.get('telefono', perfil.telefono)
-        perfil.ciudad = perfil_data.get('ciudad', perfil.ciudad)
-        perfil.barrio = perfil_data.get('barrio', perfil.barrio)
-        perfil.genero = perfil_data.get('genero', perfil.genero)
-        perfil.fecha_nacimiento = perfil_data.get('fecha_nacimiento', perfil.fecha_nacimiento)
+        for field, value in perfil_data.items():
+            if value is not None: # Only update if a value was provided in the request
+                setattr(perfil, field, value)
         perfil.save()
 
         return instance
