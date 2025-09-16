@@ -121,9 +121,11 @@ class ClientSerializer(serializers.ModelSerializer):
         instance.email = validated_data.get('email', instance.email)
         instance.save()
 
+        # Get or create PerfilUsuario instance
+        perfil, created = PerfilUsuario.objects.get_or_create(user=instance)
+
         # Update PerfilUsuario instance
-        if hasattr(instance, 'perfil') and perfil_data:
-            perfil = instance.perfil
+        if perfil_data:
             perfil.telefono = perfil_data.get('telefono', perfil.telefono)
             perfil.ciudad = perfil_data.get('ciudad', perfil.ciudad)
             perfil.barrio = perfil_data.get('barrio', perfil.barrio)
