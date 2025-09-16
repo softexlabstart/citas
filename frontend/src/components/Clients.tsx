@@ -49,9 +49,11 @@ const Clients: React.FC = () => {
         if (updatedClient) {
             // Update existing client in the list
             setClients(
-                clients?.map((client) =>
-                    client.id === updatedClient.id ? updatedClient : client
-                ) || null
+                clients
+                    ? clients.map((client) =>
+                          client.id === updatedClient.id ? updatedClient : client
+                      )
+                    : []
             );
         } else {
             // New client was added, so we need to refetch the whole list
