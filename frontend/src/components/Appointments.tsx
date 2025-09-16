@@ -185,7 +185,10 @@ const Appointments: React.FC = () => {
                       type="text"
                       placeholder={t('enter_client_name')}
                       value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setCurrentPage(1);
+                      }}
                     />
                   </Form.Group>
                 </Col>
@@ -195,7 +198,10 @@ const Appointments: React.FC = () => {
                     <Form.Control
                       as="select"
                       value={filterStatus}
-                      onChange={(e) => setFilterStatus(e.target.value)}
+                      onChange={(e) => {
+                        setFilterStatus(e.target.value);
+                        setCurrentPage(1);
+                      }}
                     >
                       <option value="">{t('all')}</option>
                       <option value={APPOINTMENT_STATUS.PENDIENTE}>{t('pending')}</option>

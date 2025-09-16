@@ -216,5 +216,11 @@
   "other": "Otro",
   "save": "Guardar",
   "client_saved_successfully": "Cliente guardado exitosamente.",
-  "error_saving_client": "Error al guardar el cliente."
+  "error_saving_client": "Error al guardar el cliente.",
+  "client_history": "Historial de citas del cliente",
+  "appointment_stats": "Estadísticas de citas",
+  "most_used_services": "Servicios más usados",
+  "appointment_history": "historial de citas",
+  "times": "veces",
+  "canceled": "canceladas"
 }
