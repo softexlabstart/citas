@@ -251,7 +251,7 @@ export const getRecursoAppointments = () => api.get<Appointment[]>('/citas/recur
 export const marcarAsistencia = (id: number, asistio: boolean, comentario?: string) => api.post(`/citas/recurso-citas/${id}/marcar_asistencia/`, { asistio, comentario });
 
 // Funciones para Clientes
-export const getClients = () => api.get<Client[]>('/clients/');
+export const getClients = () => api.get<Client[]>(`/clients/?_=${new Date().getTime()}`);
 export const createClient = (clientData: any) => api.post<Client>('/clients/', clientData);
 export const updateClient = (id: number, clientData: any) => api.patch<Client>(`/clients/${id}/`, clientData);
 export const deleteClient = (id: number) => api.delete(`/clients/${id}/`);
