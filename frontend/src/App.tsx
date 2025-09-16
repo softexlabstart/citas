@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import PrivateRoute from './components/PrivateRoute';
+import AdminRoute from './components/AdminRoute'; // Import AdminRoute
 import { AuthProvider } from './contexts/AuthContext';
 
 // Lazy load components for code splitting
@@ -19,6 +20,7 @@ const AdminSettings = lazy(() => import('./components/AdminSettings'));
 const UserGuide = lazy(() => import('./components/UserGuide'));
 const RecursoDashboard = lazy(() => import('./components/RecursoDashboard'));
 const Clients = lazy(() => import('./components/Clients'));
+const MarketingPage = lazy(() => import('./pages/MarketingPage')); // Import MarketingPage
 
 // Centered spinner component for Suspense fallback
 const CenteredSpinner = () => (
@@ -39,17 +41,24 @@ const App: React.FC = () => {
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              
+              {/* Routes for all authenticated users */}
               <Route element={<PrivateRoute />}>
                 <Route path="/" element={<Home />} />
-                <Route path="/services" element={<Services />} />
                 <Route path="/appointments" element={<Appointments />} />
                 <Route path="/calendar" element={<AppointmentsCalendar />} />
                 <Route path="/disponibilidad" element={<Disponibilidad />} />
-                <Route path="/reports" element={<ReportsPage />} />
-                <Route path="/admin-settings" element={<AdminSettings />} />
                 <Route path="/user-guide" element={<UserGuide />} />
                 <Route path="/recurso-dashboard" element={<RecursoDashboard />} />
+              </Route>
+
+              {/* Routes for admin users only */}
+              <Route element={<AdminRoute />}>
+                <Route path="/services" element={<Services />} />
+                <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/admin-settings" element={<AdminSettings />} />
                 <Route path="/clients" element={<Clients />} />
+                <Route path="/marketing" element={<MarketingPage />} />
               </Route>
             </Routes>
           </Suspense>

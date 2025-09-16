@@ -256,3 +256,6 @@ export const createClient = (clientData: any) => api.post<Client>('/clients/', c
 export const updateClient = (id: number, clientData: any) => api.patch<Client>(`/clients/${id}/`, clientData);
 export const deleteClient = (id: number) => api.delete(`/clients/${id}/`);
 export const getClientHistory = (id: number) => api.get(`/clients/${id}/history/`);
+
+// Funciones para Marketing
+export const sendMarketingEmail = (data: { subject: string; message: string }) => api.post('/api/marketing/send-email/', data);
