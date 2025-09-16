@@ -222,5 +222,9 @@
   "most_used_services": "Servicios más usados",
   "appointment_history": "historial de citas",
   "times": "veces",
-  "canceled": "canceladas"
+  "canceled": "canceladas",
+  "marketing_email": "email de marketing",
+  "marketing_email_description": "marketing_email_description",
+  "message": "Mensaje",
+  "send_email": "Enviar Email"
 }

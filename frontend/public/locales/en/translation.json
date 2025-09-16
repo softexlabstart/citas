@@ -64,5 +64,10 @@
   "our_services": "Our Services",
   "reports": "Reports",
   "admin_tools": "Admin Tools",
-  "find_next_available": "Find Next Available"
+  "find_next_available": "Find Next Available",
+  "canceled": "canceled",
+  "marketing_email":"email de marketing",
+  "marketing_email_description":"marketing email description",
+  "message":"message",
+  "send_email":"send email"
 }
