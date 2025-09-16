@@ -66,8 +66,12 @@
   "admin_tools": "Admin Tools",
   "find_next_available": "Find Next Available",
   "canceled": "canceled",
-  "marketing_email":"email de marketing",
-  "marketing_email_description":"marketing email description",
-  "message":"message",
-  "send_email":"send email"
+    "marketing_email": "Marketing Email",
+  "marketing_email_description": "Marketing email description",
+  "message": "Message",
+  "send_email": "Send Email",
+  "subject": "Subject",
+  "error_fetching_clients": "Error fetching clients.",
+  "select_recipients": "Select Recipients",
+  "select_all_clients": "Select all clients"
 }

@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import LoginView, RegisterView, TimezoneView, UserDetailView, ClientViewSet
+from .views import LoginView, RegisterView, TimezoneView, UserDetailView, ClientViewSet, ClientEmailListView
 
 router = DefaultRouter()
 router.register(r'clients', ClientViewSet, basename='client')
@@ -11,4 +11,5 @@ urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
     path('timezones/', TimezoneView.as_view(), name='timezones'),
     path('auth/user/', UserDetailView.as_view(), name='user_detail'),
+    path('client-emails/', ClientEmailListView.as_view(), name='client_emails'),
 ]

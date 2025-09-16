@@ -258,4 +258,4 @@ export const deleteClient = (id: number) => api.delete(`/clients/${id}/`);
 export const getClientHistory = (id: number) => api.get(`/clients/${id}/history/`);
 
 // Funciones para Marketing
-export const sendMarketingEmail = (data: { subject: string; message: string }) => api.post('/marketing/send-email/', data);
+export const sendMarketingEmail = (data: { subject: string; message: string; recipient_emails?: string[] }) => api.post('/marketing/send-email/', data);

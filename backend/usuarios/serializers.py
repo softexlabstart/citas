@@ -124,6 +124,19 @@ class ClientSerializer(serializers.ModelSerializer):
         return instance
 
 
+class ClientEmailSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ('id', 'full_name', 'email')
+
+    def get_full_name(self, obj):
+        if obj.first_name and obj.last_name:
+            return f"{obj.first_name} {obj.last_name}".strip()
+        return obj.username
+
+
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)

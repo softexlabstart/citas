@@ -21,12 +21,17 @@ class SendMarketingEmailView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Get all non-admin users (clients)
-        client_users = User.objects.filter(
-            is_staff=False, is_superuser=False
-        ).exclude(groups__name='SedeAdmin')
+        recipient_emails = request.data.get('recipient_emails')
 
-        recipient_list = [user.email for user in client_users if user.email]
+        if recipient_emails:
+            # If specific recipients are provided, use them
+            recipient_list = recipient_emails
+        else:
+            # Otherwise, get all non-admin users (clients)
+            client_users = User.objects.filter(
+                is_staff=False, is_superuser=False
+            ).exclude(groups__name='SedeAdmin')
+            recipient_list = [user.email for user in client_users if user.email]
 
         if not recipient_list:
             return Response(

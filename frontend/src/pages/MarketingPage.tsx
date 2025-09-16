@@ -1,15 +1,52 @@
-import React, { useState } from 'react';
-import { Container, Form, Button, Spinner, Alert } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Container, Form, Button, Spinner, Alert, Card } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import { useApi } from '../hooks/useApi';
-import { sendMarketingEmail } from '../api';
+import { sendMarketingEmail, getClients } from '../api';
+import { Client } from '../interfaces/Client';
 
 const MarketingPage: React.FC = () => {
     const { t } = useTranslation();
     const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
+    const [clients, setClients] = useState<Client[]>([]);
+    const [selectedClientEmails, setSelectedClientEmails] = useState<string[]>([]);
+    const [selectAll, setSelectAll] = useState(false);
     const { loading, error, request: doSendEmail } = useApi(sendMarketingEmail);
+    const { request: fetchClientsApi } = useApi(getClients);
+
+    useEffect(() => {
+        const fetchClients = async () => {
+            try {
+                const response = await fetchClientsApi();
+                // Assuming getClients returns PaginatedResponse<Client>
+                // Adjust if getClients returns Client[] directly
+                setClients(response.data.results || response.data);
+            } catch (err) {
+                console.error('Error fetching clients:', err);
+                toast.error(t('error_fetching_clients'));
+            }
+        };
+        fetchClients();
+    }, [t, fetchClientsApi]);
+
+    const handleClientSelect = (email: string) => {
+        setSelectedClientEmails((prevSelected) =>
+            prevSelected.includes(email)
+                ? prevSelected.filter((e) => e !== email)
+                : [...prevSelected, email]
+        );
+    };
+
+    const handleSelectAll = () => {
+        if (selectAll) {
+            setSelectedClientEmails([]);
+        } else {
+            setSelectedClientEmails(clients.map((client) => client.email));
+        }
+        setSelectAll(!selectAll);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -18,12 +55,18 @@ const MarketingPage: React.FC = () => {
             return;
         }
 
-        const { success, error: apiError } = await doSendEmail({ subject, message });
+        const { success, error: apiError } = await doSendEmail({
+            subject,
+            message,
+            recipient_emails: selectedClientEmails.length > 0 ? selectedClientEmails : undefined,
+        });
 
         if (success) {
             toast.success(t('email_sent_successfully'));
             setSubject('');
             setMessage('');
+            setSelectedClientEmails([]); // Clear selection after sending
+            setSelectAll(false);
         } else {
             toast.error(t('error_sending_email') + (apiError ? `: ${apiError}` : ''));
         }
@@ -54,6 +97,30 @@ const MarketingPage: React.FC = () => {
                         required
                     />
                 </Form.Group>
+
+                <Card className="mb-3">
+                    <Card.Header>{t('select_recipients')}</Card.Header>
+                    <Card.Body style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                        <Form.Check
+                            type="checkbox"
+                            id="selectAllClients"
+                            label={t('select_all_clients')}
+                            checked={selectAll}
+                            onChange={handleSelectAll}
+                            className="mb-2"
+                        />
+                        {clients.map((client) => (
+                            <Form.Check
+                                type="checkbox"
+                                id={`client-${client.id}`}
+                                key={client.id}
+                                label={`${client.first_name} ${client.last_name} (${client.email})`}
+                                checked={selectedClientEmails.includes(client.email)}
+                                onChange={() => handleClientSelect(client.email)}
+                            />
+                        ))}
+                    </Card.Body>
+                </Card>
 
                 {error && <Alert variant="danger">{error}</Alert>}
 

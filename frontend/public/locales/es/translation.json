@@ -224,7 +224,11 @@
   "times": "veces",
   "canceled": "canceladas",
   "marketing_email": "email de marketing",
-  "marketing_email_description": "marketing_email_description",
+  "marketing_email_description": "descripción del email de marketing",
   "message": "Mensaje",
-  "send_email": "Enviar Email"
+  "send_email": "Enviar Email",
+  "subject": "Asunto",
+  "error_fetching_clients": "Error al cargar clientes.",
+  "select_recipients": "Seleccionar Destinatarios",
+  "select_all_clients": "Seleccionar todos los clientes"
 }
