@@ -5,7 +5,7 @@ import { toast } from 'react-toastify'; // Added toast import
 import { useApi } from '../hooks/useApi';
 import { Client } from '../interfaces/Client';
 import { getClients, deleteClient } from '../api';
-import ClientForm from './ClientForm'; // Import ClientForm
+import ClientHistoryModal from './ClientHistoryModal'; // Import ClientHistoryModal
 
 const Clients: React.FC = () => {
     const { t } = useTranslation();
@@ -13,6 +13,8 @@ const Clients: React.FC = () => {
     const { loading: deleteLoading, error: deleteError, request: callDeleteClient } = useApi(deleteClient);
     const [showModal, setShowModal] = useState(false); // State for modal visibility
     const [editingClient, setEditingClient] = useState<Client | null>(null); // State for client being edited
+    const [showHistoryModal, setShowHistoryModal] = useState(false);
+    const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
     const handleDeleteClient = async (clientId: number) => {
         if (window.confirm(t('confirm_delete_client'))) {
@@ -38,6 +40,11 @@ const Clients: React.FC = () => {
     const handleEditClient = (client: Client) => {
         setEditingClient(client);
         setShowModal(true);
+    };
+
+    const handleShowHistory = (client: Client) => {
+        setSelectedClient(client);
+        setShowHistoryModal(true);
     };
 
     const handleCloseModal = () => {
@@ -101,6 +108,9 @@ const Clients: React.FC = () => {
                                     <Button variant="info" size="sm" onClick={() => handleEditClient(client)} className="me-2">
                                         {t('edit')}
                                     </Button>
+                                    <Button variant="secondary" size="sm" onClick={() => handleShowHistory(client)} className="me-2">
+                                        {t('history')}
+                                    </Button>
                                     <Button variant="danger" size="sm" onClick={() => handleDeleteClient(client.id)}>
                                         {t('delete')}
                                     </Button>
@@ -120,6 +130,9 @@ const Clients: React.FC = () => {
                     <ClientForm client={editingClient} onSuccess={handleSuccess} onCancel={handleCloseModal} />
                 </Modal.Body>
             </Modal>
+
+            {/* Client History Modal */}
+            <ClientHistoryModal client={selectedClient} show={showHistoryModal} onHide={() => setShowHistoryModal(false)} />
         </div>
     );
 };

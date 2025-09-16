@@ -255,3 +255,4 @@ export const getClients = () => api.get<Client[]>(`/clients/?_=${new Date().getT
 export const createClient = (clientData: any) => api.post<Client>('/clients/', clientData);
 export const updateClient = (id: number, clientData: any) => api.patch<Client>(`/clients/${id}/`, clientData);
 export const deleteClient = (id: number) => api.delete(`/clients/${id}/`);
+export const getClientHistory = (id: number) => api.get(`/clients/${id}/history/`);

@@ -9,6 +9,10 @@ import pytz
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth.models import User, Group # Added Group
 from citas.permissions import IsAdminOrSedeAdmin
+from rest_framework.decorators import action
+from django.db.models import Count, Q
+from citas.models import Cita
+from citas.serializers import CitaSerializer
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
@@ -65,3 +69,23 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
         exclude(groups=sede_admin_group)
         exclude(groups=recurso_group)
         select_related('perfil')
+
+    @action(detail=True, methods=['get'])
+    def history(self, request, pk=None):
+        client = self.get_object()
+        citas = Cita.objects.filter(nombre=client).order_by('-fecha')
+        
+        stats = citas.aggregate(
+            total=Count('id'),
+            asistidas=Count('id', filter=Q(estado='Asistió')),
+            canceladas=Count('id', filter=Q(estado='Cancelada')),
+            no_asistidas=Count('id', filter=Q(estado='No Asistió'))
+        )
+        
+        servicios_usados = citas.values('servicio__nombre').annotate(count=Count('servicio')).order_by('-count')
+        
+        return Response({
+            'citas': CitaSerializer(citas, many=True).data,
+            'stats': stats,
+            'servicios_mas_usados': list(servicios_usados)
+        })
