@@ -675,6 +675,8 @@ class RecursoCitaViewSet(viewsets.ReadOnlyModelViewSet):
             recurso = Colaborador.objects.get(usuario=user)
             return Cita.objects.filter(colaboradores=recurso).order_by('fecha')
         except Colaborador.DoesNotExist:
+            # Log a warning or return an empty queryset gracefully
+            print(f"WARNING: No Colaborador instance found for user: {user.username}")
             return Cita.objects.none()
 
     @action(detail=True, methods=['post'])
