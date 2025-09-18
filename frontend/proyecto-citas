@@ -1,0 +1,26 @@
+server {
+    listen 80;
+    server_name 16.52.17.116; # Reemplaza con tu IP o dominio
+
+    # Ubicación de los archivos estáticos de Django (admin)
+    location /static/ {
+        root /home/ec2-user/appcitas/citas/backend;
+    }
+
+    # Proxy para la API de Django
+    location /api/ {
+        include proxy_params;
+        proxy_pass http://unix:/run/gunicorn.sock;
+    }
+
+    # Servir la aplicación de React
+    location / {
+        # Ruta a la carpeta 'build' de tu frontend
+        root /home/ec2-user/appcitas/citas/frontend/build;
+        try_files $uri /index.html;
+    }
+
+    # Configuración adicional para logs
+    access_log /var/log/nginx/proyecto-citas.access.log;
+    error_log /var/log/nginx/proyecto-citas.error.log;
+}

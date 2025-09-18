@@ -10,6 +10,7 @@ i18n
   .init({
     debug: true,
     fallbackLng: 'es', // Default language
+    supportedLngs: ['en', 'es'],
     interpolation: {
       escapeValue: false, // not needed for react as it escapes by default
     },

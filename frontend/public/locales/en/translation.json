@@ -63,6 +63,11 @@
   "select_sede": "Select a location",
   "our_services": "Our Services",
   "reports": "Reports",
+  "reports_description": "Generate and export appointment and performance reports.",
+  "clients": "Clients",
+  "clients_description": "Manage your clients' information and history.",
+  "marketing": "Marketing",
+  "marketing_description": "Create and send email campaigns to your clients."
   "admin_tools": "Admin Tools",
   "find_next_available": "Find Next Available",
   "canceled": "canceled",

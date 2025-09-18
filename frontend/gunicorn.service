@@ -1,0 +1,12 @@
+[Unit]
+Description=gunicorn daemon for proyecto-citas
+After=network.target
+
+[Service]
+User=ec2-user
+Group=www-data
+WorkingDirectory=/home/jhonatangrajales/Desktop/proyecto-citas-/backend
+ExecStart=/home/jhonatangrajales/Desktop/proyecto-citas-/backend/venv/bin/gunicorn --access-logfile - --workers 3 --bind unix:/run/gunicorn.sock core.wsgi:application
+
+[Install]
+WantedBy=multi-user.target

@@ -2,7 +2,7 @@ import React from 'react';
 import { Row, Col, Card, ListGroup, Badge } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { CalendarCheck, ClockHistory, CashCoin } from 'react-bootstrap-icons';
+import { BarChart, People, Megaphone } from 'react-bootstrap-icons';
 import { AdminDashboardSummary } from '../api';
 import { statusConfig } from '../constants/appointmentStatus';
 
@@ -17,31 +17,37 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ data }) => {
         <>
             <Row className="mb-4">
                 <Col md={4}>
-                    <Card className="text-center shadow-sm h-100">
-                        <Card.Body>
-                            <CalendarCheck size={40} className="text-primary mb-2" />
-                            <Card.Title>{t('appointments_today')}</Card.Title>
-                            <Card.Text className="fs-2 fw-bold">{data.citas_hoy}</Card.Text>
-                        </Card.Body>
-                    </Card>
+                    <Link to="/reports" className="text-decoration-none">
+                        <Card className="text-center shadow-sm h-100 card-hover">
+                            <Card.Body>
+                                <BarChart size={40} className="text-primary mb-2" />
+                                <Card.Title>{t('reports')}</Card.Title>
+                                <Card.Text>{t('reports_description')}</Card.Text>
+                            </Card.Body>
+                        </Card>
+                    </Link>
                 </Col>
                 <Col md={4}>
-                    <Card className="text-center shadow-sm h-100">
-                        <Card.Body>
-                            <ClockHistory size={40} className="text-warning mb-2" />
-                            <Card.Title>{t('pending_confirmation')}</Card.Title>
-                            <Card.Text className="fs-2 fw-bold">{data.pendientes_confirmacion}</Card.Text>
-                        </Card.Body>
-                    </Card>
+                    <Link to="/clients" className="text-decoration-none">
+                        <Card className="text-center shadow-sm h-100 card-hover">
+                            <Card.Body>
+                                <People size={40} className="text-warning mb-2" />
+                                <Card.Title>{t('clients')}</Card.Title>
+                                <Card.Text>{t('clients_description')}</Card.Text>
+                            </Card.Body>
+                        </Card>
+                    </Link>
                 </Col>
                 <Col md={4}>
-                    <Card className="text-center shadow-sm h-100">
-                        <Card.Body>
-                            <CashCoin size={40} className="text-success mb-2" />
-                            <Card.Title>{t('revenue_this_month')}</Card.Title>
-                            <Card.Text className="fs-2 fw-bold">${(data.ingresos_mes || 0).toFixed(2)}</Card.Text>
-                        </Card.Body>
-                    </Card>
+                    <Link to="/marketing" className="text-decoration-none">
+                        <Card className="text-center shadow-sm h-100 card-hover">
+                            <Card.Body>
+                                <Megaphone size={40} className="text-success mb-2" />
+                                <Card.Title>{t('marketing')}</Card.Title>
+                                <Card.Text>{t('marketing_description')}</Card.Text>
+                            </Card.Body>
+                        </Card>
+                    </Link>
                 </Col>
             </Row>
 
