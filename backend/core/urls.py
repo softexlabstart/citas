@@ -9,12 +9,12 @@ from citas.views import WelcomeView
 urlpatterns = [
     path('', WelcomeView.as_view(), name='api-root-welcome'),
     path('admin/', admin.site.urls),
-    path('api/citas/', include('citas.urls')),
-    path('api/', include('usuarios.urls')),
-    path('api/organizacion/', include('organizacion.urls')),
-    path('api/marketing/', include('marketing.urls')),
     path('api/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/citas/', include('citas.urls')),
+    path('api/organizacion/', include('organizacion.urls')),
+    path('api/marketing/', include('marketing.urls')),
+    path('api/', include('usuarios.urls')), # Dejamos esta ruta más genérica al final
 ]
 
 if settings.DEBUG:
