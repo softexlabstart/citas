@@ -123,13 +123,13 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
         client = self.get_object()
-        citas = Cita.objects.filter(nombre=client).order_by('-fecha')
+        citas = Cita.objects.filter(Q(user=client) | Q(nombre=client.username)).distinct().order_by('-fecha')
         
         stats = citas.aggregate(
             total=Count('id'),
-            asistidas=Count('id', filter=Q(estado='Asistió')),
+            asistidas=Count('id', filter=Q(estado='Asistio')),
             canceladas=Count('id', filter=Q(estado='Cancelada')),
-            no_asistidas=Count('id', filter=Q(estado='No Asistió'))
+            no_asistidas=Count('id', filter=Q(estado='No Asistio'))
         )
         
         servicios_usados = citas.values('servicio__nombre').annotate(count=Count('servicio')).order_by('-count')
