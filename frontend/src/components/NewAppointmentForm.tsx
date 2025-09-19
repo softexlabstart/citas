@@ -31,6 +31,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
   } = useAppointmentForm();
 
   const [selectedServicios, setSelectedServicios] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: availability, loading: slotsLoading, request: fetchAvailableSlots, error: availabilityError } = useApi<{ disponibilidad: any[] }, [string, number, string, string[]]>(getDisponibilidad);
   const { loading: isSubmitting, request: submitAppointment, error: submitError } = useApi(addAppointment);
@@ -61,6 +62,11 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
   }, [prefillData, servicios, recursos, setSelectedRecurso]);
 
   const availableSlots = availability?.disponibilidad.filter(slot => slot.status === 'disponible') || [];
+
+  const filteredServicios = servicios.filter(service =>
+    service.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    service.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   useEffect(() => {
     if (date && selectedRecurso && selectedSede && selectedServicios.length > 0) {
@@ -153,27 +159,31 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
           {!selectedSede || loadingServicios ? (
             <p>{t('select_sede_first')}</p>
           ) : (
-            <div className="service-selection-container" style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #ced4da', borderRadius: '0.25rem' }}>
-              <ListGroup>
-                {servicios.map((service) => (
-                  <ListGroup.Item key={service.id}>
-                    <Form.Check
-                      type="checkbox"
-                      id={`service-${service.id}`}
-                      label={
-                        <>
-                          <strong>{service.nombre}</strong>
-                          <br />
-                          <small>{service.descripcion}</small>
-                        </>
-                      }
-                      checked={selectedServicios.includes(String(service.id))}
-                      onChange={() => handleServiceChange(String(service.id))}
-                    />
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
-            </div>
+            <>
+              <Form.Control
+                type="text"
+                placeholder={t('search_services')}
+                className="mb-2"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <div className="service-selection-container" style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #ced4da', borderRadius: '0.25rem' }}>
+                <ListGroup>
+                  {filteredServicios.map((service) => (
+                    <ListGroup.Item
+                      key={service.id}
+                      action
+                      active={selectedServicios.includes(String(service.id))}
+                      onClick={() => handleServiceChange(String(service.id))}
+                    >
+                      <strong>{service.nombre}</strong>
+                      <br />
+                      <small>{service.descripcion}</small>
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              </div>
+            </>
           )}
         </Form.Group>
 
