@@ -36,8 +36,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ data }) => {
                 } finally {
                     setLoading(false);
                 }
-            } else {
-                setLoading(false); // If no user, stop loading
             }
         };
         fetchClientData();
@@ -105,5 +103,3 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ data }) => {
 };
 
 export default UserDashboard;
-
-    
