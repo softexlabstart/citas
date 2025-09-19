@@ -24,4 +24,5 @@ export interface User {
 export interface RegisterUser extends Omit<User, 'id' | 'is_staff' | 'perfil' | 'groups'> {
     password: string;
     timezone: string;
+    has_consented_data_processing: boolean; // Added for registration consent
 }
