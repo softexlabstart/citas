@@ -23,6 +23,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onSuccess, onCancel }) 
     const [barrio, setBarrio] = useState(client?.barrio || '');
     const [genero, setGenero] = useState(client?.genero || '');
     const [fechaNacimiento, setFechaNacimiento] = useState(client?.fecha_nacimiento || '');
+    const [consentGiven, setConsentGiven] = useState(false);
 
         const { loading: createLoading, error: createError, request: callCreateClient } = useApi(createClient);
     const { loading: updateLoading, error: updateError, request: callUpdateClient } = useApi(updateClient);
@@ -158,11 +159,29 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onSuccess, onCancel }) 
                 </Col>
             </Row>
 
+            <Form.Group className="mb-3">
+                <Form.Check
+                    type="checkbox"
+                    id="data-processing-consent"
+                    label={
+                        <>
+                            {t('i_agree_to_data_processing')}{' '}
+                            <a href="/privacy-policy" target="_blank" rel="noopener noreferrer">
+                                {t('privacy_policy')}
+                            </a>
+                        </>
+                    }
+                    checked={consentGiven}
+                    onChange={(e) => setConsentGiven(e.target.checked)}
+                    required
+                />
+            </Form.Group>
+
             <div className="d-flex justify-content-end mt-3">
                 <Button variant="secondary" onClick={onCancel} className="me-2">
                     {t('cancel')}
                 </Button>
-                <Button variant="primary" type="submit" disabled={loading}>
+                <Button variant="primary" type="submit" disabled={loading || !consentGiven}>
                     {loading ? <Spinner as="span" animation="border" size="sm" /> : t('save')}
                 </Button>
             </div>
