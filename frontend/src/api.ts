@@ -177,7 +177,7 @@ export interface UserDashboardSummary {
 
 export type DashboardSummary = AdminDashboardSummary | UserDashboardSummary;
 
-export const getDashboardSummary = () => api.get<DashboardSummary>('/citas/dashboard/summary/');
+export const getDashboardSummary = () => api.get<DashboardSummary>('/api/citas/dashboard/summary/');
 
 // Funciones para Sedes (New section)
 export const getSedes = () => api.get<Sede[]>('/organizacion/sedes/');
