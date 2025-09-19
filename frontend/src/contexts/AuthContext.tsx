@@ -1,4 +1,4 @@
-import React, { createContext, ReactNode, useState, useEffect, useCallback } from 'react';
+import React, { createContext, ReactNode, useState, useEffect, useCallback, useContext } from 'react';
 import { login as apiLogin, setupInterceptors } from '../api';
 import { User } from '../interfaces/User';
 import useIdleTimer from '../hooks/useIdleTimer';
@@ -63,4 +63,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             {children}
         </AuthContext.Provider>
     );
+};
+
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
 };
