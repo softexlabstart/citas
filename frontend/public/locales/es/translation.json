@@ -281,5 +281,6 @@
   "confirm_delete_account_title": "Confirmar Eliminación de Cuenta",
   "confirm_delete_account_message": "¿Estás seguro de que deseas eliminar tu cuenta? Esta acción es irreversible y se perderán todos tus datos.",
   "account_deleted_successfully": "Cuenta eliminada exitosamente.",
-  "error_deleting_account": "Error al eliminar la cuenta."
+  "error_deleting_account": "Error al eliminar la cuenta.",
+  "data_processing_preference_updated": "Preferencia de procesamiento de datos actualizada."
 }

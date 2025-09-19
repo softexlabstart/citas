@@ -166,7 +166,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onSuccess, onCancel }) 
                     label={
                         <>
                             {t('i_agree_to_data_processing')}{' '}
-                            <a href="/privacy-policy" target="_blank" rel="noopener noreferrer">
+                            <a href="https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=49981" target="_blank" rel="noopener noreferrer">
                                 {t('privacy_policy')}
                             </a>
                         </>

@@ -109,5 +109,6 @@
   "confirm_delete_account_title": "Confirm Account Deletion",
   "confirm_delete_account_message": "Are you sure you want to delete your account? This action is irreversible and all your data will be lost.",
   "account_deleted_successfully": "Account deleted successfully.",
-  "error_deleting_account": "Error deleting account."
+  "error_deleting_account": "Error deleting account.",
+  "data_processing_preference_updated": "Data processing preference updated."
 }

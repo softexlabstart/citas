@@ -1,52 +1,54 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Spinner, Alert, Button, Form } from 'react-bootstrap';
+import { Container, Spinner, Alert, Button, Form, Row, Col } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import ClientForm from '../components/ClientForm';
 import { useAuth } from '../contexts/AuthContext';
-import { getPersonalData, deleteAccount, updateDataProcessingOptOut } from '../api'; // Corrected import
+import { getPersonalData, deleteAccount, updateDataProcessingOptOut, updateUserProfile } from '../api';
 import { Client } from '../interfaces/Client';
-import ConfirmationModal from '../components/ConfirmationModal'; // Import ConfirmationModal
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const EditProfilePage: React.FC = () => {
     const { t } = useTranslation();
-    const { user, logout } = useAuth(); // Get logout from useAuth
+    const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [clientData, setClientData] = useState<Client | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false); // State for delete confirmation modal
-    const [opposeDataProcessing, setOpposeDataProcessing] = useState(clientData?.data_processing_opt_out || false);
+    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+    const [opposeDataProcessing, setOpposeDataProcessing] = useState(false); // Initialized to false, will be updated by useEffect
 
-    useEffect(() => {
-        if (clientData) {
-            setOpposeDataProcessing(clientData.data_processing_opt_out || false);
-        }
-    }, [clientData]);
+    // Form states
+    const [username, setUsername] = useState('');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [email, setEmail] = useState('');
+    const [telefono, setTelefono] = useState('');
+    const [ciudad, setCiudad] = useState('');
+    const [barrio, setBarrio] = useState('');
+    const [genero, setGenero] = useState('');
+    const [fechaNacimiento, setFechaNacimiento] = useState('');
 
-    const handleOpposeDataProcessingChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const newValue = event.target.checked;
-        setOpposeDataProcessing(newValue);
-        try {
-            await updateDataProcessingOptOut(newValue);
-            toast.success(t('data_processing_preference_updated'));
-        } catch (err: any) {
-            const errorMessage = err.response?.data?.detail || err.message || t('error_updating_data_processing_preference');
-            toast.error(errorMessage);
-            console.error('Error updating data processing preference:', err);
-            setOpposeDataProcessing(!newValue); // Revert UI on error
-        }
-    };
-
+    // Effect to load client data and initialize form states
     useEffect(() => {
         const fetchClientData = async () => {
             if (user && user.id) {
                 try {
                     setLoading(true);
-                    const response = await getPersonalData(); // Corrected API call
+                    const response = await getPersonalData();
                     if (response.data) {
                         setClientData(response.data);
+                        // Initialize form states from fetched data
+                        setUsername(response.data.username || '');
+                        setFirstName(response.data.first_name || '');
+                        setLastName(response.data.last_name || '');
+                        setEmail(response.data.email || '');
+                        setTelefono(response.data.telefono || '');
+                        setCiudad(response.data.ciudad || '');
+                        setBarrio(response.data.barrio || '');
+                        setGenero(response.data.genero || '');
+                        setFechaNacimiento(response.data.fecha_nacimiento || '');
+                        setOpposeDataProcessing(response.data.data_processing_opt_out || false);
                     } else {
                         setError(t('error_fetching_profile'));
                         toast.error(t('error_fetching_profile'));
@@ -65,11 +67,47 @@ const EditProfilePage: React.FC = () => {
         };
 
         fetchClientData();
-    }, [user, t]);
+    }, [user, t]); // Depend on user and t
 
-    const handleSuccess = () => {
-        toast.success(t('profile_updated_successfully'));
-        navigate(-1);
+    const handleOpposeDataProcessingChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = event.target.checked;
+        setOpposeDataProcessing(newValue);
+        try {
+            await updateDataProcessingOptOut(newValue);
+            toast.success(t('data_processing_preference_updated'));
+        } catch (err: any) {
+            const errorMessage = err.response?.data?.detail || err.message || t('error_updating_data_processing_preference');
+            toast.error(errorMessage);
+            console.error('Error updating data processing preference:', err);
+            setOpposeDataProcessing(!newValue); // Revert UI on error
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true); // Set loading true for form submission
+        try {
+            const updatedData: Partial<Client> = {
+                first_name: firstName,
+                last_name: lastName,
+                email,
+                telefono,
+                ciudad,
+                barrio,
+                genero,
+                fecha_nacimiento: fechaNacimiento,
+            };
+            await updateUserProfile(updatedData);
+            toast.success(t('profile_updated_successfully'));
+            navigate(-1); // Navigate back after successful update
+        } catch (err: any) {
+            const errorMessage = err.response?.data?.detail || err.message || t('error_updating_profile');
+            toast.error(errorMessage);
+            setError(errorMessage);
+            console.error('Error updating profile:', err);
+        } finally {
+            setLoading(false); // Set loading false after submission attempt
+        }
     };
 
     const handleCancel = () => {
@@ -109,7 +147,7 @@ const EditProfilePage: React.FC = () => {
             toast.error(errorMessage);
             console.error('Error deleting account:', err);
         } finally {
-            setShowDeleteConfirmModal(true); // Close the modal
+            setShowDeleteConfirmModal(false); // Close the modal
         }
     };
 
@@ -146,7 +184,91 @@ const EditProfilePage: React.FC = () => {
     return (
         <Container className="mt-5">
             <h2>{t('edit_profile')}</h2>
-            <ClientForm client={clientData} onSuccess={handleSuccess} onCancel={handleCancel} />
+            <Form onSubmit={handleSubmit}>
+                <Row>
+                    <Col md={6}>
+                        <Form.Group className="mb-3">
+                            <Form.Label>{t('username')}</Form.Label>
+                            <Form.Control type="text" value={username} disabled />
+                        </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                        <Form.Group className="mb-3">
+                            <Form.Label>{t('email')}</Form.Label>
+                            <Form.Control type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                        </Form.Group>
+                    </Col>
+                </Row>
+
+                <Row>
+                    <Col md={6}>
+                        <Form.Group className="mb-3">
+                            <Form.Label>{t('first_name')}</Form.Label>
+                            <Form.Control type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                        </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                        <Form.Group className="mb-3">
+                            <Form.Label>{t('last_name')}</Form.Label>
+                            <Form.Control type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                        </Form.Group>
+                    </Col>
+                </Row>
+
+                <Row>
+                    <Col md={6}>
+                        <Form.Group className="mb-3">
+                            <Form.Label>{t('phone')}</Form.Label>
+                            <Form.Control type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+                        </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                        <Form.Group className="mb-3">
+                            <Form.Label>{t('city')}</Form.Label>
+                            <Form.Control type="text" value={ciudad} onChange={(e) => setCiudad(e.target.value)} />
+                        </Form.Group>
+                    </Col>
+                </Row>
+
+                <Row>
+                    <Col md={6}>
+                        <Form.Group className="mb-3">
+                            <Form.Label>{t('neighborhood')}</Form.Label>
+                            <Form.Control type="text" value={barrio} onChange={(e) => setBarrio(e.target.value)} />
+                        </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                        <Form.Group className="mb-3">
+                            <Form.Label>{t('gender')}</Form.Label>
+                            <Form.Control as="select" value={genero} onChange={(e) => setGenero(e.target.value)}>
+                                <option value="">{t('select_gender')}</option>
+                                <option value="M">{t('male')}</option>
+                                <option value="F">{t('female')}</option>
+                                <option value="O">{t('other')}</option>
+                            </Form.Control>
+                        </Form.Group>
+                    </Col>
+                </Row>
+
+                <Row>
+                    <Col md={6}>
+                        <Form.Group className="mb-3">
+                            <Form.Label>{t('date_of_birth')}</Form.Label>
+                            <Form.Control type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} />
+                        </Form.Group>
+                    </Col>
+                </Row>
+
+                <div className="d-flex justify-content-end mt-3">
+                    <Button variant="secondary" onClick={handleCancel} className="me-2">
+                        {t('cancel')}
+                    </Button>
+                    <Button variant="primary" type="submit" disabled={loading}>
+                        {loading ? <Spinner as="span" animation="border" size="sm" /> : t('save')}
+                    </Button>
+                </div>
+            </Form>
+
             <div className="mt-3">
                 <Form.Check
                     type="switch"
