@@ -89,7 +89,7 @@ class ClientSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        perfil = instance.perfil
+        perfil = getattr(instance, 'perfil', None)
         if perfil:
             representation['telefono'] = perfil.telefono
             representation['ciudad'] = perfil.ciudad
