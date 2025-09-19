@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import ClientForm from '../components/ClientForm';
 import { useAuth } from '../contexts/AuthContext';
-import { getClientById, getPersonalData, deleteAccount, updateDataProcessingOptOut } from '../api'; // Import deleteAccount
+import { getPersonalData, deleteAccount, updateDataProcessingOptOut } from '../api'; // Corrected import
 import { Client } from '../interfaces/Client';
 import ConfirmationModal from '../components/ConfirmationModal'; // Import ConfirmationModal
 
@@ -44,7 +44,7 @@ const EditProfilePage: React.FC = () => {
             if (user && user.id) {
                 try {
                     setLoading(true);
-                    const response = await getClientById(user.id);
+                    const response = await getPersonalData(); // Corrected API call
                     if (response.data) {
                         setClientData(response.data);
                     } else {
