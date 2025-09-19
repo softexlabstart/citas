@@ -58,7 +58,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ data }) => {
                         data.proximas_citas.map(cita => (
                             <ListGroup.Item key={cita.id} className="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <strong>{cita.nombre}</strong> - {cita.servicio.nombre}
+                                    <strong>{cita.nombre}</strong> - {cita.servicios.map(s => s.nombre).join(', ')}
                                     <br />
                                     <small className="text-muted">{new Date(cita.fecha).toLocaleString()}</small>
                                 </div>
