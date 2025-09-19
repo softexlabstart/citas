@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, momentLocalizer, Event, Views, NavigateAction } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { Container, Spinner, Alert, Modal, Button, Badge, Row, Col, Form } from 'react-bootstrap';
+import { Container, Spinner, Alert, Modal, Button, Badge, Row, Col, Form, ListGroup } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useApi } from '../hooks/useApi';
 import { getAllAppointments, getBloqueos, Bloqueo, getRecursos } from '../api';
@@ -27,6 +27,9 @@ const AppointmentsCalendar: React.FC = () => {
     const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
     const [selectedResourceId, setSelectedResourceId] = useState<string>('');
     const [dateRange, setDateRange] = useState<{ start: Date, end: Date } | null>(null);
+    const [showMoreModal, setShowMoreModal] = useState(false);
+    const [moreModalEvents, setMoreModalEvents] = useState<CalendarEvent[]>([]);
+    const [moreModalDate, setMoreModalDate] = useState<Date | null>(null);
 
     // Set the initial date range on component mount
     useEffect(() => {
@@ -80,6 +83,12 @@ const AppointmentsCalendar: React.FC = () => {
     const handleCloseModal = () => {
         setShowModal(false);
         setSelectedAppointment(null);
+    };
+
+    const handleShowMore = (events: CalendarEvent[], date: Date) => {
+        setMoreModalEvents(events);
+        setMoreModalDate(date);
+        setShowMoreModal(true);
     };
 
     const handleNavigate = (newDate: Date, view: string) => {
@@ -139,7 +148,7 @@ const AppointmentsCalendar: React.FC = () => {
             
             {!(loadingAppointments || loadingBloqueos || loadingRecursos) && (
                 <div style={{ height: '70vh' }}>
-                    <Calendar<CalendarEvent> localizer={localizer} events={events} startAccessor="start" endAccessor="end" messages={calendarMessages} onSelectEvent={handleSelectEvent} eventPropGetter={eventPropGetter} onNavigate={handleNavigate} style={{ height: '100%' }} />
+                    <Calendar<CalendarEvent> localizer={localizer} events={events} startAccessor="start" endAccessor="end" messages={calendarMessages} onSelectEvent={handleSelectEvent} eventPropGetter={eventPropGetter} onNavigate={handleNavigate} onShowMore={handleShowMore} style={{ height: '100%' }} />
                 </div>
             )}
 
@@ -165,6 +174,46 @@ const AppointmentsCalendar: React.FC = () => {
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={handleCloseModal}>
+                        {t('close')}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal show={showMoreModal} onHide={() => setShowMoreModal(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>{t('appointments_for_date', { date: moreModalDate ? moment(moreModalDate).format('LL') : '' })}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {moreModalEvents.length > 0 ? (
+                        <ListGroup>
+                            {moreModalEvents.map((event, index) => (
+                                <ListGroup.Item key={index} action onClick={() => {
+                                    if (event.type === 'appointment') {
+                                        setSelectedAppointment(event.resource as Appointment);
+                                        setShowModal(true);
+                                        setShowMoreModal(false); // Close the "more" modal
+                                    }
+                                }}>
+                                    <strong>{event.title}</strong>
+                                    <br />
+                                    <small>{moment(event.start).format('LT')} - {moment(event.end).format('LT')}</small>
+                                    {event.type === 'appointment' && (
+                                        <>
+                                            <br />
+                                            <Badge bg={statusConfig[(event.resource as Appointment).estado]?.color || 'light'}>
+                                                {t(statusConfig[(event.resource as Appointment).estado]?.key || (event.resource as Appointment).estado.toLowerCase())}
+                                            </Badge>
+                                        </>
+                                    )}
+                                </ListGroup.Item>
+                            ))}
+                        </ListGroup>
+                    ) : (
+                        <p>{t('no_appointments_for_this_day')}</p>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowMoreModal(false)}>
                         {t('close')}
                     </Button>
                 </Modal.Footer>
