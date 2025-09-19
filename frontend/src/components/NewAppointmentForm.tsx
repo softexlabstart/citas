@@ -157,15 +157,19 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
               as="select"
               multiple
               value={selectedServicios}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                const options = e.target.options;
-                const value: string[] = [];
-                for (let i = 0, l = options.length; i < l; i++) {
-                  if (options[i].selected) {
-                    value.push(options[i].value);
+              onChange={(e) => {
+                if (e.target instanceof HTMLSelectElement) {
+                  const options = e.target.options;
+                  const value: string[] = [];
+                  for (let i = 0, l = options.length; i < l; i++) {
+                    if (options[i].selected) {
+                      value.push(options[i].value);
+                    }
                   }
+                  setSelectedServicios(value);
+                } else {
+                  console.error("Unexpected target type for service selection:", e.target);
                 }
-                setSelectedServicios(value);
               }}
               required
             >
