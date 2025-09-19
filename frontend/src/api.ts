@@ -21,22 +21,22 @@ const api = axios.create({
 });
 
 api.interceptors.request.use(
-    (config) => {
+    (config: any) => {
         const token = localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
     },
-    (error) => {
+    (error: any) => {
         return Promise.reject(error);
     }
 );
 
 export const setupInterceptors = (logout: (message?: string) => void) => {
     api.interceptors.response.use(
-        (response) => response,
-        (error) => {
+        (response: any) => response,
+        (error: any) => {
             if (error.response && error.response.status === 401) {
                 logout('Tu sesión ha expirado. Por favor, inicia sesión de nuevo.');
             }
@@ -224,9 +224,9 @@ export const downloadAppointmentsReportCSV = (startDate: string, endDate: string
 
 // Funciones para Autenticación
 export const login = async (username: string, password: string) => {
-    const response = await api.post('/token/', { username, password });
+    const response = await api.post('/api/token/', { username, password });
     const token = response.data.access;
-    const userResponse = await api.get('/auth/user/', {
+    const userResponse = await api.get('/api/auth/user/', {
         headers: { Authorization: `Bearer ${token}` }
     });
     return { ...response.data, user: userResponse.data };
@@ -252,8 +252,8 @@ export const marcarAsistencia = (id: number, asistio: boolean, comentario?: stri
 
 // Funciones para Clientes
 export const getClients = () => api.get<Client[]>(`/clients/?_=${new Date().getTime()}`);
-export const createClient = (clientData: any) => api.post<Client>('/clients/', clientData);
-export const updateClient = (id: number, clientData: any) => api.patch<Client>(`/clients/${id}/`, clientData);
+export const createClient = (clientData: Partial<Client>) => api.post<Client>('/clients/', clientData);
+export const updateClient = (id: number, clientData: Partial<Client>) => api.patch<Client>(`/clients/${id}/`, clientData);
 export const deleteClient = (id: number) => api.delete(`/clients/${id}/`);
 export const getClientHistory = (id: number) => api.get(`/clients/${id}/history/`);
 

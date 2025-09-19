@@ -67,11 +67,11 @@
   "clients": "Clients",
   "clients_description": "Manage your clients' information and history.",
   "marketing": "Marketing",
-  "marketing_description": "Create and send email campaigns to your clients."
+  "marketing_description": "Create and send email campaigns to your clients.",
   "admin_tools": "Admin Tools",
   "find_next_available": "Find Next Available",
   "canceled": "canceled",
-    "marketing_email": "Marketing Email",
+  "marketing_email": "Marketing Email",
   "marketing_email_description": "Marketing email description",
   "message": "Message",
   "send_email": "Send Email",
