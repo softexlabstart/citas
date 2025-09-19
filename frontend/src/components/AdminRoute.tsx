@@ -10,7 +10,7 @@ const AdminRoute: React.FC = () => {
         return <Navigate to="/login" />;
     }
 
-    if (!(user.is_staff || user.perfil?.is_sede_admin)) {
+    if (!(user.is_staff || user.perfil?.is_sede_admin || user.groups.includes('SedeAdmin'))) {
         // Solo staff y sede admin pueden acceder a rutas administrativas
         return <Navigate to="/" />;
     }
