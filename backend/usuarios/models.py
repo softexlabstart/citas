@@ -23,6 +23,8 @@ class PerfilUsuario(models.Model):
     barrio = models.CharField(max_length=100, blank=True, null=True)
     genero = models.CharField(max_length=1, choices=GENERO_CHOICES, blank=True, null=True)
     fecha_nacimiento = models.DateField(blank=True, null=True)
+    has_consented_data_processing = models.BooleanField(default=False) # New field for consent
+    data_processing_opt_out = models.BooleanField(default=False) # New field for opting out of data processing
 
     def __str__(self):
         return self.user.username

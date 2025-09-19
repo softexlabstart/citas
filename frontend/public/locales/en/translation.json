@@ -93,5 +93,21 @@
  "deselect_all": "deselect all",
  "select_services": "select services",
  "i_agree_to_data_processing": "I agree to the processing of my data in accordance with the privacy policy.",
- "privacy_policy": "Privacy Policy"
+ "privacy_policy": "Privacy Policy",
+ "personal_data_management": "Personal Data Management",
+ "accept": "Accept",
+ "decline": "Decline",
+ "consent_required": "Consent is required to proceed.",
+  "edit_my_information": "Edit My Information",
+  "oppose_data_processing": "Oppose Data Processing",
+  "delete_my_account": "Delete My Account",
+  "are_you_sure_delete_account": "Are you sure you want to delete your account",
+  "account_deletion_warning": "Warning: Account deletion cannot be undone.",
+  "download_my_data": "Download my data",
+  "data_downloaded_successfully": "Data downloaded successfully.",
+  "error_downloading_data": "Error downloading data.",
+  "confirm_delete_account_title": "Confirm Account Deletion",
+  "confirm_delete_account_message": "Are you sure you want to delete your account? This action is irreversible and all your data will be lost.",
+  "account_deleted_successfully": "Account deleted successfully.",
+  "error_deleting_account": "Error deleting account."
 }

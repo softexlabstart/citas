@@ -265,5 +265,21 @@
   "marketing_step_3_p1": "- Asunto: El título",
   "select_services": "Seleccionar Servicios",
   "i_agree_to_data_processing": "Estoy de acuerdo con el procesamiento de datos",
-  "privacy_policy": "Política de Privacidad"
+  "privacy_policy": "Política de Privacidad",
+  "personal_data_management": "Gestión de Datos Personales",
+  "accept": "Aceptar",
+  "decline": "Rechazar",
+  "consent_required": "Se requiere consentimiento para continuar.",
+  "edit_my_information": "Editar mi Información",
+  "oppose_data_processing": "Oponerme al procesamiento de datos",
+  "delete_my_account": "Eliminar mi Cuenta",
+  "are_you_sure_delete_account": "¿Estás seguro de que deseas eliminar tu cuenta? Esta acción es irreversible y se perderán todos tus datos.",
+  "account_deletion_warning": "Advertencia: La eliminación de tu cuenta no se puede deshacer.",
+  "download_my_data": "Descargar mis datos",
+  "data_downloaded_successfully": "Datos descargados exitosamente.",
+  "error_downloading_data": "Error al descargar los datos.",
+  "confirm_delete_account_title": "Confirmar Eliminación de Cuenta",
+  "confirm_delete_account_message": "¿Estás seguro de que deseas eliminar tu cuenta? Esta acción es irreversible y se perderán todos tus datos.",
+  "account_deleted_successfully": "Cuenta eliminada exitosamente.",
+  "error_deleting_account": "Error al eliminar la cuenta."
 }

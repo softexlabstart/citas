@@ -4,21 +4,28 @@ import { useNavigate, Link } from 'react-router-dom';
 import { RegisterUser } from '../interfaces/User';
 import { Container, Row, Col, Card, Form, Button, Alert, InputGroup } from 'react-bootstrap';
 import { Person, Lock, Envelope, PersonBadge } from 'react-bootstrap-icons';
+import { useTranslation } from 'react-i18next'; // Import useTranslation
 
 const RegisterPage: React.FC = () => {
+    const { t } = useTranslation(); // Initialize useTranslation
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [email, setEmail] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
+    const [hasConsented, setHasConsented] = useState(false); // New state for consent
     const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!hasConsented) {
+            setError(t('consent_required'));
+            return;
+        }
         try {
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            const newUser: RegisterUser = { username, password, email, first_name: firstName, last_name: lastName, timezone };
+            const newUser: RegisterUser = { username, password, email, first_name: firstName, last_name: lastName, timezone, has_consented_data_processing: hasConsented };
             await register(newUser);
             navigate('/login');
         } catch (error) {
@@ -39,52 +46,64 @@ const RegisterPage: React.FC = () => {
                 <Col xs={12} md={6} className="d-flex justify-content-center align-items-center">
                     <Card style={{ width: '24rem' }} className="shadow-lg border-0 card-transparent">
                         <Card.Body className="p-5">
-                            <Card.Title className="text-center mb-4 h2">Registrarse</Card.Title>
+                            <Card.Title className="text-center mb-4 h2">{t('register')}</Card.Title>
                             {error && <Alert variant="danger">{error}</Alert>}
                             <Form onSubmit={handleSubmit}>
                                 <Form.Group className="mb-3">
                                     <InputGroup>
                                         <InputGroup.Text><Person /></InputGroup.Text>
-                                        <Form.Control type="text" placeholder="Usuario" value={username} onChange={(e) => setUsername(e.target.value)} required />
+                                        <Form.Control type="text" placeholder={t('username')} value={username} onChange={(e) => setUsername(e.target.value)} required />
                                     </InputGroup>
                                 </Form.Group>
 
                                 <Form.Group className="mb-3">
                                     <InputGroup>
                                         <InputGroup.Text><Lock /></InputGroup.Text>
-                                        <Form.Control type="password" placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                                        <Form.Control type="password" placeholder={t('password')} value={password} onChange={(e) => setPassword(e.target.value)} required />
                                     </InputGroup>
                                 </Form.Group>
 
                                 <Form.Group className="mb-3">
                                     <InputGroup>
-_                                        <InputGroup.Text><Envelope /></InputGroup.Text>
-                                        <Form.Control type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                                    </InputGroup>
-                                </Form.Group>
-
-                                <Form.Group className="mb-3">
-                                    <InputGroup>
-                                        <InputGroup.Text><PersonBadge /></InputGroup.Text>
-                                        <Form.Control type="text" placeholder="Nombre" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                                        <InputGroup.Text><Envelope /></InputGroup.Text>
+                                        <Form.Control type="email" placeholder={t('email')} value={email} onChange={(e) => setEmail(e.target.value)} required />
                                     </InputGroup>
                                 </Form.Group>
 
                                 <Form.Group className="mb-3">
                                     <InputGroup>
                                         <InputGroup.Text><PersonBadge /></InputGroup.Text>
-                                        <Form.Control type="text" placeholder="Apellido" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+                                        <Form.Control type="text" placeholder={t('first_name')} value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
                                     </InputGroup>
+                                </Form.Group>
+
+                                <Form.Group className="mb-3">
+                                    <InputGroup>
+                                        <InputGroup.Text><PersonBadge /></InputGroup.Text>
+                                        <Form.Control type="text" placeholder={t('last_name')} value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+                                    </InputGroup>
+                                </Form.Group>
+
+                                {/* Consent Checkbox */}
+                                <Form.Group className="mb-3">
+                                    <Form.Check 
+                                        type="checkbox"
+                                        id="dataConsent"
+                                        label={<span dangerouslySetInnerHTML={{ __html: t('consent_privacy_policy', { 0: `<a href="/privacy-policy" target="_blank">${t('privacy_policy')}</a>` }) }} />}
+                                        checked={hasConsented}
+                                        onChange={(e) => setHasConsented(e.target.checked)}
+                                        required
+                                    />
                                 </Form.Group>
 
                                 <div className="d-grid">
                                     <Button variant="primary" type="submit" className="btn-block fw-bold">
-                                        Registrarse
+                                        {t('register')}
                                     </Button>
                                 </div>
                             </Form>
                             <p className="mt-4 text-center">
-                                ¿Ya tienes cuenta? <Link to="/login">Iniciar Sesión</Link>
+                                {t('already_have_account')} <Link to="/login">{t('login')}</Link>
                             </p>
                         </Card.Body>
                     </Card>

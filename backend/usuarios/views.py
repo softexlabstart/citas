@@ -93,6 +93,43 @@ class UserDetailView(APIView):
         data.pop('is_superuser', None)
         return Response(data)
 
+    def put(self, request, *args, **kwargs):
+        user = request.user
+        serializer = UserSerializer(user, data=request.data, partial=False)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, *args, **kwargs):
+        user = request.user
+        serializer = UserSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'], url_path='personal-data')
+    def get_personal_data(self, request):
+        user = request.user
+        user_data = UserSerializer(user).data
+        # Remove sensitive fields before returning
+        user_data.pop('password', None)
+        user_data.pop('last_login', None)
+        user_data.pop('is_superuser', None)
+        
+        # You might want to include other related data here, e.g., appointments
+        # citas = Cita.objects.filter(user=user)
+        # user_data['citas'] = CitaSerializer(citas, many=True).data
+
+        return Response(user_data)
+
+    @action(detail=False, methods=['delete'], url_path='delete-account')
+    def delete_my_account(self, request):
+        user = request.user
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
     """
     A viewset for viewing and managing client data.

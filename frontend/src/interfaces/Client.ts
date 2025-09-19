@@ -11,4 +11,6 @@ export interface Client {
     genero: string;
     fecha_nacimiento: string; // Added
     age: number;
+    has_consented_data_processing: boolean;
+    data_processing_opt_out: boolean;
 }

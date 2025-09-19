@@ -16,7 +16,7 @@ class PerfilUsuarioSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PerfilUsuario
-        fields = ('timezone', 'sede', 'sedes_administradas', 'is_sede_admin', 'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento')
+        fields = ('timezone', 'sede', 'sedes_administradas', 'is_sede_admin', 'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento', 'has_consented_data_processing', 'data_processing_opt_out') # Added data_processing_opt_out
 
     def get_is_sede_admin(self, obj):
         user = obj.user
@@ -25,41 +25,49 @@ class PerfilUsuarioSerializer(serializers.ModelSerializer):
         return is_in_admin_group or has_sedes_administradas
 
 class UserSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
-    perfil = PerfilUsuarioSerializer(read_only=True) # Nested serializer for PerfilUsuario
-    groups = serializers.SerializerMethodField()
+    password = serializers.CharField(write_only=True, required=False) # Make password optional for updates
+    perfil = PerfilUsuarioSerializer() # Removed read_only=True
+    groups = serializers.SerializerMethodField(read_only=True) # Make groups read_only
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'is_staff', 'password', 'perfil', 'groups') # Include 'perfil'
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'is_staff', 'password', 'perfil', 'groups')
 
     def get_groups(self, obj):
         return [group.name for group in obj.groups.all()]
 
     def create(self, validated_data):
-        # The 'sede' field was previously handled directly in UserSerializer,
-        # but now it's part of PerfilUsuario. We need to adjust this.
-        # For user creation, we'll assume 'sede' might come in the initial data
-        # and pass it to PerfilUsuario creation.
-        # If 'sede' is not directly passed during user creation, PerfilUsuario
-        # will be created without a default 'sede', which can be updated later.
-
+        perfil_data = validated_data.pop('perfil', {})
         user = User.objects.create_user(
             username=validated_data['username'],
-            email=validated_data['email'],
+            email=validated_data.get('email', ''),
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', '')
         )
         user.set_password(validated_data['password'])
         user.save()
-
-        # PerfilUsuario is created via signal, so we don't need to explicitly create it here
-        # However, if 'sede' was part of the initial user creation request,
-        # we need to ensure it's set on the PerfilUsuario.
-        # This part of the logic might need adjustment depending on how user registration
-        # is expected to handle the 'sede' field for PerfilUsuario.
-        # For now, assuming PerfilUsuario is created by signal and can be updated later.
+        PerfilUsuario.objects.create(user=user, **perfil_data) # Create PerfilUsuario here
         return user
+
+    def update(self, instance, validated_data):
+        perfil_data = validated_data.pop('perfil', {})
+
+        # Update User fields
+        instance.username = validated_data.get('username', instance.username)
+        instance.email = validated_data.get('email', instance.email)
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        if 'password' in validated_data:
+            instance.set_password(validated_data['password'])
+        instance.save()
+
+        # Update PerfilUsuario fields
+        perfil = instance.perfil
+        for attr, value in perfil_data.items():
+            setattr(perfil, attr, value)
+        perfil.save()
+
+        return instance
 
 
 class ClientSerializer(serializers.ModelSerializer):

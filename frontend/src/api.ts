@@ -264,3 +264,9 @@ export const getClientHistory = (id: number) => api.get(`/api/clients/${id}/hist
 
 // Funciones para Marketing
 export const sendMarketingEmail = (data: { subject: string; message: string; recipient_emails?: string[] }) => api.post('/api/marketing/send-email/', data);
+
+// Funciones para Gestión de Datos Personales (New)
+export const getPersonalData = () => api.get<any>('/api/auth/user/personal-data/');
+export const deleteAccount = () => api.delete('/api/auth/user/delete-account/'); // New function for deleting account
+
+export const updateDataProcessingOptOut = (optOutStatus: boolean) => api.patch('/api/auth/user/', { perfil: { data_processing_opt_out: optOutStatus } });

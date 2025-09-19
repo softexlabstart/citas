@@ -1,33 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Spinner, Alert, Button, Modal } from 'react-bootstrap'; // Added Button and Modal
+import { Table, Spinner, Alert, Button, Modal } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'react-toastify'; // Added toast import
+import { toast } from 'react-toastify';
 import { useApi } from '../hooks/useApi';
 import { Client } from '../interfaces/Client';
 import { getClients, deleteClient } from '../api';
-import ClientForm from './ClientForm'; // Import ClientForm
-import ClientHistoryModal from './ClientHistoryModal'; // Import ClientHistoryModal
+import ClientForm from './ClientForm';
+import ClientHistoryModal from './ClientHistoryModal';
+import ConfirmationModal from './ConfirmationModal'; // Import ConfirmationModal
 
 
 const Clients: React.FC = () => {
     const { t } = useTranslation();
     const { data: clients, loading, error, request: fetchClients, setData: setClients } = useApi(getClients);
     const { loading: deleteLoading, error: deleteError, request: callDeleteClient } = useApi(deleteClient);
-    const [showModal, setShowModal] = useState(false); // State for modal visibility
-    const [editingClient, setEditingClient] = useState<Client | null>(null); // State for client being edited
+    const [showModal, setShowModal] = useState(false);
+    const [editingClient, setEditingClient] = useState<Client | null>(null);
     const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+    const [showConfirmModal, setShowConfirmModal] = useState(false); // State for confirmation modal visibility
+    const [clientToDeleteId, setClientToDeleteId] = useState<number | null>(null); // State for client ID to delete
 
-    const handleDeleteClient = async (clientId: number) => {
-        if (window.confirm(t('confirm_delete_client'))) {
-            const { success } = await callDeleteClient(clientId);
+    const handleDeleteClient = (clientId: number) => {
+        setClientToDeleteId(clientId);
+        setShowConfirmModal(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (clientToDeleteId) {
+            const { success } = await callDeleteClient(clientToDeleteId);
             if (success) {
                 toast.success(t('client_deleted_successfully'));
                 fetchClients(); // Refresh client list
             } else if (deleteError) {
                 toast.error(t('error_deleting_client') + ": " + deleteError);
             }
+            setClientToDeleteId(null);
+            setShowConfirmModal(false);
         }
+    };
+
+    const handleCloseConfirmModal = () => {
+        setClientToDeleteId(null);
+        setShowConfirmModal(false);
     };
 
     useEffect(() => {
@@ -35,7 +50,7 @@ const Clients: React.FC = () => {
     }, [fetchClients]);
 
     const handleAddClient = () => {
-        setEditingClient(null); // Clear any previous editing state
+        setEditingClient(null);
         setShowModal(true);
     };
 
@@ -51,12 +66,11 @@ const Clients: React.FC = () => {
 
     const handleCloseModal = () => {
         setShowModal(false);
-        setEditingClient(null); // Clear editing state on close
+        setEditingClient(null);
     };
 
     const handleSuccess = (updatedClient?: Client) => {
         if (updatedClient) {
-            // Update existing client in the list
             setClients(
                 clients
                     ? clients.map((client) =>
@@ -65,7 +79,6 @@ const Clients: React.FC = () => {
                     : []
             );
         } else {
-            // New client was added, so we need to refetch the whole list
             fetchClients();
         }
         handleCloseModal();
@@ -93,7 +106,7 @@ const Clients: React.FC = () => {
                             <th>{t('neighborhood')}</th>
                             <th>{t('gender')}</th>
                             <th>{t('age')}</th>
-                            <th>{t('actions')}</th> {/* Added actions column */}
+                            <th>{t('actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -135,6 +148,15 @@ const Clients: React.FC = () => {
 
             {/* Client History Modal */}
             <ClientHistoryModal client={selectedClient} show={showHistoryModal} onHide={() => setShowHistoryModal(false)} />
+
+            {/* Confirmation Modal for deleting client */}
+            <ConfirmationModal
+                isOpen={showConfirmModal}
+                onClose={handleCloseConfirmModal}
+                onConfirm={handleConfirmDelete}
+                message={t('confirm_delete_client')}
+                title={t('confirm_deletion')}
+            />
         </div>
     );
 };
