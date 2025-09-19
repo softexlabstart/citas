@@ -122,7 +122,7 @@ export const getDisponibilidad = (fecha: string, recursoId: number, sedeId: stri
 // Funciones para Bloqueos (New)
 export interface Bloqueo {
     id: number;
-    recurso: Recurso;
+    colaborador: Recurso;
     sede: Sede;
     motivo: string;
     fecha_inicio: string;
