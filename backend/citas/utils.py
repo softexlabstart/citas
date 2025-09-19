@@ -14,7 +14,7 @@ def send_appointment_email(appointment, subject, template_name, context=None):
 
     html_message = render_to_string(f'emails/{template_name}.html', context)
     # Generate a simple plain text message as a fallback
-    plain_message = f"Detalles de su cita para {appointment.servicio.nombre} el {appointment.fecha.strftime('%Y-%m-%d a las %H:%M')}."
+    plain_message = f"Detalles de su cita para {', '.join([s.nombre for s in appointment.servicios.all()])} el {appointment.fecha.strftime('%Y-%m-%d a las %H:%M')}."
 
     recipient_list = []
     if appointment.user and appointment.user.email:

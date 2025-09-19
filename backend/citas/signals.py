@@ -12,6 +12,6 @@ def send_appointment_confirmation_email(sender, instance, created, **kwargs):
     if created:
         send_appointment_email(
             appointment=instance,
-            subject=f"Confirmación de Cita: {instance.servicio.nombre}",
+            subject=f"Confirmación de Cita: {', '.join([s.nombre for s in instance.servicios.all()])}",
             template_name='appointment_confirmation'
         )
