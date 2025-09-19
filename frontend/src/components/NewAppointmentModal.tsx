@@ -8,7 +8,7 @@ interface NewAppointmentModalProps {
     show: boolean;
     onHide: () => void;
     onAppointmentAdded: () => void;
-    prefillData?: Partial<CreateAppointmentPayload> & { recurso_id: number };
+    prefillData?: Partial<CreateAppointmentPayload> & { recurso_id: number, servicios_ids: number[] };
 }
 
 const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({ show, onHide, onAppointmentAdded, prefillData }) => {

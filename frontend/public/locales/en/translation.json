@@ -13,7 +13,7 @@
   "id": "ID",
   "client_name": "Client Name",
   "date": "Date",
-  "service": "Service",
+  "single_service": "Service",
   "status": "Status",
   "actions": "Actions",
   "confirm": "Confirm",
@@ -78,5 +78,17 @@
   "subject": "Subject",
   "error_fetching_clients": "Error fetching clients.",
   "select_recipients": "Select Recipients",
-  "select_all_clients": "Select all clients"
+  "select_all_clients": "Select all clients",
+  "confirm_delete_block_title": "Confirm Delete Block",
+  "confirm_delete_block_body": "confirm delete block body",
+  "yes_delete": "yes delete",
+  "no_cancel": "no cancel", 
+  "confirm_delete_item_title": "Confirm Delete Item",
+"confirm_delete_item_body": "confirm delete item body",
+"yes_delete_item": "yes delete item",
+"no_cancel_item": "no cancel item",
+"error_sending_email": "error sending email",
+"email_sent_successfully": "email sent successfully",
+"select_all": "select all",
+ "deselect_all": "deselect all"
 }

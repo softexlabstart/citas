@@ -8,7 +8,6 @@ import { useApi } from './useApi';
 export const useAppointmentForm = () => {
     // State for selected values
     const [selectedSede, setSelectedSede] = useState('');
-    const [selectedServicio, setSelectedServicio] = useState('');
     const [selectedRecurso, setSelectedRecurso] = useState('');
 
     // API hooks for data fetching
@@ -25,7 +24,6 @@ export const useAppointmentForm = () => {
     // Fetch servicios and recursos when a sede is selected
     useEffect(() => {
         // Reset selections when sede changes
-        setSelectedServicio('');
         setSelectedRecurso('');
 
         if (selectedSede) {
@@ -41,14 +39,12 @@ export const useAppointmentForm = () => {
         servicios: useMemo(() => (selectedSede ? servicios || [] : []), [selectedSede, servicios]),
         recursos: useMemo(() => (selectedSede ? recursos || [] : []), [selectedSede, recursos]),
         selectedSede,
-        selectedServicio,
         selectedRecurso,
         loadingSedes,
         loadingServicios,
         loadingRecursos,
         error: errorSedes || errorServicios || errorRecursos,
         setSelectedSede,
-        setSelectedServicio,
         setSelectedRecurso
     };
 };

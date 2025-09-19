@@ -44,14 +44,19 @@ class ServicioAdmin(admin.ModelAdmin):
 
 @admin.register(Cita)
 class CitaAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'fecha', 'servicio', 'sede', 'confirmado', 'estado')
-    list_filter = ('sede', 'estado', 'confirmado', 'fecha', 'servicio')
-    search_fields = ('nombre', 'servicio__nombre', 'sede__nombre', 'user__username')
-    list_select_related = ('servicio', 'sede', 'user')
+    list_display = ('nombre', 'fecha', 'get_servicios_display', 'sede', 'confirmado', 'estado')
+    list_filter = ('sede', 'estado', 'confirmado', 'fecha', 'servicios')
+    search_fields = ('nombre', 'servicios__nombre', 'sede__nombre', 'user__username')
+    list_select_related = ('sede', 'user')
+    prefetch_related = ('servicios', 'colaboradores')
     # 'list_editable' is removed for 'estado' and 'confirmado' to enforce using custom actions.
     # This ensures that business logic, like sending email notifications, is always triggered
     # when an appointment's status changes, preventing inconsistencies.
     actions = ['confirmar_citas', 'cancelar_citas', 'export_to_excel', 'export_to_pdf', 'marcar_asistio', 'marcar_no_asistio']
+
+    @admin.display(description='Servicios')
+    def get_servicios_display(self, obj):
+        return ", ".join([servicio.nombre for servicio in obj.servicios.all()])
 
     def get_urls(self):
         urls = super().get_urls()
@@ -68,7 +73,7 @@ class CitaAdmin(admin.ModelAdmin):
             cita.save()
             send_appointment_email(
                 appointment=cita,
-                subject=f"Tu cita ha sido confirmada: {cita.servicio.nombre}",
+                subject=f"Tu cita ha sido confirmada: {', '.join([s.nombre for s in cita.servicios.all()])}",
                 template_name='appointment_confirmation'
             )
             updated_count += 1
@@ -86,7 +91,7 @@ class CitaAdmin(admin.ModelAdmin):
             cita.save()
             send_appointment_email(
                 appointment=cita,
-                subject=f"Cancelación de Cita: {cita.servicio.nombre}",
+                subject=f"Cancelación de Cita: {', '.join([s.nombre for s in cita.servicios.all()])}",
                 template_name='appointment_cancellation',
                 context={'original_fecha': original_fecha}
             )
@@ -115,12 +120,12 @@ class CitaAdmin(admin.ModelAdmin):
     marcar_no_asistio.short_description = "Marcar como no asistida"
 
     def export_to_excel(self, request, queryset):
-        optimized_queryset = queryset.select_related('servicio')
+        optimized_queryset = queryset.prefetch_related('servicios')
         return generate_excel_report(optimized_queryset)
     export_to_excel.short_description = 'Exportar a Excel'
 
     def export_to_pdf(self, request, queryset):
-        optimized_queryset = queryset.select_related('servicio')
+        optimized_queryset = queryset.prefetch_related('servicios')
         return generate_pdf_report(optimized_queryset)
     export_to_pdf.short_description = 'Exportar a PDF'
 

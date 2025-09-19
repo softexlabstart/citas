@@ -47,13 +47,14 @@ class DisponibilidadView(APIView):
         fecha_str = request.query_params.get('fecha')
         recurso_id = request.query_params.get('recurso_id')
         sede_id = request.query_params.get('sede_id')
-        servicio_id = request.query_params.get('servicio_id')
+        servicio_ids_str = request.query_params.get('servicio_ids')
 
-        if not fecha_str or not recurso_id or not sede_id or not servicio_id:
-            return Response({'error': _('Faltan parámetros de fecha, recurso, sede o servicio.')}, status=400)
+        if not fecha_str or not recurso_id or not sede_id or not servicio_ids_str:
+            return Response({'error': _('Faltan parámetros de fecha, recurso, sede o servicios.')}, status=400)
 
         try:
-            slots = get_available_slots(recurso_id, fecha_str, servicio_id)
+            servicio_ids = [int(s_id) for s_id in servicio_ids_str.split(',')]
+            slots = get_available_slots(recurso_id, fecha_str, servicio_ids)
             return Response({'disponibilidad': slots})
         except ValueError as e:
             return Response({'error': str(e)}, status=400)
@@ -62,14 +63,15 @@ class NextAvailabilityView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        servicio_id = request.query_params.get('servicio_id')
+        servicio_ids_str = request.query_params.get('servicio_ids')
         sede_id = request.query_params.get('sede_id')
 
-        if not servicio_id or not sede_id:
-            return Response({'error': _('Faltan parámetros de servicio o sede.')}, status=400)
+        if not servicio_ids_str or not sede_id:
+            return Response({'error': _('Faltan parámetros de servicios o sede.')}, status=400)
 
         try:
-            slots = find_next_available_slots(servicio_id, sede_id)
+            servicio_ids = [int(s_id) for s_id in servicio_ids_str.split(',')]
+            slots = find_next_available_slots(servicio_ids, sede_id)
             return Response(slots)
         except ValueError as e:
             return Response({'error': str(e)}, status=400)
@@ -169,6 +171,13 @@ class CitaViewSet(viewsets.ModelViewSet):
         if recurso_id and 'colaboradores_ids' not in data:
             data['colaboradores_ids'] = [recurso_id]
         
+        # Ensure servicios_ids is a list of integers
+        servicios_ids = data.get('servicios_ids')
+        if isinstance(servicios_ids, str):
+            data['servicios_ids'] = [int(s_id) for s_id in servicios_ids.split(',')]
+        elif not isinstance(servicios_ids, list):
+            data['servicios_ids'] = [] # Default to empty list if not provided or invalid format
+
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -192,7 +201,14 @@ class CitaViewSet(viewsets.ModelViewSet):
         
         # For regular users or staff, associate the appointment with the logged-in user.
         # The 'sede' is already handled by the serializer's 'sede_id' field.
-        serializer.save(user=user)
+        cita = serializer.save(user=user)
+
+        # Send email notification
+        send_appointment_email(
+            appointment=cita,
+            subject=f"Confirmación de Cita: {', '.join([s.nombre for s in cita.servicios.all()])}",
+            template_name='appointment_confirmation'
+        )
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -214,7 +230,7 @@ class CitaViewSet(viewsets.ModelViewSet):
         if updated_instance.fecha != old_fecha:
             send_appointment_email(
                 appointment=updated_instance,
-                subject=f"Reprogramación de Cita: {updated_instance.servicio.nombre}",
+                subject=f"Reprogramación de Cita: {', '.join([s.nombre for s in updated_instance.servicios.all()])}",
                 template_name='appointment_reschedule'
             )
 
@@ -230,7 +246,7 @@ class CitaViewSet(viewsets.ModelViewSet):
 
         send_appointment_email(
             appointment=instance,
-            subject=f"Cancelación de Cita: {instance.servicio.nombre}",
+            subject=f"Cancelación de Cita: {', '.join([s.nombre for s in instance.servicios.all()])}",
             template_name='appointment_cancellation',
             context={'original_fecha': original_fecha}
         )
@@ -251,7 +267,7 @@ class CitaViewSet(viewsets.ModelViewSet):
 
             send_appointment_email(
                 appointment=cita,
-                subject=f"Tu cita ha sido confirmada: {cita.servicio.nombre}",
+                subject=f"Tu cita ha sido confirmada: {', '.join([s.nombre for s in cita.servicios.all()])}",
                 template_name='appointment_confirmation'
             )
 
@@ -311,7 +327,7 @@ class DashboardSummaryView(APIView):
             ingresos_mes = base_queryset.filter(
                 estado='Asistio',
                 fecha__gte=start_of_month
-            ).aggregate(total=Sum('servicio__precio'))['total'] or 0
+            ).aggregate(total=Sum(F('servicios__precio')))['total'] or 0
 
             proximas_citas = base_queryset.filter(
                 fecha__gte=timezone.now(),
@@ -389,7 +405,7 @@ class AppointmentReportView(APIView):
         )
 
         if servicio_id:
-            queryset = queryset.filter(servicio_id=servicio_id)
+            queryset = queryset.filter(servicios__id=servicio_id)
         if colaborador_id:
             queryset = queryset.filter(colaboradores__id=colaborador_id)
         if estado:
@@ -401,16 +417,16 @@ class AppointmentReportView(APIView):
 
             writer = csv.writer(response)
             # Write header
-            writer.writerow([_('ID'), _('Nombre Cliente'), _('Fecha'), _('Servicio'), _('Sede'), _('Estado'), _('Confirmado'), _('Usuario')])
+            writer.writerow([_('ID'), _('Nombre Cliente'), _('Fecha'), _('Servicios'), _('Sede'), _('Estado'), _('Confirmado'), _('Usuario')])
 
             # Write data rows
             # Add 'sede' to select_related for performance optimization
-            for cita in queryset.select_related('servicio', 'user', 'sede').prefetch_related('colaboradores'):
+            for cita in queryset.select_related('user', 'sede').prefetch_related('servicios', 'colaboradores'):
                 writer.writerow([
                     cita.id,
                     cita.nombre,
                     cita.fecha.strftime('%Y-%m-%d %H:%M'),
-                    cita.servicio.nombre,
+                    ", ".join([s.nombre for s in cita.servicios.all()]),
                     cita.sede.nombre,
                     cita.estado,
                     _('Sí') if cita.confirmado else _('No'),
@@ -428,7 +444,9 @@ class AppointmentReportView(APIView):
                 if state not in report:
                     report[state] = 0
 
-            return Response(report)
+            total_revenue = queryset.filter(estado='Asistio').aggregate(total=Sum(F('servicios__precio')))['total'] or 0
+
+            return Response({'report': report, 'total_revenue': total_revenue})
 
 class SedeReportView(APIView):
     permission_classes = [IsAuthenticated]
@@ -487,14 +505,14 @@ class SedeReportView(APIView):
 
         # Apply optional filters for service and resource to the base queryset
         if servicio_id:
-            base_queryset = base_queryset.filter(servicio_id=servicio_id)
+            base_queryset = base_queryset.filter(servicios__id=servicio_id)
         if colaborador_id:
             base_queryset = base_queryset.filter(colaboradores__id=colaborador_id)
 
         # Calculate total revenue from the base queryset, before applying the status filter.
         # This ensures the total revenue reflects all attended appointments in the selected scope,
         # regardless of the status filter applied to the detailed view.
-        total_revenue = base_queryset.filter(estado='Asistio').aggregate(total=Sum('servicio__precio'))['total'] or 0
+        total_revenue = base_queryset.filter(estado='Asistio').aggregate(total=Sum(F('servicios__precio')))['total'] or 0
 
         # Now, apply the optional estado filter to get the final queryset for the detailed report
         queryset = base_queryset
@@ -511,7 +529,7 @@ class SedeReportView(APIView):
             no_asistio=Count(Case(When(estado='No Asistio', then=1), output_field=IntegerField())),
             ingresos=Sum(
                 Case(
-                    When(estado='Asistio', then=F('servicio__precio')),
+                    When(estado='Asistio', then=F('servicios__precio')),
                     default=Value(0),
                     output_field=DecimalField()
                 )
@@ -540,9 +558,9 @@ class SedeReportView(APIView):
         # Let's provide a summary of services and resources used within the filtered set.
         
         # Services summary
-        services_summary = queryset.values('servicio__nombre').annotate(
-            count=Count('servicio__nombre')
-        ).order_by('servicio__nombre')
+        services_summary = queryset.values('servicios__nombre').annotate(
+            count=Count('servicios__nombre')
+        ).order_by('servicios__nombre')
 
         # Resources summary
         resources_summary = queryset.values('colaboradores__nombre').annotate(
@@ -561,7 +579,7 @@ class SedeReportView(APIView):
 class ReportForm(forms.Form):
     start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), label=_("Fecha de Inicio"))
     end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), label=_("Fecha de Fin"))
-    servicio = forms.ModelChoiceField(queryset=Servicio.objects.all(), required=False, label=_("Servicio"))
+    servicios = forms.ModelMultipleChoiceField(queryset=Servicio.objects.all(), required=False, label=_("Servicios"))
     colaborador = forms.ModelChoiceField(queryset=Colaborador.objects.all(), required=False, label=_("Colaborador"))
     estado = forms.ChoiceField(choices=[('', _('Todos'))] + Cita.ESTADO_CHOICES, required=False, label=_("Estado"))
     report_format = forms.ChoiceField(choices=[('json', _('JSON (Resumen)')), ('csv', _('CSV (Detallado)'))], label=_("Formato de Reporte"))
@@ -590,7 +608,7 @@ def admin_report_view(request):
         if form.is_valid():
             start_date = form.cleaned_data['start_date']
             end_date = form.cleaned_data['end_date']
-            servicio = form.cleaned_data['servicio']
+            servicios = form.cleaned_data['servicios']
             colaborador = form.cleaned_data['colaborador']
             estado = form.cleaned_data['estado']
             report_format = form.cleaned_data['report_format']
@@ -606,8 +624,8 @@ def admin_report_view(request):
                 'end_date': end_date.strftime('%Y-%m-%d'),
                 'export': report_format # Corrected from 'format' to 'export'
             }
-            if servicio:
-                dummy_request.query_params['servicio_id'] = servicio.id
+            if servicios:
+                dummy_request.query_params['servicio_ids'] = ",".join([str(s.id) for s in servicios])
             if colaborador:
                 dummy_request.query_params['colaborador_id'] = colaborador.id
             if estado:

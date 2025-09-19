@@ -61,7 +61,7 @@ const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({ client, show, o
                                 {history.citas.map((cita: any) => (
                                     <tr key={cita.id}>
                                         <td>{new Date(cita.fecha).toLocaleString()}</td>
-                                        <td>{cita.servicio.nombre}</td>
+                                        <td>{cita.servicios.map((s: any) => s.nombre).join(', ')}</td>
                                         <td>{t(cita.estado)}</td>
                                     </tr>
                                 ))}

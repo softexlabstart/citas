@@ -6,15 +6,18 @@ from rest_framework.exceptions import ValidationError
 from .models import Cita, Horario, Colaborador, Servicio, Bloqueo
 from organizacion.models import Sede
 
-def check_appointment_availability(sede, servicio, colaboradores, fecha, cita_id=None):
+def check_appointment_availability(sede, servicios, colaboradores, fecha, cita_id=None):
     """
     Verifica la disponibilidad de una cita, incluyendo horarios de colaboradores y conflictos de citas.
     Lanza una ValidationError si no está disponible.
     """
+    if not servicios:
+        raise ValidationError("Debe seleccionar al menos un servicio.")
+
     try:
-        duracion_estimada = servicio.duracion_estimada
+        duracion_estimada = sum(s.duracion_estimada for s in servicios)
     except AttributeError:
-        raise ValidationError("El servicio seleccionado no tiene una duración estimada válida.")
+        raise ValidationError("Uno de los servicios seleccionados no tiene una duración estimada válida.")
 
     cita_start_time = fecha
     cita_end_time = cita_start_time + timedelta(minutes=duracion_estimada)
@@ -22,7 +25,7 @@ def check_appointment_availability(sede, servicio, colaboradores, fecha, cita_id
     # Annotate existing appointments once outside the loop for efficiency.
     existing_appointments = Cita.objects.annotate(
         end_time=ExpressionWrapper(
-            F('fecha') + F('servicio__duracion_estimada') * timedelta(minutes=1),
+            F('fecha') + F('servicios__duracion_estimada') * timedelta(minutes=1),
             output_field=DateTimeField()
         )
     )
@@ -66,7 +69,7 @@ def check_appointment_availability(sede, servicio, colaboradores, fecha, cita_id
 
         for conflict in potential_conflicts:
             conflict_start = conflict.fecha
-            conflict_end = conflict_start + timedelta(minutes=conflict.servicio.duracion_estimada)
+            conflict_end = conflict_start + timedelta(minutes=sum(s.duracion_estimada for s in conflict.servicios.all()))
             # Standard overlap check: (StartA < EndB) and (EndA > StartB)
             if cita_start_time < conflict_end and cita_end_time > conflict_start:
                 raise ValidationError(f"El colaborador '{colaborador.nombre}' ya tiene una cita agendada que se superpone con el horario solicitado.")
@@ -82,7 +85,7 @@ def check_appointment_availability(sede, servicio, colaboradores, fecha, cita_id
 
     return True
 
-def get_available_slots(colaborador_id, fecha_str, servicio_id):
+def get_available_slots(colaborador_id, fecha_str, servicio_ids):
     """
     Obtiene los slots de tiempo disponibles para un colaborador en una fecha específica,
     considerando la duración del servicio.
@@ -90,8 +93,11 @@ def get_available_slots(colaborador_id, fecha_str, servicio_id):
     try:
         fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
         colaborador = Colaborador.objects.get(id=colaborador_id)
-        servicio = Servicio.objects.get(id=servicio_id)
-        intervalo = timedelta(minutes=servicio.duracion_estimada)
+        servicios = Servicio.objects.filter(id__in=servicio_ids)
+        if not servicios.exists():
+            raise ValueError('IDs de servicio inválidos.')
+        duracion_total_servicios = sum(s.duracion_estimada for s in servicios)
+        intervalo = timedelta(minutes=duracion_total_servicios)
         # Define a smaller step for generating potential slots
         step = timedelta(minutes=15)
     except (ValueError, Colaborador.DoesNotExist, Servicio.DoesNotExist):
@@ -125,7 +131,7 @@ def get_available_slots(colaborador_id, fecha_str, servicio_id):
         busy_times = []
         for cita in citas_del_dia:
             start = cita.fecha
-            end = start + timedelta(minutes=cita.servicio.duracion_estimada)
+            end = start + timedelta(minutes=sum(s.duracion_estimada for s in cita.servicios.all()))
             if start < schedule_end and end > schedule_start:
                 busy_times.append((start, end))
         for bloqueo in bloqueos_del_dia:
@@ -166,23 +172,27 @@ def get_available_slots(colaborador_id, fecha_str, servicio_id):
     available_slots.sort(key=lambda x: x['start'])
     return available_slots
 
-def find_next_available_slots(servicio_id, sede_id, limit=5):
+def find_next_available_slots(servicio_ids, sede_id, limit=5):
     """
     Finds the next available slots for a given service at a specific location,
     across all available resources.
     """
+    if not servicio_ids:
+        raise ValueError("Debe proporcionar al menos un ID de servicio.")
+
     try:
         sede = Sede.objects.get(id=sede_id)
     except Sede.DoesNotExist:
         raise ValueError(f"La sede con id={sede_id} no existe.")
 
-    try:
-        servicio = Servicio.objects.get(id=servicio_id)
-    except Servicio.DoesNotExist:
-        raise ValueError(f"El servicio con id={servicio_id} no existe.")
+    servicios = Servicio.objects.filter(id__in=servicio_ids)
+    if not servicios.exists():
+        raise ValueError(f"Alguno de los servicios con ids={servicio_ids} no existe.")
 
-    if servicio.sede.id != sede.id:
-        raise ValueError(f"El servicio '{servicio.nombre}' (id={servicio.id}) pertenece a la sede '{servicio.sede.nombre}' (id={servicio.sede.id}), no a la sede seleccionada '{sede.nombre}' (id={sede.id}).")
+    # Check if all services belong to the selected sede
+    for servicio in servicios:
+        if servicio.sede.id != sede.id:
+            raise ValueError(f"El servicio '{servicio.nombre}' (id={servicio.id}) pertenece a la sede '{servicio.sede.nombre}' (id={servicio.sede.id}), no a la sede seleccionada '{sede.nombre}' (id={sede.id}).")
 
     colaboradores = Colaborador.objects.filter(sede_id=sede_id)
     if not colaboradores.exists():
@@ -197,7 +207,7 @@ def find_next_available_slots(servicio_id, sede_id, limit=5):
         daily_slots_for_all_colaboradores = []
         for colaborador in colaboradores:
             date_str = current_date.strftime('%Y-%m-%d')
-            daily_slots = get_available_slots(colaborador.id, date_str, servicio_id)
+            daily_slots = get_available_slots(colaborador.id, date_str, servicio_ids)
             
             for slot in daily_slots:
                 if slot['status'] == 'disponible' and datetime.fromisoformat(slot['start']) > timezone.now():

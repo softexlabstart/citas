@@ -50,9 +50,9 @@ const AppointmentsCalendar: React.FC = () => {
     const events: CalendarEvent[] = useMemo(() => {
         const filteredAppointments = appointments?.filter(app => !selectedResourceId || app.colaboradores.some(r => r.id === Number(selectedResourceId))) || [];
         const appointmentEvents = filteredAppointments.map((appointment) => ({
-            title: `${appointment.nombre} - ${appointment.servicio.nombre}`,
+            title: `${appointment.nombre} - ${appointment.servicios.map(s => s.nombre).join(', ')}`,
             start: new Date(appointment.fecha),
-            end: new Date(new Date(appointment.fecha).getTime() + (appointment.servicio.duracion_estimada || 60) * 60 * 1000),
+            end: new Date(new Date(appointment.fecha).getTime() + (appointment.servicios.reduce((sum, s) => sum + (s.duracion_estimada || 0), 0) || 60) * 60 * 1000),
             resource: appointment,
             type: 'appointment' as 'appointment', // Explicitly cast the literal type
         }));
@@ -151,7 +151,7 @@ const AppointmentsCalendar: React.FC = () => {
                     {selectedAppointment && (
                         <div>
                             <p><strong>{t('client_name')}:</strong> {selectedAppointment.nombre}</p>
-                            <p><strong>{t('service')}:</strong> {selectedAppointment.servicio.nombre}</p>
+                            <p><strong>{t('service')}:</strong> {selectedAppointment.servicios.map(s => s.nombre).join(', ')}</p>
                             <p><strong>{t('sede_label')}:</strong> {selectedAppointment.sede.nombre}</p>
                             <p><strong>{t('date')}:</strong> {new Date(selectedAppointment.fecha).toLocaleString()}</p>
                             <p><strong>{t('resources')}:</strong> {selectedAppointment.colaboradores.map(r => r.nombre).join(', ')}</p>

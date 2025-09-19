@@ -13,7 +13,7 @@
   "id": "ID",
   "client_name": "Nombre Cliente",
   "date": "Fecha",
-  "service": "Servicio",
+  "single_service": "Servicio",
   "status": "Estado",
   "actions": "Acciones",
   "confirm": "Confirmar",
@@ -238,5 +238,13 @@
   "confirm_delete_block_title": "Confirmar Eliminación de Bloqueo",
   "confirm_delete_block_body": "estás seguro de que deseas eliminar este bloqueo?",
   "yes_delete": "Sí, Eliminar",
-  "no_cancel": "No, Cancelar"
+  "no_cancel": "No, Cancelar",
+  "confirm_delete_item_title": "Confirmar Eliminación",
+  "confirm_delete_item_body": "¿Estás seguro de que deseas eliminar este elemento?",
+  "yes_delete_item": "Sí, Eliminar",
+  "no_cancel_item": "No, Cancelar",
+  "error_sending_email": "Error al enviar el email.",
+  "email_sent_successfully": "Email enviado exitosamente.",
+  "select_all": "Seleccionar Todo",
+  "deselect_all": "Deseleccionar Todo"
 }

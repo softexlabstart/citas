@@ -18,7 +18,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ data }) => {
             <Card.Body>
                 {data.proxima_cita ? (
                     <>
-                        <Card.Title className="fs-3">{data.proxima_cita.servicio.nombre}</Card.Title>
+                        <Card.Title className="fs-3">{data.proxima_cita.servicios.map(s => s.nombre).join(', ')}</Card.Title>
                         <Card.Text className="fs-5">
                             {new Date(data.proxima_cita.fecha).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                         </Card.Text>

@@ -134,7 +134,7 @@ const SedeReport: React.FC = () => {
                                 <h5>{t('services_summary')}</h5>
                                 <Table striped bordered hover responsive size="sm">
                                     <thead><tr><th>{t('service')}</th><th>{t('count')}</th></tr></thead>
-                                    <tbody>{reportData.resumen_servicios.map((item, index) => (<tr key={index}><td>{item.servicio__nombre}</td><td>{item.count}</td></tr>))}</tbody>
+                                    <tbody>{reportData.resumen_servicios.map((item, index) => (<tr key={index}><td>{item.servicios__nombre}</td><td>{item.count}</td></tr>))}</tbody>
                                 </Table>
                             </Col>
                             <Col md={6}>

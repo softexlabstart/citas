@@ -75,7 +75,7 @@ export const getAllAppointments = (startDate?: string, endDate?: string) => {
 export interface CreateAppointmentPayload {
     nombre: string;
     fecha: string;
-    servicio_id: number;
+    servicios_ids: number[];
     colaboradores_ids: number[];
     sede_id: number;
     estado: 'Pendiente';
@@ -109,12 +109,12 @@ export const getRecursos = (sedeId?: string) => {
 export const addRecurso = (recurso: Partial<Recurso>) => api.post<Recurso>('/api/citas/recursos/', recurso);
 export const updateRecurso = (id: number, recurso: Partial<Recurso>) => api.patch<Recurso>(`/api/citas/recursos/${id}/`, recurso);
 export const deleteRecurso = (id: number) => api.delete(`/api/citas/recursos/${id}/`);
-export const getDisponibilidad = (fecha: string, recursoId: number, sedeId: string, servicioId: string) => {
+export const getDisponibilidad = (fecha: string, recursoId: number, sedeId: string, servicioIds: string[]) => {
     const params = new URLSearchParams({
         fecha,
         recurso_id: String(recursoId),
         sede_id: sedeId,
-        servicio_id: servicioId,
+        servicio_ids: servicioIds.join(','),
     });
     return api.get(`/api/citas/disponibilidad/?${params.toString()}`);
 };
@@ -158,8 +158,11 @@ export interface NextAvailableSlot {
     end: string;
 }
 
-export const getNextAvailableSlots = (servicioId: string, sedeId: string) => {
-    const params = new URLSearchParams({ servicio_id: servicioId, sede_id: sedeId });
+export const getNextAvailableSlots = (servicioIds: string[], sedeId: string) => {
+    const params = new URLSearchParams({
+        servicio_ids: servicioIds.join(','),
+        sede_id: sedeId
+    });
     return api.get<NextAvailableSlot[]>(`/api/citas/next-availability/?${params.toString()}`);
 };
 
@@ -183,13 +186,13 @@ export const getDashboardSummary = () => api.get<DashboardSummary>('/api/citas/d
 export const getSedes = () => api.get<Sede[]>('/api/organizacion/sedes/');
 
 // Funciones para Reportes
-export const getAppointmentsReport = (startDate: string, endDate: string, servicioId?: string, recursoId?: string) => {
+export const getAppointmentsReport = (startDate: string, endDate: string, servicioIds?: string[], recursoId?: string) => {
     const params = new URLSearchParams({
         start_date: startDate,
         end_date: endDate,
     });
-    if (servicioId) {
-        params.append('servicio_id', servicioId);
+    if (servicioIds && servicioIds.length > 0) {
+        params.append('servicio_ids', servicioIds.join(','));
     }
     if (recursoId) {
         params.append('recurso_id', recursoId);
@@ -205,13 +208,13 @@ export const getSedeSummaryReport = (startDate: string, endDate: string) => {
     return api.get(`/api/citas/reports/sede_summary/?${params.toString()}`);
 };
 
-export const downloadAppointmentsReportCSV = (startDate: string, endDate: string, servicioId?: string, recursoId?: string) => {
+export const downloadAppointmentsReportCSV = (startDate: string, endDate: string, servicioIds?: string[], recursoId?: string) => {
     const params = new URLSearchParams({
         start_date: startDate,
         end_date: endDate,
     });
-    if (servicioId) {
-        params.append('servicio_id', servicioId);
+    if (servicioIds && servicioIds.length > 0) {
+        params.append('servicio_ids', servicioIds.join(','));
     }
     if (recursoId) {
         params.append('recurso_id', recursoId);

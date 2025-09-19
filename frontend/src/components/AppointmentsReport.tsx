@@ -30,14 +30,14 @@ const AppointmentsReport: React.FC = () => {
     // Form state
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    const [servicioId, setServicioId] = useState('');
+    const [servicioIds, setServicioIds] = useState<string[]>([]);
     const [recursoId, setRecursoId] = useState('');
     const [isExporting, setIsExporting] = useState(false);
 
     // API hooks
     const { data: servicios, loading: loadingServicios, request: fetchServicios } = useApi<Service[], []>(getServicios);
     const { data: recursos, loading: loadingRecursos, request: fetchRecursos } = useApi<Recurso[], []>(getRecursos);
-    const { data: reportData, loading: loadingReport, error: reportError, request: fetchReport } = useApi<ReportData, [string, string, string | undefined, string | undefined]>(getAppointmentsReport);
+    const { data: reportData, loading: loadingReport, error: reportError, request: fetchReport } = useApi<ReportData, [string, string, string[] | undefined, string | undefined]>(getAppointmentsReport);
 
     useEffect(() => {
         fetchServicios();
@@ -50,7 +50,7 @@ const AppointmentsReport: React.FC = () => {
             toast.warn(t('select_start_and_end_date'));
             return;
         }
-        fetchReport(startDate, endDate, servicioId || undefined, recursoId || undefined);
+        fetchReport(startDate, endDate, servicioIds.length > 0 ? servicioIds : undefined, recursoId || undefined);
     };
 
     const handleExportCSV = async () => {
@@ -60,7 +60,7 @@ const AppointmentsReport: React.FC = () => {
         }
         setIsExporting(true);
         try {
-            const response = await downloadAppointmentsReportCSV(startDate, endDate, servicioId || undefined, recursoId || undefined);
+            const response = await downloadAppointmentsReportCSV(startDate, endDate, servicioIds.length > 0 ? servicioIds : undefined, recursoId || undefined);
             const blob = new Blob([response.data], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -76,6 +76,14 @@ const AppointmentsReport: React.FC = () => {
         } finally {
             setIsExporting(false);
         }
+    };
+
+    const handleServiceChange = (serviceId: string) => {
+        setServicioIds(prev =>
+            prev.includes(serviceId)
+                ? prev.filter(id => id !== serviceId)
+                : [...prev, serviceId]
+        );
     };
 
     const generateChartData = () => {
@@ -125,10 +133,20 @@ const AppointmentsReport: React.FC = () => {
                             <Col md={6}>
                                 <Form.Group className="mb-3">
                                     <Form.Label>{t('service')} ({t('optional')})</Form.Label>
-                                    <Form.Control as="select" value={servicioId} onChange={(e) => setServicioId(e.target.value)} disabled={isLoadingFilters}>
-                                        <option value="">{t('all_services')}</option>
-                                        {servicios?.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-                                    </Form.Control>
+                                    {isLoadingFilters ? (
+                                        <Spinner animation="border" size="sm" />
+                                    ) : (
+                                        servicios?.map(s => (
+                                            <Form.Check
+                                                type="checkbox"
+                                                key={s.id}
+                                                id={`service-filter-${s.id}`}
+                                                label={s.nombre}
+                                                checked={servicioIds.includes(String(s.id))}
+                                                onChange={() => handleServiceChange(String(s.id))}
+                                            />
+                                        ))
+                                    )}
                                 </Form.Group>
                             </Col>
                             <Col md={6}>

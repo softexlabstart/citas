@@ -7,7 +7,7 @@ export interface Appointment {
   id: number;
   nombre: string;
   fecha: string;
-  servicio: Service;
+  servicios: Service[];
   colaboradores: Recurso[];
   confirmado: boolean;
   user: User;

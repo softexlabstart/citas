@@ -71,9 +71,9 @@ class Cita(models.Model):
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='citas', null=True, blank=True)
-    nombre = models.CharField(max_length=100, db_index=True)
-    fecha = models.DateTimeField(db_index=True)
-    servicio = models.ForeignKey(Servicio, on_delete=models.CASCADE, related_name='citas')
+    nombre = models.CharField(max_length=100)
+    fecha = models.DateTimeField()
+    servicios = models.ManyToManyField(Servicio, related_name='citas')
     colaboradores = models.ManyToManyField('Colaborador', related_name='citas', blank=True)
     confirmado = models.BooleanField(default=False)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente', db_index=True)

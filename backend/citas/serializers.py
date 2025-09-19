@@ -46,8 +46,8 @@ class BloqueoSerializer(serializers.ModelSerializer):
         fields = ['id', 'colaborador', 'motivo', 'fecha_inicio', 'fecha_fin', 'colaborador_id']
 
 class CitaSerializer(serializers.ModelSerializer):
-    servicio = ServicioSerializer(read_only=True)
-    servicio_id = serializers.PrimaryKeyRelatedField(queryset=Servicio.objects.all(), source='servicio', write_only=True)
+    servicios = ServicioSerializer(many=True, read_only=True)
+    servicios_ids = serializers.PrimaryKeyRelatedField(queryset=Servicio.objects.all(), source='servicios', many=True, write_only=True)
     user = UserSerializer(read_only=True)
     colaboradores = ColaboradorSerializer(many=True, read_only=True)
     colaboradores_ids = serializers.PrimaryKeyRelatedField(queryset=Colaborador.objects.all(), source='colaboradores', many=True, write_only=True)
@@ -56,7 +56,7 @@ class CitaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cita
-        fields = ['id', 'nombre', 'fecha', 'servicio', 'servicio_id', 'confirmado', 'user', 'estado', 'colaboradores', 'colaboradores_ids', 'sede', 'sede_id', 'comentario']
+        fields = ['id', 'nombre', 'fecha', 'servicios', 'servicios_ids', 'confirmado', 'user', 'estado', 'colaboradores', 'colaboradores_ids', 'sede', 'sede_id', 'comentario']
 
     def validate_fecha(self, value):
         if self.instance and self.instance.estado == 'Cancelada':
@@ -71,13 +71,14 @@ class CitaSerializer(serializers.ModelSerializer):
 
         colaboradores = data.get('colaboradores', self.instance.colaboradores.all() if self.instance else [])
         fecha = data.get('fecha', self.instance.fecha if self.instance else None)
-        servicio = data.get('servicio', self.instance.servicio if self.instance else None)
+        servicios = data.get('servicios', self.instance.servicios.all() if self.instance else [])
         sede = data.get('sede', self.instance.sede if self.instance else None)
         cita_id = self.instance.id if self.instance else None
 
-        if not all([colaboradores, fecha, servicio, sede]):
+        if not all([colaboradores, fecha, servicios, sede]):
             return data
 
-        check_appointment_availability(sede, servicio, colaboradores, fecha, cita_id)
+        for servicio in servicios:
+            check_appointment_availability(sede, servicio, colaboradores, fecha, cita_id)
 
         return data

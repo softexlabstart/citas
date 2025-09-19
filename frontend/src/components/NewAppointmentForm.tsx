@@ -21,20 +21,20 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
     servicios,
     recursos,
     selectedSede,
-    selectedServicio,
     selectedRecurso,
     loadingSedes,
     loadingServicios,
     loadingRecursos,
     error: formDependencyError,
     setSelectedSede,
-    setSelectedServicio,
-    setSelectedRecurso
+    setSelectedRecurso,
   } = useAppointmentForm();
 
-  const { data: availability, loading: slotsLoading, request: fetchAvailableSlots, error: availabilityError } = useApi<{ disponibilidad: any[] }, [string, number, string, string]>(getDisponibilidad);
+  const [selectedServicios, setSelectedServicios] = useState<string[]>([]);
+
+  const { data: availability, loading: slotsLoading, request: fetchAvailableSlots, error: availabilityError } = useApi<{ disponibilidad: any[] }, [string, number, string, string[]]>(getDisponibilidad);
   const { loading: isSubmitting, request: submitAppointment, error: submitError } = useApi(addAppointment);
-  const { data: nextAvailable, loading: nextAvailableLoading, request: fetchNextAvailable, error: nextAvailableError } = useApi<NextAvailableSlot[], [string, string]>(getNextAvailableSlots);
+  const { data: nextAvailable, loading: nextAvailableLoading, request: fetchNextAvailable, error: nextAvailableError } = useApi<NextAvailableSlot[], [string[], string]>(getNextAvailableSlots);
 
   const [date, setDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
@@ -42,35 +42,45 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
 
   useEffect(() => {
     if (prefillData) {
-        setSelectedSede(String(prefillData.sede_id));
-        // The useEffect in useAppointmentForm will fetch servicios and recursos.
-        // We need to wait for them to be loaded before setting the other fields.
+      setSelectedSede(String(prefillData.sede_id));
+      // The useEffect in useAppointmentForm will fetch servicios and recursos.
+      // We need to wait for them to be loaded before setting the other fields.
     }
   }, [prefillData, setSelectedSede]);
 
   useEffect(() => {
     // This effect runs when the prefill data is available AND the dependent dropdowns have been loaded.
     if (prefillData && servicios.length > 0 && recursos.length > 0) {
-        setSelectedServicio(String(prefillData.servicio_id));
-        setSelectedRecurso(String(prefillData.recurso_id));
-        setDate(prefillData.fecha?.split('T')[0] || '');
-        setSelectedSlot(prefillData.fecha || '');
+      if (prefillData.servicios_ids) {
+        setSelectedServicios(prefillData.servicios_ids.map(String));
+      }
+      setSelectedRecurso(String(prefillData.recurso_id));
+      setDate(prefillData.fecha?.split('T')[0] || '');
+      setSelectedSlot(prefillData.fecha || '');
     }
-  }, [prefillData, servicios, recursos, setSelectedServicio, setSelectedRecurso]);
+  }, [prefillData, servicios, recursos, setSelectedRecurso]);
 
   const availableSlots = availability?.disponibilidad.filter(slot => slot.status === 'disponible') || [];
 
   useEffect(() => {
-    if (date && selectedRecurso && selectedSede && selectedServicio) {
-      fetchAvailableSlots(date, parseInt(selectedRecurso, 10), selectedSede, selectedServicio);
+    if (date && selectedRecurso && selectedSede && selectedServicios.length > 0) {
+      fetchAvailableSlots(date, parseInt(selectedRecurso, 10), selectedSede, selectedServicios);
     }
-  }, [date, selectedRecurso, selectedSede, selectedServicio, fetchAvailableSlots]);
+  }, [date, selectedRecurso, selectedSede, selectedServicios, fetchAvailableSlots]);
 
   const handleFindNextAvailable = () => {
-    if (selectedServicio && selectedSede) {
-      fetchNextAvailable(selectedServicio, selectedSede);
+    if (selectedServicios.length > 0 && selectedSede) {
+      fetchNextAvailable(selectedServicios, selectedSede);
       setShowNextAvailableModal(true);
     }
+  };
+
+  const handleServiceChange = (serviceId: string) => {
+    setSelectedServicios(prev =>
+      prev.includes(serviceId)
+        ? prev.filter(id => id !== serviceId)
+        : [...prev, serviceId]
+    );
   };
 
   const handleSelectNextAvailable = (slot: NextAvailableSlot) => {
@@ -83,7 +93,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
   const resetForm = () => {
     setDate('');
     setSelectedSede('');
-    setSelectedServicio('');
+    setSelectedServicios([]);
     setSelectedRecurso('');
     setSelectedSlot('');
   };
@@ -91,13 +101,13 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-        toast.error(t('you_must_be_logged_in'));
-        return;
+      toast.error(t('you_must_be_logged_in'));
+      return;
     }
     const newAppointment = {
       nombre: user.username,
       fecha: selectedSlot,
-      servicio_id: parseInt(selectedServicio),
+      servicios_ids: selectedServicios.map(id => parseInt(id, 10)),
       colaboradores_ids: [parseInt(selectedRecurso)],
       sede_id: parseInt(selectedSede),
       estado: 'Pendiente' as const,
@@ -140,12 +150,20 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
         <Form.Group className="mb-3">
           <Form.Label>{t('service_label')}</Form.Label>
           {loadingServicios && <Spinner animation="border" size="sm" />}
-          <Form.Control as="select" value={selectedServicio} onChange={(e) => setSelectedServicio(e.target.value)} required disabled={!selectedSede || loadingServicios}>
-            <option value="">{t('select_service')}</option>
-            {servicios.map((service) => (
-              <option key={service.id} value={service.id}>{service.nombre}</option>
-            ))}
-          </Form.Control>
+          {!selectedSede || loadingServicios ? (
+            <p>{t('select_sede_first')}</p>
+          ) : (
+            servicios.map((service) => (
+              <Form.Check
+                type="checkbox"
+                key={service.id}
+                id={`service-${service.id}`}
+                label={service.nombre}
+                checked={selectedServicios.includes(String(service.id))}
+                onChange={() => handleServiceChange(String(service.id))}
+              />
+            ))
+          )}
         </Form.Group>
 
         <Form.Group className="mb-3">
@@ -161,10 +179,10 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
 
         <Form.Group className="mb-3">
           <Form.Label>{t('date_label')}</Form.Label>
-          <Form.Control type="date" value={date} min={new Date().toISOString().split('T')[0]} onChange={(e) => { setDate(e.target.value); setSelectedSlot(''); }} required disabled={!selectedSede || !selectedServicio || !selectedRecurso} />
+          <Form.Control type="date" value={date} min={new Date().toISOString().split('T')[0]} onChange={(e) => { setDate(e.target.value); setSelectedSlot(''); }} required disabled={!selectedSede || selectedServicios.length === 0 || !selectedRecurso} />
         </Form.Group>
 
-        <Button variant="info" onClick={handleFindNextAvailable} disabled={!selectedServicio || !selectedSede || nextAvailableLoading}>
+        <Button variant="info" onClick={handleFindNextAvailable} disabled={selectedServicios.length === 0 || !selectedSede || nextAvailableLoading}>
           {nextAvailableLoading ? t('searching') : t('find_next_available')}
         </Button>
 

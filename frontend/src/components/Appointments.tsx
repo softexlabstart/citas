@@ -225,7 +225,7 @@ const Appointments: React.FC = () => {
                         <th>{t('id')}</th>
                         <th>{t('client_name')}</th>
                         <th>{t('date')}</th>
-                        <th>{t('service')}</th>
+                        <th>{t('services')}</th>
                         <th>{t('sede_label')}</th>
                         <th>{t('status')}</th>
                         <th>{t('actions')}</th>
@@ -240,7 +240,7 @@ const Appointments: React.FC = () => {
                             <td>{appointment.id}</td>
                             <td>{appointment.nombre}</td>
                             <td>{new Date(appointment.fecha).toLocaleString()}</td>
-                            <td>{appointment.servicio.nombre}</td>
+                            <td>{appointment.servicios.map(s => s.nombre).join(', ')}</td>
                             <td>{appointment.sede.nombre}</td>
                             <td>
                               <Badge bg={statusConfig[appointment.estado]?.color || 'light'}>
