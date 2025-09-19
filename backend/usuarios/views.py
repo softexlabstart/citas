@@ -109,7 +109,9 @@ class UserDetailView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    class PersonalDataView(APIView):
+    
+
+class PersonalDataView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
@@ -133,6 +135,7 @@ class DeleteAccountView(APIView):
         user = request.user
         user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
     """
