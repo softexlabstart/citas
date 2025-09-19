@@ -130,7 +130,7 @@ export interface Bloqueo {
 }
 
 export interface CreateBloqueoPayload {
-    recurso_id: number;
+    colaborador_id: number;
     sede_id: number;
     motivo: string;
     fecha_inicio: string;

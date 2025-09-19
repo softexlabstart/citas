@@ -23,7 +23,7 @@ const BlocksManager: React.FC = () => {
 
     // Form State
     const [formData, setFormData] = useState({
-        recurso_id: '',
+        colaborador_id: '',
         sede_id: '',
         motivo: '',
         fecha_inicio: '',
@@ -40,12 +40,12 @@ const BlocksManager: React.FC = () => {
     const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         
-        if (name === 'recurso_id') {
+        if (name === 'colaborador_id') {
             const selectedRecurso = recursos?.find(r => r.id === Number(value));
             // When a resource is selected, also update the corresponding sede_id atomically
             setFormData(prev => ({
                 ...prev,
-                recurso_id: value,
+                colaborador_id: value,
                 sede_id: selectedRecurso ? String(selectedRecurso.sede.id) : ''
             }));
         } else {
@@ -55,14 +55,14 @@ const BlocksManager: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.recurso_id || !formData.motivo || !formData.fecha_inicio || !formData.fecha_fin || !formData.sede_id) {
+        if (!formData.colaborador_id || !formData.motivo || !formData.fecha_inicio || !formData.fecha_fin || !formData.sede_id) {
             toast.warn(t('please_fill_all_fields'));
             return;
         }
 
         const payload: CreateBloqueoPayload = {
             ...formData,
-            recurso_id: Number(formData.recurso_id),
+            colaborador_id: Number(formData.colaborador_id),
             sede_id: Number(formData.sede_id),
         };
 
@@ -70,7 +70,7 @@ const BlocksManager: React.FC = () => {
         if (success) {
             toast.success(t('block_created_successfully'));
             fetchBloqueos(undefined);
-            setFormData({ recurso_id: '', sede_id: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
+            setFormData({ colaborador_id: '', sede_id: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
         } else {
             toast.error(t('unexpected_error'));
         }
@@ -99,7 +99,7 @@ const BlocksManager: React.FC = () => {
                         <Col md={6}>
                             <Form.Group className="mb-3">
                                 <Form.Label>{t('resource_label')}</Form.Label>
-                                <Form.Control as="select" name="recurso_id" value={formData.recurso_id} onChange={handleFormChange} required>
+                                <Form.Control as="select" name="colaborador_id" value={formData.colaborador_id} onChange={handleFormChange} required>
                                     <option value="">{t('select_resource')}</option>
                                     {recursos?.map(r => <option key={r.id} value={r.id}>{r.nombre} ({r.sede.nombre})</option>)}
                                 </Form.Control>
