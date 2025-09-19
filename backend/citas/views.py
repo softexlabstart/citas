@@ -297,8 +297,10 @@ class DashboardSummaryView(APIView):
 
         # Determine if the user is an admin (staff or sede admin)
         is_admin_user = user.is_staff
-        if not is_admin_user and hasattr(user, 'perfil') and user.perfil:
-            is_admin_user = user.perfil.sedes_administradas.exists()
+        if not is_admin_user:
+            is_in_admin_group = user.groups.filter(name='SedeAdmin').exists()
+            has_sedes_administradas = hasattr(user, 'perfil') and user.perfil and user.perfil.sedes_administradas.exists()
+            is_admin_user = is_in_admin_group or has_sedes_administradas
 
         # Admin/Staff specific stats
         if is_admin_user:

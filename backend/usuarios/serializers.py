@@ -19,7 +19,10 @@ class PerfilUsuarioSerializer(serializers.ModelSerializer):
         fields = ('timezone', 'sede', 'sedes_administradas', 'is_sede_admin', 'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento')
 
     def get_is_sede_admin(self, obj):
-        return obj.sedes_administradas.exists()
+        user = obj.user
+        is_in_admin_group = user.groups.filter(name='SedeAdmin').exists()
+        has_sedes_administradas = obj.sedes_administradas.exists()
+        return is_in_admin_group or has_sedes_administradas
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
