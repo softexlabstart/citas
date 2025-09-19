@@ -107,7 +107,7 @@ class ClientSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
-        perfil = instance.perfil
+        perfil, created = PerfilUsuario.objects.get_or_create(user=instance)
         
         # User fields
         instance.username = validated_data.get('username', instance.username)
