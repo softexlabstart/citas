@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Button, Alert, Modal } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { UserDashboardSummary } from '../api';
+import { UserDashboardSummary, getClientById } from '../api';
+import { useAuth } from '../contexts/AuthContext';
+import { Client } from '../interfaces/Client';
 
 interface UserDashboardProps {
     data: UserDashboardSummary;
@@ -13,6 +15,33 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ data }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+    const { user } = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [clientData, setClientData] = useState<Client | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchClientData = async () => {
+            if (user && user.id) { // Ensure user and user.id exist
+                setLoading(true);
+                try {
+                    const response = await getClientById(user.id);
+                    if (response.data) {
+                        setClientData(response.data);
+                    } else {
+                        setError(t('error_fetching_profile'));
+                    }
+                } catch (err: any) {
+                    setError(err.message || t('error_fetching_profile'));
+                } finally {
+                    setLoading(false);
+                }
+            } else {
+                setLoading(false); // If no user, stop loading
+            }
+        };
+        fetchClientData();
+    }, [user, t, getClientById]); // Add getClientById to dependency array
 
     return (
         <>
@@ -76,3 +105,5 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ data }) => {
 };
 
 export default UserDashboard;
+
+    
