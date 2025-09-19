@@ -47,7 +47,7 @@ export const setupInterceptors = (logout: (message?: string) => void) => {
 
 // Funciones para Citas
 export const getAppointments = (status?: string, page?: number, search?: string) => {
-  let url = '/citas/citas/';
+  let url = '/api/citas/citas/';
   const params = new URLSearchParams();
   if (status) {
     params.append('estado', status);
@@ -68,7 +68,7 @@ export const getAllAppointments = (startDate?: string, endDate?: string) => {
   if (startDate) params.append('start_date', startDate);
   if (endDate) params.append('end_date', endDate);
   const queryString = params.toString();
-  const url = `/citas/citas/all/${queryString ? `?${queryString}` : ''}`;
+  const url = `/api/citas/citas/all/${queryString ? `?${queryString}` : ''}`;
   return api.get<Appointment[]>(url);
 };
 
@@ -81,34 +81,34 @@ export interface CreateAppointmentPayload {
     estado: 'Pendiente';
 }
 
-export const addAppointment = (appointment: CreateAppointmentPayload) => api.post<Appointment>('/citas/citas/', appointment);
-export const confirmAppointment = (id: number) => api.post(`/citas/citas/${id}/confirmar/`);
-export const deleteAppointment = (id: number) => api.delete(`/citas/citas/${id}/`);
-export const updateAppointment = (id: number, appointment: Partial<Appointment>) => api.patch(`/citas/citas/${id}/`, appointment);
+export const addAppointment = (appointment: CreateAppointmentPayload) => api.post<Appointment>('/api/citas/citas/', appointment);
+export const confirmAppointment = (id: number) => api.post(`/api/citas/citas/${id}/confirmar/`);
+export const deleteAppointment = (id: number) => api.delete(`/api/citas/citas/${id}/`);
+export const updateAppointment = (id: number, appointment: Partial<Appointment>) => api.patch(`/api/citas/citas/${id}/`, appointment);
 
 // Funciones para Servicios
 export const getServicios = (sedeId?: string) => {
-    let url = '/citas/servicios/';
+    let url = '/api/citas/servicios/';
     if (sedeId) {
         url += `?sede_id=${sedeId}`;
     }
     return api.get<Service[]>(url);
 };
-export const addServicio = (servicio: Partial<Service>) => api.post<Service>('/citas/servicios/', servicio);
-export const updateServicio = (id: number, servicio: Partial<Service>) => api.patch<Service>(`/citas/servicios/${id}/`, servicio);
-export const deleteServicio = (id: number) => api.delete(`/citas/servicios/${id}/`);
+export const addServicio = (servicio: Partial<Service>) => api.post<Service>('/api/citas/servicios/', servicio);
+export const updateServicio = (id: number, servicio: Partial<Service>) => api.patch<Service>(`/api/citas/servicios/${id}/`, servicio);
+export const deleteServicio = (id: number) => api.delete(`/api/citas/servicios/${id}/`);
 
 // Funciones para Recursos
 export const getRecursos = (sedeId?: string) => {
-    let url = '/citas/recursos/';
+    let url = '/api/citas/recursos/';
     if (sedeId) {
         url += `?sede_id=${sedeId}`;
     }
     return api.get<Recurso[]>(url);
 };
-export const addRecurso = (recurso: Partial<Recurso>) => api.post<Recurso>('/citas/recursos/', recurso);
-export const updateRecurso = (id: number, recurso: Partial<Recurso>) => api.patch<Recurso>(`/citas/recursos/${id}/`, recurso);
-export const deleteRecurso = (id: number) => api.delete(`/citas/recursos/${id}/`);
+export const addRecurso = (recurso: Partial<Recurso>) => api.post<Recurso>('/api/citas/recursos/', recurso);
+export const updateRecurso = (id: number, recurso: Partial<Recurso>) => api.patch<Recurso>(`/api/citas/recursos/${id}/`, recurso);
+export const deleteRecurso = (id: number) => api.delete(`/api/citas/recursos/${id}/`);
 export const getDisponibilidad = (fecha: string, recursoId: number, sedeId: string, servicioId: string) => {
     const params = new URLSearchParams({
         fecha,
@@ -116,7 +116,7 @@ export const getDisponibilidad = (fecha: string, recursoId: number, sedeId: stri
         sede_id: sedeId,
         servicio_id: servicioId,
     });
-    return api.get(`/citas/disponibilidad/?${params.toString()}`);
+    return api.get(`/api/citas/disponibilidad/?${params.toString()}`);
 };
 
 // Funciones para Bloqueos (New)
@@ -143,10 +143,10 @@ export const getBloqueos = (sedeId?: string, startDate?: string, endDate?: strin
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
     const queryString = params.toString();
-    return api.get<Bloqueo[]>(`/citas/bloqueos/${queryString ? `?${queryString}` : ''}`);
+    return api.get<Bloqueo[]>(`/api/citas/bloqueos/${queryString ? `?${queryString}` : ''}`);
 };
-export const addBloqueo = (bloqueo: CreateBloqueoPayload) => api.post<Bloqueo>('/citas/bloqueos/', bloqueo);
-export const deleteBloqueo = (id: number) => api.delete(`/citas/bloqueos/${id}/`);
+export const addBloqueo = (bloqueo: CreateBloqueoPayload) => api.post<Bloqueo>('/api/citas/bloqueos/', bloqueo);
+export const deleteBloqueo = (id: number) => api.delete(`/api/citas/bloqueos/${id}/`);
 
 // Funciones para Disponibilidad Inteligente (New)
 export interface NextAvailableSlot {
@@ -160,7 +160,7 @@ export interface NextAvailableSlot {
 
 export const getNextAvailableSlots = (servicioId: string, sedeId: string) => {
     const params = new URLSearchParams({ servicio_id: servicioId, sede_id: sedeId });
-    return api.get<NextAvailableSlot[]>(`/citas/next-availability/?${params.toString()}`);
+    return api.get<NextAvailableSlot[]>(`/api/citas/next-availability/?${params.toString()}`);
 };
 
 // Funciones para Dashboard (New)
@@ -180,7 +180,7 @@ export type DashboardSummary = AdminDashboardSummary | UserDashboardSummary;
 export const getDashboardSummary = () => api.get<DashboardSummary>('/api/citas/dashboard/summary/');
 
 // Funciones para Sedes (New section)
-export const getSedes = () => api.get<Sede[]>('/organizacion/sedes/');
+export const getSedes = () => api.get<Sede[]>('/api/organizacion/sedes/');
 
 // Funciones para Reportes
 export const getAppointmentsReport = (startDate: string, endDate: string, servicioId?: string, recursoId?: string) => {
@@ -194,7 +194,7 @@ export const getAppointmentsReport = (startDate: string, endDate: string, servic
     if (recursoId) {
         params.append('recurso_id', recursoId);
     }
-    return api.get(`/citas/reports/appointments/?${params.toString()}`);
+    return api.get(`/api/citas/reports/appointments/?${params.toString()}`);
 };
 
 export const getSedeSummaryReport = (startDate: string, endDate: string) => {
@@ -202,7 +202,7 @@ export const getSedeSummaryReport = (startDate: string, endDate: string) => {
         start_date: startDate,
         end_date: endDate,
     });
-    return api.get(`/citas/reports/sede_summary/?${params.toString()}`);
+    return api.get(`/api/citas/reports/sede_summary/?${params.toString()}`);
 };
 
 export const downloadAppointmentsReportCSV = (startDate: string, endDate: string, servicioId?: string, recursoId?: string) => {
@@ -218,7 +218,7 @@ export const downloadAppointmentsReportCSV = (startDate: string, endDate: string
     }
     params.append('export', 'csv'); // Use 'export' to avoid conflict with DRF's 'format'
     // Important: set responseType to 'blob' to handle file download
-    return api.get(`/citas/reports/appointments/?${params.toString()}`, { responseType: 'blob' });
+    return api.get(`/api/citas/reports/appointments/?${params.toString()}`, { responseType: 'blob' });
 };
 
 
@@ -233,29 +233,29 @@ export const login = async (username: string, password: string) => {
 };
 
 export const register = async (user: RegisterUser) => {
-    const response = await api.post('/register/', user);
+    const response = await api.post('/api/register/', user);
     return response.data;
 };
 
 // Funciones para Zonas Horarias
-export const getTimezones = () => api.get<string[]>('/timezones/');
+export const getTimezones = () => api.get<string[]>('/api/timezones/');
 
 // Funciones para Horarios
-export const getHorarios = () => api.get<Horario[]>('/citas/horarios/');
-export const addHorario = (horario: Horario) => api.post('/citas/horarios/', horario);
-export const updateHorario = (id: number, horario: Horario) => api.patch(`/citas/horarios/${id}/`, horario);
-export const deleteHorario = (id: number) => api.delete(`/citas/horarios/${id}/`);
+export const getHorarios = () => api.get<Horario[]>('/api/citas/horarios/');
+export const addHorario = (horario: Horario) => api.post('/api/citas/horarios/', horario);
+export const updateHorario = (id: number, horario: Horario) => api.patch(`/api/citas/horarios/${id}/`, horario);
+export const deleteHorario = (id: number) => api.delete(`/api/citas/horarios/${id}/`);
 
 // Funciones para Recurso Dashboard
-export const getRecursoAppointments = () => api.get<Appointment[]>('/citas/recurso-citas/');
-export const marcarAsistencia = (id: number, asistio: boolean, comentario?: string) => api.post(`/citas/recurso-citas/${id}/marcar_asistencia/`, { asistio, comentario });
+export const getRecursoAppointments = () => api.get<Appointment[]>('/api/citas/recurso-citas/');
+export const marcarAsistencia = (id: number, asistio: boolean, comentario?: string) => api.post(`/api/citas/recurso-citas/${id}/marcar_asistencia/`, { asistio, comentario });
 
 // Funciones para Clientes
-export const getClients = () => api.get<Client[]>(`/clients/?_=${new Date().getTime()}`);
-export const createClient = (clientData: Partial<Client>) => api.post<Client>('/clients/', clientData);
-export const updateClient = (id: number, clientData: Partial<Client>) => api.patch<Client>(`/clients/${id}/`, clientData);
-export const deleteClient = (id: number) => api.delete(`/clients/${id}/`);
-export const getClientHistory = (id: number) => api.get(`/clients/${id}/history/`);
+export const getClients = () => api.get<Client[]>(`/api/clients/?_=${new Date().getTime()}`);
+export const createClient = (clientData: Partial<Client>) => api.post<Client>('/api/clients/', clientData);
+export const updateClient = (id: number, clientData: Partial<Client>) => api.patch<Client>(`/api/clients/${id}/`, clientData);
+export const deleteClient = (id: number) => api.delete(`/api/clients/${id}/`);
+export const getClientHistory = (id: number) => api.get(`/api/clients/${id}/history/`);
 
 // Funciones para Marketing
-export const sendMarketingEmail = (data: { subject: string; message: string; recipient_emails?: string[] }) => api.post('/marketing/send-email/', data);
+export const sendMarketingEmail = (data: { subject: string; message: string; recipient_emails?: string[] }) => api.post('/api/marketing/send-email/', data);
