@@ -90,5 +90,6 @@
 "error_sending_email": "error sending email",
 "email_sent_successfully": "email sent successfully",
 "select_all": "select all",
- "deselect_all": "deselect all"
+ "deselect_all": "deselect all",
+ "select_services": "select services"
 }

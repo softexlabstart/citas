@@ -153,33 +153,27 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
           {!selectedSede || loadingServicios ? (
             <p>{t('select_sede_first')}</p>
           ) : (
-            <Form.Control
-              as="select"
-              multiple
-              value={selectedServicios}
-              onChange={(e) => {
-                if (e.target instanceof HTMLSelectElement) {
-                  const options = e.target.options;
-                  const value: string[] = [];
-                  for (let i = 0, l = options.length; i < l; i++) {
-                    if (options[i].selected) {
-                      value.push(options[i].value);
-                    }
-                  }
-                  setSelectedServicios(value);
-                } else {
-                  console.error("Unexpected target type for service selection:", e.target);
-                }
-              }}
-              required
-            >
-              <option value="" disabled>{t('select_services')}</option>
-              {servicios.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.nombre}
-                </option>
-              ))}
-            </Form.Control>
+            <div className="service-selection-container" style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #ced4da', borderRadius: '0.25rem' }}>
+              <ListGroup>
+                {servicios.map((service) => (
+                  <ListGroup.Item key={service.id}>
+                    <Form.Check
+                      type="checkbox"
+                      id={`service-${service.id}`}
+                      label={
+                        <>
+                          <strong>{service.nombre}</strong>
+                          <br />
+                          <small>{service.descripcion}</small>
+                        </>
+                      }
+                      checked={selectedServicios.includes(String(service.id))}
+                      onChange={() => handleServiceChange(String(service.id))}
+                    />
+                  </ListGroup.Item>
+                ))}
+              </ListGroup>
+            </div>
           )}
         </Form.Group>
 
