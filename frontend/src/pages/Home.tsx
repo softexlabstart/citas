@@ -28,7 +28,8 @@ const Home: React.FC = () => {
     if (!data) {
       return null;
     }
-    if (user?.is_staff || user?.perfil?.is_sede_admin) {
+    const isAdmin = user?.is_staff || user?.perfil?.is_sede_admin || user?.groups.includes('SedeAdmin');
+    if (isAdmin) {
       return <AdminDashboard data={data as AdminDashboardSummary} />;
     }
     if (user?.groups.includes('Recurso')) {
