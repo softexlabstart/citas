@@ -28,11 +28,11 @@ const Home: React.FC = () => {
     if (!data) {
       return null;
     }
-    if (user?.groups.includes('Recurso')) {
-      return <RecursoDashboard />;
-    }
     if (user?.is_staff || user?.perfil?.is_sede_admin) {
       return <AdminDashboard data={data as AdminDashboardSummary} />;
+    }
+    if (user?.groups.includes('Recurso')) {
+      return <RecursoDashboard />;
     }
     return <UserDashboard data={data as UserDashboardSummary} />;
   };
