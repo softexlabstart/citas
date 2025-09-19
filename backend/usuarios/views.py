@@ -107,6 +107,8 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
         return User.objects.filter(is_staff=False)\
             .exclude(groups=sede_admin_group)\
             .exclude(groups=recurso_group)\
+            .exclude(email__isnull=True)\
+            .exclude(email__exact='')\
             .select_related('perfil')
 
     # Agregar paginación para evitar exponer grandes cantidades de datos
