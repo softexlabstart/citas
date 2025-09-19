@@ -153,16 +153,29 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
           {!selectedSede || loadingServicios ? (
             <p>{t('select_sede_first')}</p>
           ) : (
-            servicios.map((service) => (
-              <Form.Check
-                type="checkbox"
-                key={service.id}
-                id={`service-${service.id}`}
-                label={service.nombre}
-                checked={selectedServicios.includes(String(service.id))}
-                onChange={() => handleServiceChange(String(service.id))}
-              />
-            ))
+            <Form.Control
+              as="select"
+              multiple
+              value={selectedServicios}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                const options = e.target.options;
+                const value: string[] = [];
+                for (let i = 0, l = options.length; i < l; i++) {
+                  if (options[i].selected) {
+                    value.push(options[i].value);
+                  }
+                }
+                setSelectedServicios(value);
+              }}
+              required
+            >
+              <option value="" disabled>{t('select_services')}</option>
+              {servicios.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.nombre}
+                </option>
+              ))}
+            </Form.Control>
           )}
         </Form.Group>
 
