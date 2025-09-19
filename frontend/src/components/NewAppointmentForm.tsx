@@ -10,7 +10,7 @@ import { useAuth } from '../hooks/useAuth';
 
 interface NewAppointmentFormProps {
   onAppointmentAdded: () => void;
-  prefillData?: Partial<CreateAppointmentPayload> & { recurso_id: number };
+  prefillData?: Partial<CreateAppointmentPayload> & { recurso_id: number, servicios_ids?: number[] };
 }
 
 const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAdded, prefillData }) => {

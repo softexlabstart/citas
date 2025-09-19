@@ -61,7 +61,7 @@ const RecursoDashboard = () => {
                     {appointments.map(appointment => (
                         <tr key={appointment.id}>
                             <td>{appointment.nombre}</td>
-                            <td>{appointment.servicio.nombre}</td>
+                            <td>{appointment.servicios.map(s => s.nombre).join(', ')}</td>
                             <td>{new Date(appointment.fecha).toLocaleString()}</td>
                             <td>
                                 <Badge bg={appointment.estado === 'Asistio' ? 'success' : appointment.estado === 'No Asistio' ? 'danger' : 'secondary'}>

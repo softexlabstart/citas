@@ -51,7 +51,7 @@ const Disponibilidad: React.FC = () => {
         const newAppointment = {
             nombre: user.username,
             fecha: slot.start,
-            servicios_ids: [parseInt(selectedServicio)],
+                        servicios_ids: [parseInt(selectedServicio)],
             colaboradores_ids: [slot.recurso.id],
             sede_id: parseInt(selectedSede),
             estado: 'Pendiente' as const,
