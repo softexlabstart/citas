@@ -22,15 +22,17 @@ const EditProfilePage: React.FC = () => {
                 try {
                     setLoading(true);
                     const response = await getClientById(user.id);
-                    if (response.success && response.data) {
+                    if (response.data) { // Check for data directly
                         setClientData(response.data);
                     } else {
-                        setError(response.error || t('error_fetching_profile'));
-                        toast.error(response.error || t('error_fetching_profile'));
+                        // If response.data is null/undefined, it's an unexpected scenario for a 2xx response
+                        setError(t('error_fetching_profile'));
+                        toast.error(t('error_fetching_profile'));
                     }
-                } catch (err) {
-                    setError(t('error_fetching_profile'));
-                    toast.error(t('error_fetching_profile'));
+                } catch (err: any) { // Catch AxiosError
+                    const errorMessage = err.response?.data?.detail || err.message || t('error_fetching_profile');
+                    setError(errorMessage);
+                    toast.error(errorMessage);
                 } finally {
                     setLoading(false);
                 }
