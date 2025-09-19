@@ -21,6 +21,7 @@ const UserGuide = lazy(() => import('./components/UserGuide'));
 const RecursoDashboard = lazy(() => import('./components/RecursoDashboard'));
 const Clients = lazy(() => import('./components/Clients'));
 const MarketingPage = lazy(() => import('./pages/MarketingPage')); // Import MarketingPage
+const EditProfilePage = lazy(() => import('./pages/EditProfilePage')); // New lazy-loaded component
 
 // Centered spinner component for Suspense fallback
 const CenteredSpinner = () => (
@@ -50,6 +51,7 @@ const App: React.FC = () => {
                 <Route path="/disponibilidad" element={<Disponibilidad />} />
                 <Route path="/user-guide" element={<UserGuide />} />
                 <Route path="/recurso-dashboard" element={<RecursoDashboard />} />
+                <Route path="/profile/edit" element={<EditProfilePage />} /> {/* New route for editing user profile */}
               </Route>
 
               {/* Routes for admin users only */}

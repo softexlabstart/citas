@@ -91,5 +91,7 @@
 "email_sent_successfully": "email sent successfully",
 "select_all": "select all",
  "deselect_all": "deselect all",
- "select_services": "select services"
+ "select_services": "select services",
+ "i_agree_to_data_processing": "I agree to the processing of my data in accordance with the privacy policy.",
+ "privacy_policy": "Privacy Policy"
 }

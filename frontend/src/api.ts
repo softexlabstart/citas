@@ -15,7 +15,8 @@ export interface PaginatedResponse<T> {
 }
 
 const API_URL = process.env.REACT_APP_API_URL;
-
+// IMPORTANT: In production, REACT_APP_API_URL should always be an HTTPS endpoint
+// to ensure data encryption in transit.
 const api = axios.create({
   baseURL: API_URL,
 });
@@ -255,6 +256,7 @@ export const marcarAsistencia = (id: number, asistio: boolean, comentario?: stri
 
 // Funciones para Clientes
 export const getClients = () => api.get<Client[]>(`/api/clients/?_=${new Date().getTime()}`);
+export const getClientById = (id: number) => api.get<Client>(`/api/clients/${id}/`); // Added for fetching single client
 export const createClient = (clientData: Partial<Client>) => api.post<Client>('/api/clients/', clientData);
 export const updateClient = (id: number, clientData: Partial<Client>) => api.patch<Client>(`/api/clients/${id}/`, clientData);
 export const deleteClient = (id: number) => api.delete(`/api/clients/${id}/`);

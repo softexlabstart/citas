@@ -263,5 +263,7 @@
   "marketing_step_2": "2. Haz clic en 'Nuevo Email de Marketing' para crear una nueva campaña.",
   "marketing_step_3": "3. Rellena los campos necesarios:",
   "marketing_step_3_p1": "- Asunto: El título",
-  "select_services": "Seleccionar Servicios"
+  "select_services": "Seleccionar Servicios",
+  "i_agree_to_data_processing": "Estoy de acuerdo con el procesamiento de datos",
+  "privacy_policy": "Política de Privacidad"
 }
