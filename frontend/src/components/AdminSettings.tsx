@@ -53,6 +53,8 @@ const AdminSettings: React.FC = () => {
     const [formData, setFormData] = useState<any>({});
     const [metadata, setMetadata] = useState<MetadataPair[]>([]);
     const [processing, setProcessing] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deletingItemInfo, setDeletingItemInfo] = useState<{ type: 'service' | 'resource', id: number } | null>(null);
 
     useEffect(() => {
         fetchServicios(undefined);
@@ -138,21 +140,29 @@ const AdminSettings: React.FC = () => {
         setProcessing(false);
     };
     
-    const handleDelete = async (type: 'service' | 'resource', id: number) => {
-        if (window.confirm(t('confirm_delete_item'))) {
-            try {
-                if (type === 'service') {
-                    await deleteServicio(id);
-                    fetchServicios(undefined);
-                } else if (type === 'resource') {
-                    await deleteRecurso(id);
-                    fetchRecursos(undefined);
-                }
-                toast.success(t('item_deleted_successfully'));
-            } catch (err: any) {
-                toast.error(err.response?.data?.detail || t('unexpected_error'));
+    const handleDelete = (type: 'service' | 'resource', id: number) => {
+        setDeletingItemInfo({ type, id });
+        setShowDeleteModal(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!deletingItemInfo) return;
+
+        try {
+            if (deletingItemInfo.type === 'service') {
+                await deleteServicio(deletingItemInfo.id);
+                fetchServicios(undefined);
+            } else if (deletingItemInfo.type === 'resource') {
+                await deleteRecurso(deletingItemInfo.id);
+                fetchRecursos(undefined);
             }
+            toast.success(t('item_deleted_successfully'));
+        } catch (err: any) {
+            toast.error(err.response?.data?.detail || t('unexpected_error'));
         }
+
+        setShowDeleteModal(false);
+        setDeletingItemInfo(null);
     };
 
     if (!user || (!user.is_staff && !user.perfil?.is_sede_admin)) {
@@ -160,68 +170,83 @@ const AdminSettings: React.FC = () => {
     }
 
     return (
-        <Container className="mt-5">
-            <h2>{t('admin_settings')}</h2>
-            <Tabs defaultActiveKey="services" id="admin-settings-tabs" className="mb-3">
-                <Tab eventKey="services" title={t('manage_services')}>
-                    <Button className="mb-3" onClick={() => handleOpenModal('service')}>{t('new_service')}</Button>
-                    <Table striped bordered hover responsive>
-                        <thead><tr><th>{t('name')}</th><th>{t('description')}</th><th>{t('duration')}</th><th>{t('price')}</th><th>{t('sede_label')}</th><th>{t('actions')}</th></tr></thead>
-                        <tbody>
-                            {loadingServicios ? (<tr><td colSpan={6} className="text-center"><Spinner animation="border" /></td></tr>) : (
-                                servicios?.map(s => (<tr key={s.id}><td>{s.nombre}</td><td>{s.descripcion}</td><td>{s.duracion_estimada} min</td><td>${(Number(s.precio) || 0).toFixed(2)}</td><td>{s.sede.nombre}</td><td><Button variant="warning" size="sm" onClick={() => handleOpenModal('service', s)}>{t('edit')}</Button>{' '}<Button variant="danger" size="sm" onClick={() => handleDelete('service', s.id)}>{t('delete')}</Button></td></tr>))
-                            )}
-                        </tbody>
-                    </Table>
-                </Tab>
-                <Tab eventKey="resources" title={t('manage_resources')}>
-                    <Button className="mb-3" onClick={() => handleOpenModal('resource')}>{t('new_resource')}</Button>
-                    <Table striped bordered hover responsive>
-                        <thead><tr><th>{t('name')}</th><th>{t('email')}</th><th>{t('description')}</th><th>{t('sede_label')}</th><th>{t('actions')}</th></tr></thead>
-                        <tbody>
-                            {loadingRecursos ? (<tr><td colSpan={5} className="text-center"><Spinner animation="border" /></td></tr>) : (
-                                recursos?.map(r => (<tr key={r.id}><td>{r.nombre}</td><td>{r.email}</td><td>{r.descripcion}</td><td>{r.sede.nombre}</td><td><Button variant="warning" size="sm" onClick={() => handleOpenModal('resource', r)}>{t('edit')}</Button>{' '}<Button variant="danger" size="sm" onClick={() => handleDelete('resource', r.id)}>{t('delete')}</Button></td></tr>))
-                            )}
-                        </tbody>
-                    </Table>
-                </Tab>
-                <Tab eventKey="blocks" title={t('manage_blocks')}>
-                    <BlocksManager />
-                </Tab>
-            </Tabs>
+        <>
+            <Container className="mt-5">
+                <h2>{t('admin_settings')}</h2>
+                <Tabs defaultActiveKey="services" id="admin-settings-tabs" className="mb-3">
+                    <Tab eventKey="services" title={t('manage_services')}>
+                        <Button className="mb-3" onClick={() => handleOpenModal('service')}>{t('new_service')}</Button>
+                        <Table striped bordered hover responsive>
+                            <thead><tr><th>{t('name')}</th><th>{t('description')}</th><th>{t('duration')}</th><th>{t('price')}</th><th>{t('sede_label')}</th><th>{t('actions')}</th></tr></thead>
+                            <tbody>
+                                {loadingServicios ? (<tr><td colSpan={6} className="text-center"><Spinner animation="border" /></td></tr>) : (
+                                    servicios?.map(s => (<tr key={s.id}><td>{s.nombre}</td><td>{s.descripcion}</td><td>{s.duracion_estimada} min</td><td>${(Number(s.precio) || 0).toFixed(2)}</td><td>{s.sede.nombre}</td><td><Button variant="warning" size="sm" onClick={() => handleOpenModal('service', s)}>{t('edit')}</Button>{' '}<Button variant="danger" size="sm" onClick={() => handleDelete('service', s.id)}>{t('delete')}</Button></td></tr>))
+                                )}
+                            </tbody>
+                        </Table>
+                    </Tab>
+                    <Tab eventKey="resources" title={t('manage_resources')}>
+                        <Button className="mb-3" onClick={() => handleOpenModal('resource')}>{t('new_resource')}</Button>
+                        <Table striped bordered hover responsive>
+                            <thead><tr><th>{t('name')}</th><th>{t('email')}</th><th>{t('description')}</th><th>{t('sede_label')}</th><th>{t('actions')}</th></tr></thead>
+                            <tbody>
+                                {loadingRecursos ? (<tr><td colSpan={5} className="text-center"><Spinner animation="border" /></td></tr>) : (
+                                    recursos?.map(r => (<tr key={r.id}><td>{r.nombre}</td><td>{r.email}</td><td>{r.descripcion}</td><td>{r.sede.nombre}</td><td><Button variant="warning" size="sm" onClick={() => handleOpenModal('resource', r)}>{t('edit')}</Button>{' '}<Button variant="danger" size="sm" onClick={() => handleDelete('resource', r.id)}>{t('delete')}</Button></td></tr>))
+                                )}
+                            </tbody>
+                        </Table>
+                    </Tab>
+                    <Tab eventKey="blocks" title={t('manage_blocks')}>
+                        <BlocksManager />
+                    </Tab>
+                </Tabs>
 
-            <Modal show={showModal} onHide={handleCloseModal} size="lg">
-                <Form onSubmit={handleSubmit}>
-                    <Modal.Header closeButton><Modal.Title>{editingItem ? t('edit') : t('new')}{' '}{modalType === 'service' ? t('service') : t('resource')}</Modal.Title></Modal.Header>
+                <Modal show={showModal} onHide={handleCloseModal} size="lg">
+                    <Form onSubmit={handleSubmit}>
+                        <Modal.Header closeButton><Modal.Title>{editingItem ? t('edit') : t('new')}{' '}{modalType === 'service' ? t('service') : t('resource')}</Modal.Title></Modal.Header>
+                        <Modal.Body>
+                            <Form.Group className="mb-3"><Form.Label>{t('name')}</Form.Label><Form.Control type="text" name="nombre" value={formData.nombre || ''} onChange={handleFormChange} required /></Form.Group>
+                            {modalType === 'resource' && (<Form.Group className="mb-3"><Form.Label>{t('email')}</Form.Label><Form.Control type="email" name="email" value={formData.email || ''} onChange={handleFormChange} /></Form.Group>)}
+                            <Form.Group className="mb-3"><Form.Label>{t('description')}</Form.Label><Form.Control as="textarea" name="descripcion" value={formData.descripcion || ''} onChange={handleFormChange} /></Form.Group>
+                            {modalType === 'service' && (<Form.Group className="mb-3"><Form.Label>{t('duration')}</Form.Label><Form.Control type="number" name="duracion_estimada" value={formData.duracion_estimada || 30} onChange={handleFormChange} required /></Form.Group>)}
+                            {modalType === 'service' && (<Form.Group className="mb-3"><Form.Label>{t('price')}</Form.Label><Form.Control type="number" name="precio" value={formData.precio || '0.00'} onChange={handleFormChange} step="0.01" required /></Form.Group>)}
+                            <Form.Group className="mb-3"><Form.Label>{t('sede_label')}</Form.Label><Form.Control as="select" name="sede" value={formData.sede?.id || formData.sede || ''} onChange={handleFormChange} required><option value="">{t('select_sede')}</option>{sedes?.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}</Form.Control></Form.Group>
+                            <hr />
+                            <h5>{t('metadata')}</h5>
+                            {metadata.map((pair, index) => (
+                                <Row key={index} className="mb-2">
+                                    <Col>
+                                        <InputGroup>
+                                            <Form.Control type="text" placeholder={t('key')} value={pair.key} onChange={(e) => handleMetadataChange(index, 'key', e.target.value)} />
+                                            <Form.Control type="text" placeholder={t('value')} value={pair.value} onChange={(e) => handleMetadataChange(index, 'value', e.target.value)} />
+                                            <Button variant="outline-danger" onClick={() => removeMetadataField(index)}>X</Button>
+                                        </InputGroup>
+                                    </Col>
+                                </Row>
+                            ))}
+                            <Button variant="outline-secondary" size="sm" onClick={addMetadataField}>{t('add_field')}</Button>
+                        </Modal.Body>
+                        <Modal.Footer>
+                            <Button variant="secondary" onClick={handleCloseModal}>{t('close')}</Button>
+                            <Button variant="primary" type="submit" disabled={processing}>{processing ? <Spinner size="sm" /> : t('save_changes')}</Button>
+                        </Modal.Footer>
+                    </Form>
+                </Modal>
+
+                <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered>
+                    <Modal.Header closeButton>
+                        <Modal.Title>{t('confirm_delete_item_title')}</Modal.Title>
+                    </Modal.Header>
                     <Modal.Body>
-                        <Form.Group className="mb-3"><Form.Label>{t('name')}</Form.Label><Form.Control type="text" name="nombre" value={formData.nombre || ''} onChange={handleFormChange} required /></Form.Group>
-                        {modalType === 'resource' && (<Form.Group className="mb-3"><Form.Label>{t('email')}</Form.Label><Form.Control type="email" name="email" value={formData.email || ''} onChange={handleFormChange} /></Form.Group>)}
-                        <Form.Group className="mb-3"><Form.Label>{t('description')}</Form.Label><Form.Control as="textarea" name="descripcion" value={formData.descripcion || ''} onChange={handleFormChange} /></Form.Group>
-                        {modalType === 'service' && (<Form.Group className="mb-3"><Form.Label>{t('duration')}</Form.Label><Form.Control type="number" name="duracion_estimada" value={formData.duracion_estimada || 30} onChange={handleFormChange} required /></Form.Group>)}
-                        {modalType === 'service' && (<Form.Group className="mb-3"><Form.Label>{t('price')}</Form.Label><Form.Control type="number" name="precio" value={formData.precio || '0.00'} onChange={handleFormChange} step="0.01" required /></Form.Group>)}
-                        <Form.Group className="mb-3"><Form.Label>{t('sede_label')}</Form.Label><Form.Control as="select" name="sede" value={formData.sede?.id || formData.sede || ''} onChange={handleFormChange} required><option value="">{t('select_sede')}</option>{sedes?.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}</Form.Control></Form.Group>
-                        <hr />
-                        <h5>{t('metadata')}</h5>
-                        {metadata.map((pair, index) => (
-                            <Row key={index} className="mb-2">
-                                <Col>
-                                    <InputGroup>
-                                        <Form.Control type="text" placeholder={t('key')} value={pair.key} onChange={(e) => handleMetadataChange(index, 'key', e.target.value)} />
-                                        <Form.Control type="text" placeholder={t('value')} value={pair.value} onChange={(e) => handleMetadataChange(index, 'value', e.target.value)} />
-                                        <Button variant="outline-danger" onClick={() => removeMetadataField(index)}>X</Button>
-                                    </InputGroup>
-                                </Col>
-                            </Row>
-                        ))}
-                        <Button variant="outline-secondary" size="sm" onClick={addMetadataField}>{t('add_field')}</Button>
+                        {t('confirm_delete_item_body')}
                     </Modal.Body>
                     <Modal.Footer>
-                        <Button variant="secondary" onClick={handleCloseModal}>{t('close')}</Button>
-                        <Button variant="primary" type="submit" disabled={processing}>{processing ? <Spinner size="sm" /> : t('save_changes')}</Button>
+                        <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>{t('no')}</Button>
+                        <Button variant="danger" onClick={confirmDelete}>{t('yes_delete')}</Button>
                     </Modal.Footer>
-                </Form>
-            </Modal>
-        </Container>
+                </Modal>
+            </Container>
+        </>
     );
 };
 
