@@ -109,8 +109,10 @@ class UserDetailView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=False, methods=['get'], url_path='personal-data')
-    def get_personal_data(self, request):
+    class PersonalDataView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
         user = request.user
         user_data = UserSerializer(user).data
         # Remove sensitive fields before returning
@@ -124,8 +126,10 @@ class UserDetailView(APIView):
 
         return Response(user_data)
 
-    @action(detail=False, methods=['delete'], url_path='delete-account')
-    def delete_my_account(self, request):
+class DeleteAccountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, *args, **kwargs):
         user = request.user
         user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
