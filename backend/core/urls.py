@@ -11,10 +11,10 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('api/citas/', include('citas.urls')),
-    path('api/organizacion/', include('organizacion.urls')),
-    path('api/marketing/', include('marketing.urls')),
-    path('api/', include('usuarios.urls')), # Dejamos esta ruta más genérica al final
+    path('api/citas/', include('citas.urls', namespace='citas')),
+    path('api/organizacion/', include('organizacion.urls', namespace='organizacion')),
+    path('api/marketing/', include('marketing.urls', namespace='marketing')),
+    path('api/', include('usuarios.urls', namespace='usuarios')),
 ]
 
 if settings.DEBUG:
