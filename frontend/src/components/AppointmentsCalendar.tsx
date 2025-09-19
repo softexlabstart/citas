@@ -48,7 +48,7 @@ const AppointmentsCalendar: React.FC = () => {
     }, [dateRange, fetchAppointments, fetchBloqueos]);
 
     const events: CalendarEvent[] = useMemo(() => {
-        const filteredAppointments = appointments?.filter(app => !selectedResourceId || app.recursos.some(r => r.id === Number(selectedResourceId))) || [];
+        const filteredAppointments = appointments?.filter(app => !selectedResourceId || app.colaboradores.some(r => r.id === Number(selectedResourceId))) || [];
         const appointmentEvents = filteredAppointments.map((appointment) => ({
             title: `${appointment.nombre} - ${appointment.servicio.nombre}`,
             start: new Date(appointment.fecha),
@@ -57,7 +57,7 @@ const AppointmentsCalendar: React.FC = () => {
             type: 'appointment' as 'appointment', // Explicitly cast the literal type
         }));
 
-        const filteredBloqueos = bloqueos?.filter(block => !selectedResourceId || block.recurso.id === Number(selectedResourceId)) || [];
+        const filteredBloqueos = bloqueos?.filter(block => !selectedResourceId || block.colaborador.id === Number(selectedResourceId)) || [];
         const blockEvents = filteredBloqueos.map((bloqueo) => ({
             title: `${t('block')}: ${bloqueo.motivo}`,
             start: new Date(bloqueo.fecha_inicio),
@@ -154,7 +154,7 @@ const AppointmentsCalendar: React.FC = () => {
                             <p><strong>{t('service')}:</strong> {selectedAppointment.servicio.nombre}</p>
                             <p><strong>{t('sede_label')}:</strong> {selectedAppointment.sede.nombre}</p>
                             <p><strong>{t('date')}:</strong> {new Date(selectedAppointment.fecha).toLocaleString()}</p>
-                            <p><strong>{t('resources')}:</strong> {selectedAppointment.recursos.map(r => r.nombre).join(', ')}</p>
+                            <p><strong>{t('resources')}:</strong> {selectedAppointment.colaboradores.map(r => r.nombre).join(', ')}</p>
                             <p><strong>{t('status')}:</strong> 
                                 <Badge bg={statusConfig[selectedAppointment.estado]?.color || 'light'}>
                                     {t(statusConfig[selectedAppointment.estado]?.key || selectedAppointment.estado.toLowerCase())}
