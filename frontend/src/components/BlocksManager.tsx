@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Form, Row, Col, Spinner, Alert, Card } from 'react-bootstrap';
+import { Table, Button, Form, Row, Col, Spinner, Alert, Card, Modal } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import { useApi } from '../hooks/useApi';
@@ -30,6 +30,8 @@ const BlocksManager: React.FC = () => {
         fecha_fin: '',
     });
     const [processingId, setProcessingId] = useState<number | null>(null);
+    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+    const [deletingBlockId, setDeletingBlockId] = useState<number | null>(null);
 
     useEffect(() => {
         fetchRecursos(undefined);
@@ -76,72 +78,101 @@ const BlocksManager: React.FC = () => {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (window.confirm(t('confirm_delete_block'))) {
-            setProcessingId(id);
-            const { success } = await removeBloqueo(id);
-            if (success) {
-                toast.success(t('block_deleted_successfully'));
-                fetchBloqueos(undefined);
-            } else {
-                toast.error(t('unexpected_error'));
-            }
-            setProcessingId(null);
+    const handleDelete = (id: number) => {
+        setDeletingBlockId(id);
+        setShowDeleteConfirmModal(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!deletingBlockId) return;
+        setProcessingId(deletingBlockId);
+        const { success } = await removeBloqueo(deletingBlockId);
+        if (success) {
+            toast.success(t('block_deleted_successfully'));
+            fetchBloqueos(undefined);
+        } else {
+            toast.error(t('unexpected_error'));
         }
+        setProcessingId(null);
+        setShowDeleteConfirmModal(false);
+        setDeletingBlockId(null);
     };
 
     return (
-        <Card className="p-4 rounded shadow-sm">
-            <Card.Body>
-                <h4 className="mb-3">{t('new_block')}</h4>
-                <Form onSubmit={handleSubmit}>
-                    <Row>
-                        <Col md={6}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>{t('resource_label')}</Form.Label>
-                                <Form.Control as="select" name="colaborador_id" value={formData.colaborador_id} onChange={handleFormChange} required>
-                                    <option value="">{t('select_resource')}</option>
-                                    {recursos?.map(r => <option key={r.id} value={r.id}>{r.nombre} ({r.sede.nombre})</option>)}
-                                </Form.Control>
-                            </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>{t('reason')}</Form.Label>
-                                <Form.Control type="text" name="motivo" value={formData.motivo} onChange={handleFormChange} required />
-                            </Form.Group>
-                        </Col>
-                    </Row>
-                    <Row>
-                        <Col md={6}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>{t('start_datetime')}</Form.Label>
-                                <Form.Control type="datetime-local" name="fecha_inicio" value={formData.fecha_inicio} onChange={handleFormChange} required />
-                            </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>{t('end_datetime')}</Form.Label>
-                                <Form.Control type="datetime-local" name="fecha_fin" value={formData.fecha_fin} onChange={handleFormChange} required />
-                            </Form.Group>
-                        </Col>
-                    </Row>
-                    <div className="d-flex justify-content-end">
-                        <Button type="submit" disabled={isCreating}>{isCreating ? <Spinner size="sm" /> : t('add_block')}</Button>
-                    </div>
-                </Form>
+        <>
+            <Card className="p-4 rounded shadow-sm">
+                <Card.Body>
+                    <h4 className="mb-3">{t('new_block')}</h4>
+                    <Form onSubmit={handleSubmit}>
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>{t('resource_label')}</Form.Label>
+                                    <Form.Control as="select" name="colaborador_id" value={formData.colaborador_id} onChange={handleFormChange} required>
+                                        <option value="">{t('select_resource')}</option>
+                                        {recursos?.map(r => <option key={r.id} value={r.id}>{r.nombre} ({r.sede.nombre})</option>)}
+                                    </Form.Control>
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>{t('reason')}</Form.Label>
+                                    <Form.Control type="text" name="motivo" value={formData.motivo} onChange={handleFormChange} required />
+                                </Form.Group>
+                            </Col>
+                        </Row>
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>{t('start_datetime')}</Form.Label>
+                                    <Form.Control type="datetime-local" name="fecha_inicio" value={formData.fecha_inicio} onChange={handleFormChange} required />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>{t('end_datetime')}</Form.Label>
+                                    <Form.Control type="datetime-local" name="fecha_fin" value={formData.fecha_fin} onChange={handleFormChange} required />
+                                </Form.Group>
+                            </Col>
+                        </Row>
+                        <div className="d-flex justify-content-end">
+                            <Button type="submit" disabled={isCreating}>{isCreating ? <Spinner size="sm" /> : t('add_block')}</Button>
+                        </div>
+                    </Form>
 
-                <hr className="my-4" />
+                    <hr className="my-4" />
 
-                <h4 className="mb-3">{t('existing_blocks')}</h4>
-                {loading && <Spinner animation="border" />}
-                {error && <Alert variant="danger">{t(error)}</Alert>}
-                <Table striped bordered hover responsive>
-                    <thead><tr><th>{t('resource_label')}</th><th>{t('reason')}</th><th>{t('start_datetime')}</th><th>{t('end_datetime')}</th><th>{t('actions')}</th></tr></thead>
-                    <tbody>{bloqueos?.map(b => (<tr key={b.id}><td>{b.colaborador?.nombre}</td><td>{b.motivo}</td><td>{new Date(b.fecha_inicio).toLocaleString()}</td><td>{new Date(b.fecha_fin).toLocaleString()}</td><td><Button variant="danger" size="sm" onClick={() => handleDelete(b.id)} disabled={isDeleting && processingId === b.id}>{isDeleting && processingId === b.id ? <Spinner size="sm" /> : t('delete')}</Button></td></tr>))}</tbody>
-                </Table>
-            </Card.Body>
-        </Card>
+                    <h4 className="mb-3">{t('existing_blocks')}</h4>
+                    {loading && <Spinner animation="border" />}
+                    {error && <Alert variant="danger">{t(error)}</Alert>}
+                    <Table striped bordered hover responsive>
+                        <thead><tr><th>{t('resource_label')}</th><th>{t('reason')}</th><th>{t('start_datetime')}</th><th>{t('end_datetime')}</th><th>{t('actions')}</th></tr></thead>
+                        <tbody>{bloqueos?.map(b => (<tr key={b.id}><td>{b.colaborador?.nombre}</td><td>{b.motivo}</td><td>{new Date(b.fecha_inicio).toLocaleString()}</td><td>{new Date(b.fecha_fin).toLocaleString()}</td><td><Button variant="danger" size="sm" onClick={() => handleDelete(b.id)} disabled={isDeleting && processingId === b.id}>{isDeleting && processingId === b.id ? <Spinner size="sm" /> : t('delete')}</Button></td></tr>))}</tbody>
+                    </Table>
+                </Card.Body>
+            </Card>
+
+            <Modal show={showDeleteConfirmModal} onHide={() => setShowDeleteConfirmModal(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>{t('confirm_delete_block_title')}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {t('confirm_delete_block_body')}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowDeleteConfirmModal(false)}>
+                        {t('no')}
+                    </Button>
+                    <Button variant="danger" onClick={confirmDelete} disabled={isDeleting}>
+                        {isDeleting ? (
+                            <Spinner as="span" animation="border" size="sm" />
+                        ) : (
+                            t('yes_delete')
+                        )}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+        </>
     );
 };
 
