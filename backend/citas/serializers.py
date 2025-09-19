@@ -78,7 +78,6 @@ class CitaSerializer(serializers.ModelSerializer):
         if not all([colaboradores, fecha, servicios, sede]):
             return data
 
-        for servicio in servicios:
-            check_appointment_availability(sede, servicio, colaboradores, fecha, cita_id)
+        check_appointment_availability(sede, servicios, colaboradores, fecha, cita_id)
 
         return data
