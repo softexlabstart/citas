@@ -19,7 +19,7 @@ const Disponibilidad: React.FC = () => {
 
     const { data: sedes, loading: loadingSedes, request: fetchSedes } = useApi<Sede[], []>(getSedes);
     const { data: servicios, loading: loadingServicios, request: fetchServicios } = useApi<Service[], [string]>(getServicios);
-    const { data: availableSlots, loading: loadingAvailability, error: errorAvailability, request: fetchNextSlots } = useApi<NextAvailableSlot[], [string, string]>(getNextAvailableSlots);
+    const { data: availableSlots, loading: loadingAvailability, error: errorAvailability, request: fetchNextSlots } = useApi<NextAvailableSlot[], [string[], string]>(getNextAvailableSlots);
     const { loading: isSubmitting, request: scheduleAppointment } = useApi(addAppointment);
 
     useEffect(() => {
@@ -39,7 +39,7 @@ const Disponibilidad: React.FC = () => {
             toast.warn(t('select_sede_and_service'));
             return;
         }
-        fetchNextSlots(selectedServicio, selectedSede);
+        fetchNextSlots([selectedServicio], selectedSede);
     };
 
     const handleScheduleAppointment = async (slot: NextAvailableSlot) => {
@@ -51,7 +51,7 @@ const Disponibilidad: React.FC = () => {
         const newAppointment = {
             nombre: user.username,
             fecha: slot.start,
-            servicio_id: parseInt(selectedServicio),
+            servicios_ids: [parseInt(selectedServicio)],
             colaboradores_ids: [slot.recurso.id],
             sede_id: parseInt(selectedSede),
             estado: 'Pendiente' as const,
