@@ -1,4 +1,5 @@
 # citas/urls.py
+app_name = 'citas' # Added app_name
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (ServicioViewSet, CitaViewSet, HorarioViewSet, 

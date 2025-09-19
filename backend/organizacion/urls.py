@@ -1,3 +1,4 @@
+app_name = 'organizacion' # Added app_name
 from rest_framework.routers import DefaultRouter
 from .views import SedeViewSet
 
