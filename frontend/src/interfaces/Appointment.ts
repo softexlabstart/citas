@@ -8,7 +8,7 @@ export interface Appointment {
   nombre: string;
   fecha: string;
   servicio: Service;
-  recursos: Recurso[];
+  colaboradores: Recurso[];
   confirmado: boolean;
   user: User;
   estado: 'Pendiente' | 'Confirmada' | 'Cancelada' | 'Asistio' | 'No Asistio';
