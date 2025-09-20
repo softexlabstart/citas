@@ -43,7 +43,7 @@ const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({ client, show, o
                         <ListGroup className="mb-3">
                             {history.servicios_mas_usados.map((servicio: any, index: number) => (
                                 <ListGroup.Item key={index}>
-                                    {servicio.servicio__nombre}: {servicio.count} {t('times')}
+                                    {servicio.servicios__nombre}: {servicio.count} {t('times')}
                                 </ListGroup.Item>
                             ))}
                         </ListGroup>
