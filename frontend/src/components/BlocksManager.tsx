@@ -171,7 +171,7 @@ const BlocksManager: React.FC = () => {
                     <h4 className="mb-3">{t('past_blocks')}</h4>
                     <Table striped bordered hover responsive>
                         <thead><tr><th>{t('resource_label')}</th><th>{t('reason')}</th><th>{t('start_datetime')}</th><th>{t('end_datetime')}</th><th>{t('actions')}</th></tr></thead>
-                        <tbody>{pastBlocks?.map(b => (<tr key={b.id} style={{ opacity: 0.6 }}><td>{b.colaborador?.nombre}</td><td>{b.motivo}</td><td>{new Date(b.fecha_inicio).toLocaleString()}</td><td>{new Date(b.fecha_fin).toLocaleString()}</td><td><Button variant="danger" size="sm" onClick={() => handleDelete(b.id)} disabled={isDeleting && processingId === b.id}>{isDeleting && processingId === b.id ? <Spinner size="sm" /> : t('delete')}</Button></td></tr>))}</tbody>
+                        <tbody>{pastBlocks?.map(b => (<tr key={b.id} className="table-secondary text-muted"><td>{b.colaborador?.nombre}</td><td>{b.motivo}</td><td>{new Date(b.fecha_inicio).toLocaleString()}</td><td>{new Date(b.fecha_fin).toLocaleString()}</td><td><Button variant="danger" size="sm" onClick={() => handleDelete(b.id)} disabled={isDeleting && processingId === b.id}>{isDeleting && processingId === b.id ? <Spinner size="sm" /> : t('delete')}</Button></td></tr>))}</tbody>
                     </Table>
                 </Card.Body>
             </Card>

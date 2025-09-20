@@ -194,7 +194,11 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
         if servicio.sede.id != sede.id:
             raise ValueError(f"El servicio '{servicio.nombre}' (id={servicio.id}) pertenece a la sede '{servicio.sede.nombre}' (id={servicio.sede.id}), no a la sede seleccionada '{sede.nombre}' (id={sede.id}).")
 
-    colaboradores = Colaborador.objects.filter(sede_id=sede_id)
+    # Get collaborators who are associated with the given services and the sede.
+    colaboradores = Colaborador.objects.filter(
+        sede_id=sede_id,
+        servicios__id__in=servicio_ids
+    ).distinct()
     if not colaboradores.exists():
         return []
 

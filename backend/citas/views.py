@@ -40,7 +40,7 @@ class ColaboradorViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().select_related('sede')
         now = timezone.now()
         # Exclude collaborators with an active block
         return queryset.exclude(
@@ -87,7 +87,7 @@ class NextAvailabilityView(APIView):
 
 
 class ServicioViewSet(viewsets.ModelViewSet):
-    queryset = Servicio.objects.all()
+    queryset = Servicio.objects.select_related('sede').all()
     serializer_class = ServicioSerializer
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
@@ -108,7 +108,7 @@ class ServicioViewSet(viewsets.ModelViewSet):
 
 class BloqueoViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
     """API endpoint for managing resource blocks."""
-    queryset = Bloqueo.objects.all()
+    queryset = Bloqueo.objects.select_related('colaborador__sede').all()
     serializer_class = BloqueoSerializer
     permission_classes = [IsAuthenticated, IsAdminOrSedeAdminOrReadOnly] # Only admins can block time
 
@@ -143,22 +143,25 @@ class CitaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
+        # Start with an optimized base queryset to solve N+1 issues
+        base_queryset = Cita.objects.select_related('user', 'sede').prefetch_related('servicios', 'colaboradores')
+
         # Refactored permission-based filtering for clarity and correctness
         if user.is_staff:
             # Staff users can see all appointments across all sedes
-            queryset = Cita.objects.all()
+            queryset = base_queryset.all()
         else:
             try:
                 perfil = user.perfil
                 if perfil.sedes_administradas.exists():
                     # Sede admins see appointments only from the sedes they manage
-                    queryset = Cita.objects.filter(sede__in=perfil.sedes_administradas.all())
+                    queryset = base_queryset.filter(sede__in=perfil.sedes_administradas.all())
                 else:
                     # Regular users see only their own appointments
-                    queryset = Cita.objects.filter(user=user)
+                    queryset = base_queryset.filter(user=user)
             except PerfilUsuario.DoesNotExist:
                 # Users without a profile can only see their own appointments
-                queryset = Cita.objects.filter(user=user)
+                queryset = base_queryset.filter(user=user)
 
         # Apply search filter if provided
         search_term = self.request.query_params.get('search', None)
@@ -351,7 +354,7 @@ class DashboardSummaryView(APIView):
         return Response(summary)
 
 class HorarioViewSet(viewsets.ModelViewSet):
-    queryset = Horario.objects.all()
+    queryset = Horario.objects.select_related('colaborador__sede').all()
     serializer_class = HorarioSerializer
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
     
@@ -736,9 +739,8 @@ class RecursoViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().select_related('sede')
         now = timezone.now()
-        # Exclude collaborators with an active block
         return queryset.exclude(
             bloqueos__fecha_inicio__lte=now,
             bloqueos__fecha_fin__gte=now
