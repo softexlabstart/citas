@@ -54,7 +54,6 @@ class LoginView(APIView):
         username = request.data.get('username')
         password = request.data.get('password')
         user = authenticate(username=username, password=password)
-        # No revelar si el usuario existe o no
         if user:
             login(request, user)
             refresh = RefreshToken.for_user(user)
@@ -63,7 +62,6 @@ class LoginView(APIView):
                 'access': str(refresh.access_token),
                 'user': UserSerializer(user).data
             })
-        # Mensaje genérico para credenciales inválidas
         return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
 
 class RegisterView(generics.CreateAPIView):
@@ -170,8 +168,18 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
         client = self.get_object()
-        citas = Cita.objects.filter(Q(user=client) | Q(nombre=client.username)).distinct().order_by('-fecha')
-        
+        citas = Cita.objects.filter(
+            Q(user=client) | Q(nombre=client.username)
+        ).select_related(
+            'user__perfil',
+            'sede'
+        ).prefetch_related(
+            'servicios',
+            'colaboradores',
+            'user__groups',
+            'user__perfil__sedes_administradas'
+        ).distinct().order_by('-fecha')
+
         stats = citas.aggregate(
             total=Count('id'),
             asistidas=Count('id', filter=Q(estado='Asistio')),
