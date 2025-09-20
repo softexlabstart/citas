@@ -89,7 +89,7 @@ const RegisterPage: React.FC = () => {
                                     <Form.Check 
                                         type="checkbox"
                                         id="dataConsent"
-                                        label={<span dangerouslySetInnerHTML={{ __html: t('consent_privacy_policy', { 0: `<a href="/privacy-policy" target="_blank">${t('privacy_policy')}</a>` }) }} />}
+                                        label={<span dangerouslySetInnerHTML={{ __html: t('consent_privacy_policy') }} />}
                                         checked={hasConsented}
                                         onChange={(e) => setHasConsented(e.target.checked)}
                                         required
