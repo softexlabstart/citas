@@ -133,7 +133,8 @@ class DeleteAccountView(APIView):
 
     def delete(self, request, *args, **kwargs):
         user = request.user
-        user.delete()
+        user.is_active = False  # Soft delete: deactivate the user
+        user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

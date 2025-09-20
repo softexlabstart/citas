@@ -110,5 +110,9 @@
   "confirm_delete_account_message": "Are you sure you want to delete your account? This action is irreversible and all your data will be lost.",
   "account_deleted_successfully": "Account deleted successfully.",
   "error_deleting_account": "Error deleting account.",
-  "data_processing_preference_updated": "Data processing preference updated."
+  "data_processing_preference_updated": "Data processing preference updated.",
+  "profile_updated_successfully": "Profile updated successfully.",
+  "already_have_account login": "Already have an account? Login",
+  "consent_privacy_policy": "in accordance with the privacy policy",
+  "request_opposition_sent": "Request to oppose data processing sent."
 }
