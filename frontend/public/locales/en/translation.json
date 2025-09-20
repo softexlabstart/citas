@@ -113,6 +113,6 @@
   "data_processing_preference_updated": "Data processing preference updated.",
   "profile_updated_successfully": "Profile updated successfully.",
   "already_have_account login": "Already have an account? Login",
-  "consent_privacy_policy": "in accordance with the privacy policy",
+  "consent_privacy_policy": "in accordance with {0}",
   "request_opposition_sent": "Request to oppose data processing sent."
 }
