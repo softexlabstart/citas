@@ -3,7 +3,7 @@ import { Card, Button, Alert, Modal } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { UserDashboardSummary, getClientById } from '../api';
+import { UserDashboardSummary, getClientById, deleteAccount } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { Client } from '../interfaces/Client';
 
@@ -93,7 +93,20 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ data }) => {
                     <Button variant="secondary" onClick={() => setShowDeleteConfirmModal(false)}>
                         {t('cancel')}
                     </Button>
-                    <Button variant="danger" onClick={() => { /* TODO: Implement actual deletion API call */ toast.info(t('deletion_feature_coming_soon')); setShowDeleteConfirmModal(false); }}>
+                    <Button variant="danger" onClick={async () => {
+                        try {
+                            await deleteAccount();
+                            toast.success(t('account_deleted_successfully'));
+                            setShowDeleteConfirmModal(false);
+                            // Assuming logout is available in AuthContext and clears user session
+                            // You might need to adjust this based on your AuthContext implementation
+                            // For now, we'll just navigate to home and let the token interceptor handle logout
+                            navigate('/');
+                        } catch (error) {
+                            toast.error(t('error_deleting_account'));
+                            setShowDeleteConfirmModal(false);
+                        }
+                    }}>
                         {t('delete_my_account')}
                     </Button>
                 </Modal.Footer>
