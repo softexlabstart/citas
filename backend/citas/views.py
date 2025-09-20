@@ -39,6 +39,15 @@ class ColaboradorViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
     serializer_class = ColaboradorSerializer
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        now = timezone.now()
+        # Exclude collaborators with an active block
+        return queryset.exclude(
+            bloqueos__fecha_inicio__lte=now,
+            bloqueos__fecha_fin__gte=now
+        )
+
 
 class DisponibilidadView(APIView):
     permission_classes = [AllowAny]
@@ -725,3 +734,12 @@ class RecursoViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
     queryset = Colaborador.objects.all()
     serializer_class = ColaboradorSerializer
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        now = timezone.now()
+        # Exclude collaborators with an active block
+        return queryset.exclude(
+            bloqueos__fecha_inicio__lte=now,
+            bloqueos__fecha_fin__gte=now
+        )

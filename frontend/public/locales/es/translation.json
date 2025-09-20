@@ -286,5 +286,7 @@
   "profile_updated_successfully": "Perfil actualizado exitosamente.",
   "consent_privacy_policy": "de acuerdo con la <a href=\"https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=49981\" target=\"_blank\">Política de Privacidad</a>.",
   "already_have_account login": "¿Ya tienes una cuenta? Inicia sesión",
-  "request_opposition_sent": "Solicitud de opisión enviada"
+  "request_opposition_sent": "Solicitud de opisión enviada",
+  "active_blocks": "Bloqueos Activos",
+  "past_blocks": "Historial de Bloqueos"
 }
