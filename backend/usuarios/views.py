@@ -179,7 +179,7 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
             no_asistidas=Count('id', filter=Q(estado='No Asistio'))
         )
         
-        servicios_usados = citas.values('servicio__nombre').annotate(count=Count('servicio')).order_by('-count')
+        servicios_usados = citas.values('servicios__nombre').annotate(count=Count('servicios__id')).order_by('-count')
         
         return Response({
             'citas': CitaSerializer(citas, many=True).data,
