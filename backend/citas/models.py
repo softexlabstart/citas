@@ -42,6 +42,7 @@ class Colaborador(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='colaboradores')
     nombre = models.CharField(max_length=100)
     email = models.EmailField(max_length=254, blank=True, null=True)
+    servicios = models.ManyToManyField('Servicio', related_name='colaboradores', blank=True)
     descripcion = models.TextField(blank=True, null=True)
     metadata = models.JSONField(blank=True, null=True)
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='colaboradores')

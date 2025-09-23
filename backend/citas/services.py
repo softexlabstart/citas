@@ -108,7 +108,7 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
     if not horarios_colaborador.exists():
         return []
 
-    citas_del_dia = Cita.objects.filter(colaboradores=colaborador, fecha__date=fecha, estado__in=['Pendiente', 'Confirmada']).order_by('fecha')
+    citas_del_dia = Cita.objects.filter(colaboradores=colaborador, fecha__date=fecha, estado__in=['Pendiente', 'Confirmada']).prefetch_related('servicios').order_by('fecha')
     
     day_start = timezone.make_aware(datetime.combine(fecha, time.min))
     day_end = timezone.make_aware(datetime.combine(fecha, time.max))
@@ -194,6 +194,10 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
         if servicio.sede.id != sede.id:
             raise ValueError(f"El servicio '{servicio.nombre}' (id={servicio.id}) pertenece a la sede '{servicio.sede.nombre}' (id={servicio.sede.id}), no a la sede seleccionada '{sede.nombre}' (id={sede.id}).")
 
+    duracion_total_servicios = sum(s.duracion_estimada for s in servicios)
+    intervalo = timedelta(minutes=duracion_total_servicios)
+    step = timedelta(minutes=15)
+
     # Get collaborators who are associated with the given services and the sede.
     colaboradores = Colaborador.objects.filter(
         sede_id=sede_id,
@@ -202,30 +206,101 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
     if not colaboradores.exists():
         return []
 
+    colaborador_ids = [c.id for c in colaboradores]
     all_found_slots = []
     current_date = timezone.now().date()
     days_to_check = 30
 
+    # Pre-fetch all necessary data for the entire period
+    end_date = current_date + timedelta(days=days_to_check)
+    day_start = timezone.make_aware(datetime.combine(current_date, time.min))
+    day_end = timezone.make_aware(datetime.combine(end_date, time.max))
+
+    all_horarios = Horario.objects.filter(colaborador_id__in=colaborador_ids).order_by('hora_inicio')
+    all_citas = Cita.objects.filter(colaboradores__id__in=colaborador_ids, fecha__gte=day_start, fecha__lt=day_end, estado__in=['Pendiente', 'Confirmada']).prefetch_related('servicios', 'colaboradores').order_by('fecha')
+    all_bloqueos = Bloqueo.objects.filter(colaborador_id__in=colaborador_ids, fecha_inicio__lte=day_end, fecha_fin__gte=day_start).order_by('fecha_inicio')
+
+    # Group data by collaborator
+    horarios_by_colaborador = {cid: [] for cid in colaborador_ids}
+    for h in all_horarios:
+        horarios_by_colaborador[h.colaborador_id].append(h)
+
+    citas_by_colaborador = {cid: [] for cid in colaborador_ids}
+    for c in all_citas:
+        for col in c.colaboradores.all():
+            if col.id in citas_by_colaborador:
+                citas_by_colaborador[col.id].append(c)
+
+    bloqueos_by_colaborador = {cid: [] for cid in colaborador_ids}
+    for b in all_bloqueos:
+        bloqueos_by_colaborador[b.colaborador_id].append(b)
+
     for _ in range(days_to_check):
-        # Collect all slots for the current day
+        dia_semana = current_date.weekday()
+        
         daily_slots_for_all_colaboradores = []
         for colaborador in colaboradores:
-            date_str = current_date.strftime('%Y-%m-%d')
-            daily_slots = get_available_slots(colaborador.id, date_str, servicio_ids)
-            
-            for slot in daily_slots:
-                if slot['status'] == 'disponible' and datetime.fromisoformat(slot['start']) > timezone.now():
-                    daily_slots_for_all_colaboradores.append({ 'recurso': { 'id': colaborador.id, 'nombre': colaborador.nombre }, 'start': slot['start'], 'end': slot['end'] })
+            # Get data for this collaborator for this day
+            horarios_colaborador = [h for h in horarios_by_colaborador[colaborador.id] if h.dia_semana == dia_semana]
+            if not horarios_colaborador:
+                continue
 
-        # Sort the day's slots and add them to the main list
+            citas_del_dia = [c for c in citas_by_colaborador[colaborador.id] if c.fecha.date() == current_date]
+            bloqueos_del_dia = [b for b in bloqueos_by_colaborador[colaborador.id] if b.fecha_inicio.date() <= current_date and b.fecha_fin.date() >= current_date]
+
+            # Now, the logic from get_available_slots
+            processed_slots = set()
+            for horario in horarios_colaborador:
+                schedule_start = timezone.make_aware(datetime.combine(current_date, horario.hora_inicio))
+                schedule_end = timezone.make_aware(datetime.combine(current_date, horario.hora_fin))
+
+                if schedule_end <= schedule_start:
+                    schedule_end += timedelta(days=1)
+
+                busy_times = []
+                for cita in citas_del_dia:
+                    start = cita.fecha
+                    end = start + timedelta(minutes=sum(s.duracion_estimada for s in cita.servicios.all()))
+                    if start < schedule_end and end > schedule_start:
+                        busy_times.append((start, end))
+                for bloqueo in bloqueos_del_dia:
+                    start = max(bloqueo.fecha_inicio, schedule_start)
+                    end = min(bloqueo.fecha_fin, schedule_end)
+                    if start < end:
+                        busy_times.append((start, end))
+                busy_times.sort()
+
+                current_time = schedule_start
+                while current_time < schedule_end:
+                    slot_start = current_time
+                    slot_end = slot_start + intervalo
+
+                    if slot_end > schedule_end:
+                        break
+
+                    is_available = True
+                    for busy_start, busy_end in busy_times:
+                        if slot_start < busy_end and slot_end > busy_start:
+                            is_available = False
+                            current_time = busy_end
+                            break
+                    
+                    if is_available:
+                        if slot_start not in processed_slots and slot_start > timezone.now():
+                            daily_slots_for_all_colaboradores.append({
+                                'recurso': { 'id': colaborador.id, 'nombre': colaborador.nombre },
+                                'start': slot_start.isoformat(),
+                                'end': slot_end.isoformat()
+                            })
+                            processed_slots.add(slot_start)
+                        current_time += step
+
         daily_slots_for_all_colaboradores.sort(key=lambda x: x['start'])
         all_found_slots.extend(daily_slots_for_all_colaboradores)
 
-        # If we have enough slots, we can stop
         if len(all_found_slots) >= limit:
             break
         
         current_date += timedelta(days=1)
 
-    # Return only the first 'limit' slots from the sorted list
     return all_found_slots[:limit]
