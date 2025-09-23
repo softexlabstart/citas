@@ -446,19 +446,21 @@ class AppointmentReportView(APIView):
                 ])
             return response
         else: # Default to JSON format
-            appointments_data = queryset.values('estado').annotate(count=Count('estado'))
+            # Group by status and count
+            appointments_by_status = queryset.values('estado').annotate(count=Count('id'))
 
-            report = {item['estado']: item['count'] for item in appointments_data}
-            
-            # Add counts for all possible states, even if 0
-            all_states = ['Pendiente', 'Confirmada', 'Cancelada', 'Asistio', 'No Asistio']
-            for state in all_states:
-                if state not in report:
-                    report[state] = 0
+            # Create a dictionary for quick lookups
+            status_counts = {item['estado']: item['count'] for item in appointments_by_status}
+
+            # Build a list of objects, ensuring all statuses are present, using the model's choices
+            report_list = [
+                {'estado': choice[0], 'count': status_counts.get(choice[0], 0)}
+                for choice in Cita.ESTADO_CHOICES
+            ]
 
             total_revenue = queryset.filter(estado='Asistio').aggregate(total=Sum(F('servicios__precio')))['total'] or 0
 
-            return Response({'report': report, 'total_revenue': total_revenue})
+            return Response({'report': report_list, 'total_revenue': total_revenue})
 
 class SedeReportView(APIView):
     permission_classes = [IsAuthenticated]
@@ -555,13 +557,14 @@ class SedeReportView(APIView):
                 'sede_id': item['sede__id'],
                 'sede_nombre': item['sede__nombre'],
                 'total_citas': item['total_citas'],
-                'estados': {
-                    'Pendiente': item['pendientes'],
-                    'Confirmada': item['confirmadas'],
-                    'Cancelada': item['canceladas'],
-                    'Asistio': item['asistio'],
-                    'No Asistio': item['no_asistio'],
-                },
+                # Convert the 'estados' object into a list of objects for easier frontend rendering
+                'estados': [
+                    {'estado': 'Pendiente', 'count': item['pendientes']},
+                    {'estado': 'Confirmada', 'count': item['confirmadas']},
+                    {'estado': 'Cancelada', 'count': item['canceladas']},
+                    {'estado': 'Asistio', 'count': item['asistio']},
+                    {'estado': 'No Asistio', 'count': item['no_asistio']},
+                ],
                 'ingresos': item['ingresos'] or 0
             })
         
