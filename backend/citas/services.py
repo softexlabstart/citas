@@ -286,7 +286,7 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
                             break
                     
                     if is_available:
-                        if slot_start not in processed_slots and slot_start > timezone.now():
+                        if slot_start not in processed_slots:
                             daily_slots_for_all_colaboradores.append({
                                 'recurso': { 'id': colaborador.id, 'nombre': colaborador.nombre },
                                 'start': slot_start.isoformat(),
