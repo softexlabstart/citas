@@ -380,8 +380,8 @@ class AppointmentReportView(APIView):
     def get(self, request, *args, **kwargs):
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
-        servicio_id = request.query_params.get('servicio_id')
-        colaborador_id = request.query_params.get('colaborador_id')
+        servicio_ids_str = request.query_params.get('servicio_ids')
+        colaborador_id = request.query_params.get('colaborador_id') or request.query_params.get('recurso_id')
         estado = request.query_params.get('estado')
         report_format = request.query_params.get('export', 'json') # Use 'export' to avoid conflict with DRF's 'format'
 
@@ -416,8 +416,10 @@ class AppointmentReportView(APIView):
             fecha__range=(start_date, end_date)
         )
 
-        if servicio_id:
-            queryset = queryset.filter(servicios__id=servicio_id)
+        if servicio_ids_str:
+            servicio_ids = [int(s_id) for s_id in servicio_ids_str.split(',') if s_id.isdigit()]
+            if servicio_ids:
+                queryset = queryset.filter(servicios__id__in=servicio_ids)
         if colaborador_id:
             queryset = queryset.filter(colaboradores__id=colaborador_id)
         if estado:
@@ -485,8 +487,8 @@ class SedeReportView(APIView):
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
         specific_sede_id = request.query_params.get('sede_id')
-        servicio_id = request.query_params.get('servicio_id')
-        colaborador_id = request.query_params.get('colaborador_id')
+        servicio_ids_str = request.query_params.get('servicio_ids')
+        colaborador_id = request.query_params.get('colaborador_id') or request.query_params.get('recurso_id')
         estado = request.query_params.get('estado')
 
         if not start_date_str or not end_date_str:
@@ -518,8 +520,10 @@ class SedeReportView(APIView):
                 return Response({"error": _("Specified location not found.")}, status=404)
 
         # Apply optional filters for service and resource to the base queryset
-        if servicio_id:
-            base_queryset = base_queryset.filter(servicios__id=servicio_id)
+        if servicio_ids_str:
+            servicio_ids = [int(s_id) for s_id in servicio_ids_str.split(',') if s_id.isdigit()]
+            if servicio_ids:
+                base_queryset = base_queryset.filter(servicios__id__in=servicio_ids)
         if colaborador_id:
             base_queryset = base_queryset.filter(colaboradores__id=colaborador_id)
 
