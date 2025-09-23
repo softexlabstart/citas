@@ -169,7 +169,7 @@ const AppointmentsReport: React.FC = () => {
                         </div>
                     </Form>
 
-                    {reportError && <Alert variant="danger" className="mt-4">{t(reportError) || reportError}</Alert>}
+                    {reportError && <Alert variant="danger" className="mt-4">{typeof reportError === 'string' ? t(reportError) : 'Ocurrió un error inesperado.'}</Alert>}
 
                     {reportData && !loadingReport && (
                         <div className="mt-4">

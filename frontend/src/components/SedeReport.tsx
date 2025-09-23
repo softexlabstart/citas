@@ -106,7 +106,7 @@ const SedeReport: React.FC = () => {
                     </div>
                 </Form>
 
-                {error && <Alert variant="danger" className="mt-4">{t(error) || error}</Alert>}
+                {error && <Alert variant="danger" className="mt-4">{typeof error === 'string' ? t(error) : 'Ocurrió un error inesperado.'}</Alert>}
 
                 {reportData && !loading && (
                     <div className="mt-4">
