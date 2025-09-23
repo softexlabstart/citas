@@ -282,18 +282,18 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
                     for busy_start, busy_end in busy_times:
                         if slot_start < busy_end and slot_end > busy_start:
                             is_available = False
-                            current_time = busy_end
                             break
                     
                     if is_available:
-                        if slot_start not in processed_slots:
+                        if slot_start not in processed_slots and slot_start > timezone.now():
                             daily_slots_for_all_colaboradores.append({
                                 'recurso': { 'id': colaborador.id, 'nombre': colaborador.nombre },
                                 'start': slot_start.isoformat(),
                                 'end': slot_end.isoformat()
                             })
                             processed_slots.add(slot_start)
-                        current_time += step
+                    
+                    current_time += step
 
         daily_slots_for_all_colaboradores.sort(key=lambda x: x['start'])
         all_found_slots.extend(daily_slots_for_all_colaboradores)
