@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Form, Button, Card, Spinner, Alert, Table } from 'react-bootstrap';
+import { Row, Col, Form, Button, Card, Spinner, Alert, Table } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import { useApi } from '../hooks/useApi';
@@ -11,8 +11,15 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
 ChartJS.register(ArcElement, Tooltip, Legend);
 
+// Updated interface to match the API response
+interface ReportDataItem {
+    estado: string;
+    count: number;
+}
+
 interface ReportData {
-    [key: string]: number;
+    report: ReportDataItem[];
+    total_revenue: number;
 }
 
 // Define a consistent color map for appointment statuses to ensure visual distinction in charts.
@@ -86,12 +93,13 @@ const AppointmentsReport: React.FC = () => {
         );
     };
 
+    // Updated chart data generation
     const generateChartData = () => {
-        if (!reportData) return null;
+        if (!reportData || !reportData.report) return null;
 
-        const labels = Object.keys(reportData).map(status => t(statusConfig[status as keyof typeof statusConfig]?.key || status.toLowerCase()));
-        const data = Object.values(reportData);
-        const backgroundColors = Object.keys(reportData).map(status => statusColorMap[status] || '#cccccc');
+        const labels = reportData.report.map(item => t(statusConfig[item.estado as keyof typeof statusConfig]?.key || item.estado.toLowerCase()));
+        const data = reportData.report.map(item => item.count);
+        const backgroundColors = reportData.report.map(item => statusColorMap[item.estado] || '#cccccc');
 
         return {
             labels,
@@ -171,7 +179,8 @@ const AppointmentsReport: React.FC = () => {
 
                     {reportError && <Alert variant="danger" className="mt-4">{typeof reportError === 'string' ? t(reportError) : 'Ocurrió un error inesperado.'}</Alert>}
 
-                    {reportData && !loadingReport && (
+                    {/* Updated table rendering */}
+                    {reportData && reportData.report && !loadingReport && (
                         <div className="mt-4">
                             <h4 className="mb-3">{t('report_results')}</h4>
                             <Row>
@@ -179,7 +188,12 @@ const AppointmentsReport: React.FC = () => {
                                     <Table striped bordered hover>
                                         <thead><tr><th>{t('status')}</th><th>{t('count')}</th></tr></thead>
                                         <tbody>
-                                            {Object.entries(reportData).map(([status, count]) => (<tr key={status}><td>{t(statusConfig[status as keyof typeof statusConfig]?.key || status.toLowerCase())}</td><td>{count}</td></tr>))}
+                                            {reportData.report.map(item => (
+                                                <tr key={item.estado}>
+                                                    <td>{t(statusConfig[item.estado as keyof typeof statusConfig]?.key || item.estado.toLowerCase())}</td>
+                                                    <td>{item.count}</td>
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </Table>
                                 </Col>
