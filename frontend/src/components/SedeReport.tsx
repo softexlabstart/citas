@@ -9,12 +9,13 @@ import { Bar } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
+// Updated interface to match the API response
 interface SedeReportItem {
     sede_id: number;
     sede_nombre: string;
     total_citas: number;
     ingresos: number;
-    estados: { [key: string]: number };
+    estados: { estado: string; count: number }[];
 }
 
 interface SedeReportData {
@@ -126,7 +127,17 @@ const SedeReport: React.FC = () => {
                         <h5 className="mt-5">{t('detailed_data')}</h5>
                         <Table striped bordered hover responsive className="mt-3">
                             <thead><tr><th>{t('sede_label')}</th><th>{t('total_appointments')}</th><th>{t('attended')}</th><th>{t('revenue')}</th></tr></thead>
-                            <tbody>{reportData.reporte_por_sede.map(item => (<tr key={item.sede_id}><td>{item.sede_nombre}</td><td>{item.total_citas}</td><td>{item.estados.Asistio || 0}</td><td>${(item.ingresos || 0).toFixed(2)}</td></tr>))}</tbody>
+                            {/* Updated table body to correctly access status count */}
+                            <tbody>
+                                {reportData.reporte_por_sede.map(item => (
+                                    <tr key={item.sede_id}>
+                                        <td>{item.sede_nombre}</td>
+                                        <td>{item.total_citas}</td>
+                                        <td>{item.estados.find(e => e.estado === 'Asistio')?.count || 0}</td>
+                                        <td>${(item.ingresos || 0).toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
                         </Table>
 
                         <Row className="mt-5">
