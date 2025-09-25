@@ -22,6 +22,8 @@ from organizacion.models import Sede
 from django.db.models import Count, Case, When, IntegerField, Sum, Value, DecimalField,F
 from django.db.models.functions import Coalesce
 from .utils import send_appointment_email
+from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
 
 
 class WelcomeView(APIView):
@@ -86,6 +88,7 @@ class NextAvailabilityView(APIView):
             return Response({'error': str(e)}, status=400)
 
 
+@method_decorator(cache_page(60 * 15), name='list')
 class ServicioViewSet(viewsets.ModelViewSet):
     queryset = Servicio.objects.select_related('sede').all()
     serializer_class = ServicioSerializer
