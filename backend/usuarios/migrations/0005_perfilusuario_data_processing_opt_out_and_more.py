@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('organizacion', '0004_organizacion_alter_sede_nombre_sede_organizacion'),
+        ('organizacion', '0003_create_recurso_group'),
         ('usuarios', '0004_perfilusuario_barrio_perfilusuario_ciudad_and_more'),
     ]
 
