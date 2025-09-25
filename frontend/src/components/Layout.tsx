@@ -80,9 +80,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <Nav.Link as={Link} to="/disponibilidad" onClick={handleClose} className="nav-link-custom">
                     <Search className="nav-icon" /> {t('availability')}
                   </Nav.Link>
-                  <Nav.Link as={Link} to="/organization" onClick={handleClose} className="nav-link-custom">
-                    <Building className="nav-icon" /> Organización
-                  </Nav.Link>
+                  {user?.is_staff && (
+                    <Nav.Link as={Link} to="/organization" onClick={handleClose} className="nav-link-custom">
+                      <Building className="nav-icon" /> Organización
+                    </Nav.Link>
+                  )}
                   {(user?.is_staff || user?.perfil?.is_sede_admin || user?.groups.includes('SedeAdmin')) && (
                     <>
                       <hr className="my-2" />

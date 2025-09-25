@@ -26,7 +26,7 @@ class PerfilUsuarioSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False) # Make password optional for updates
-    perfil = PerfilUsuarioSerializer() # Removed read_only=True
+    perfil = PerfilUsuarioSerializer(required=False) # Make perfil optional for registration
     groups = serializers.SerializerMethodField(read_only=True) # Make groups read_only
 
     class Meta:
@@ -46,7 +46,14 @@ class UserSerializer(serializers.ModelSerializer):
         )
         user.set_password(validated_data['password'])
         user.save()
-        PerfilUsuario.objects.create(user=user, **perfil_data) # Create PerfilUsuario here
+        
+        # Crear perfil con datos por defecto si no se proporcionan
+        PerfilUsuario.objects.create(
+            user=user, 
+            timezone=perfil_data.get('timezone', 'America/Bogota'),
+            has_consented_data_processing=perfil_data.get('has_consented_data_processing', False),
+            **{k: v for k, v in perfil_data.items() if k not in ['timezone', 'has_consented_data_processing']}
+        )
         return user
 
     def update(self, instance, validated_data):

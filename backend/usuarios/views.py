@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import UserSerializer, MyTokenObtainPairSerializer, ClientSerializer, ClientEmailSerializer, MultiTenantRegistrationSerializer, InvitationSerializer, OrganizacionSerializer, SedeDetailSerializer
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from .permissions import IsSuperAdmin
 import pytz
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth.models import User, Group # Added Group
@@ -199,7 +200,7 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
 # Vistas para registro multi-tenant
 class MultiTenantRegistrationView(APIView):
     """Vista para registro de usuario con organización."""
-    permission_classes = [AllowAny]
+    permission_classes = [IsSuperAdmin]
     
     def post(self, request, *args, **kwargs):
         serializer = MultiTenantRegistrationSerializer(data=request.data)

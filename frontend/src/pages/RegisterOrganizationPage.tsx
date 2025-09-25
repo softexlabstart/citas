@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { registerWithOrganization } from '../api';
 import { useNavigate, Link } from 'react-router-dom';
 import { MultiTenantRegistrationData } from '../interfaces/Organization';
 import { Container, Row, Col, Card, Form, Button, Alert, InputGroup, Tabs, Tab } from 'react-bootstrap';
-import { Person, Lock, Envelope, PersonBadge, Building, MapPin, Phone } from 'react-bootstrap-icons';
+import { Person, Lock, Envelope, PersonBadge, Building, MapPin, Phone, Shield } from 'react-bootstrap-icons';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../hooks/useAuth';
 
 const RegisterOrganizationPage: React.FC = () => {
     const { t } = useTranslation();
+    const { user } = useAuth();
     const [formData, setFormData] = useState<MultiTenantRegistrationData>({
         username: '',
         email: '',
@@ -26,6 +28,13 @@ const RegisterOrganizationPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        // Verificar si el usuario es superadmin
+        if (user && !user.is_staff) {
+            setError('Solo los administradores del sistema pueden crear organizaciones.');
+        }
+    }, [user]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -57,6 +66,30 @@ const RegisterOrganizationPage: React.FC = () => {
             setLoading(false);
         }
     };
+
+    // Si hay error de permisos, mostrar mensaje de error
+    if (error && error.includes('Solo los administradores')) {
+        return (
+            <Container fluid className="p-0 vh-100">
+                <Row className="g-0 h-100">
+                    <Col className="d-flex justify-content-center align-items-center">
+                        <Card style={{ width: '28rem' }} className="shadow-lg border-0">
+                            <Card.Body className="p-5 text-center">
+                                <Shield size={64} className="text-danger mb-4" />
+                                <h2 className="mb-4">Acceso Restringido</h2>
+                                <Alert variant="danger">{error}</Alert>
+                                <p className="mt-4">
+                                    <Link to="/login" className="btn btn-primary">
+                                        Volver al Login
+                                    </Link>
+                                </p>
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                </Row>
+            </Container>
+        );
+    }
 
     return (
         <Container fluid className="p-0 vh-100">
