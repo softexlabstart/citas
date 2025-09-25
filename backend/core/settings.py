@@ -117,15 +117,6 @@ CACHES = {
     }
 }
 
-# Celery Configuration
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379/2'  # Using DB 2 for Celery
-CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/2'
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = TIME_ZONE
-
-
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -157,6 +148,15 @@ USE_I18N = True
 USE_L10N = True # Added for localized formatting of data
 
 USE_TZ = True
+
+
+# Celery Configuration
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/2'  # Using DB 2 for Celery
+CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/2'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
 
 # Define the languages that your site supports
 LANGUAGES = [
