@@ -14,5 +14,6 @@ python-decouple==3.8 # Pinned version
 python-dotenv==1.1.1 # Pinned version
 openpyxl==3.1.5 # For Excel exports
 reportlab==4.2.0 # For PDF exports
-redis==5.0.7 # Redis client #instalar directamente en el entorno
+redis==5.0.7 # Redis client
 django-redis==5.4.0 # For Redis caching
+celery==5.4.0 # For background tasks

@@ -1,12 +1,21 @@
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
+from celery import shared_task
+from .models import Cita
 
-
-def send_appointment_email(appointment, subject, template_name, context=None):
+@shared_task
+def send_appointment_email(appointment_id, subject, template_name, context=None):
     """
     A utility function to build recipient lists and send appointment-related emails.
+    This is a Celery task, so it runs in the background.
     """
+    try:
+        appointment = Cita.objects.get(id=appointment_id)
+    except Cita.DoesNotExist:
+        print(f"Error: Cita with id {appointment_id} does not exist. Cannot send email.")
+        return
+
     if context is None:
         context = {}
     # Ensure the appointment is always in the context

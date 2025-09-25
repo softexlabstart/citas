@@ -218,9 +218,9 @@ class CitaViewSet(viewsets.ModelViewSet):
         # The 'sede' is already handled by the serializer's 'sede_id' field.
         cita = serializer.save(user=user)
 
-        # Send email notification
-        send_appointment_email(
-            appointment=cita,
+        # Send email notification in the background
+        send_appointment_email.delay(
+            appointment_id=cita.id,
             subject=f"Confirmación de Cita: {', '.join([s.nombre for s in cita.servicios.all()])}",
             template_name='appointment_confirmation'
         )
@@ -243,8 +243,8 @@ class CitaViewSet(viewsets.ModelViewSet):
         # After a successful update, check if the date has changed to send a notification
         updated_instance = self.get_object()
         if updated_instance.fecha != old_fecha:
-            send_appointment_email(
-                appointment=updated_instance,
+            send_appointment_email.delay(
+                appointment_id=updated_instance.id,
                 subject=f"Reprogramación de Cita: {', '.join([s.nombre for s in updated_instance.servicios.all()])}",
                 template_name='appointment_reschedule'
             )
@@ -259,11 +259,14 @@ class CitaViewSet(viewsets.ModelViewSet):
         instance.estado = 'Cancelada'
         instance.save()
 
-        send_appointment_email(
-            appointment=instance,
+        # Pass serializable data to the Celery task
+        context = {'original_fecha': original_fecha.isoformat()}
+
+        send_appointment_email.delay(
+            appointment_id=instance.id,
             subject=f"Cancelación de Cita: {', '.join([s.nombre for s in instance.servicios.all()])}",
             template_name='appointment_cancellation',
-            context={'original_fecha': original_fecha}
+            context=context
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -280,8 +283,8 @@ class CitaViewSet(viewsets.ModelViewSet):
             cita.confirmado = True
             cita.save()
 
-            send_appointment_email(
-                appointment=cita,
+            send_appointment_email.delay(
+                appointment_id=cita.id,
                 subject=f"Tu cita ha sido confirmada: {', '.join([s.nombre for s in cita.servicios.all()])}",
                 template_name='appointment_confirmation'
             )
