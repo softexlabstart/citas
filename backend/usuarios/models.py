@@ -18,8 +18,8 @@ class PerfilUsuario(models.Model):
     sedes_administradas = models.ManyToManyField(Sede, related_name='administradores', blank=True)
     
     # New fields for client data
-    telefono = models.CharField(max_length=20, blank=True, null=True)
-    ciudad = models.CharField(max_length=100, blank=True, null=True)
+    telefono = models.CharField(max_length=20, blank=True, null=True, db_index=True)
+    ciudad = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     barrio = models.CharField(max_length=100, blank=True, null=True)
     genero = models.CharField(max_length=1, choices=GENERO_CHOICES, blank=True, null=True)
     fecha_nacimiento = models.DateField(blank=True, null=True)
@@ -42,9 +42,9 @@ class PerfilUsuario(models.Model):
 
 
 class Usuario(models.Model):
-    nombre = models.CharField(max_length=100)
+    nombre = models.CharField(max_length=100, db_index=True)
     email = models.EmailField(unique=True)
-    telefono = models.CharField(max_length=20, blank=True, null=True)
+    telefono = models.CharField(max_length=20, blank=True, null=True, db_index=True)
     password = models.CharField(max_length=100)
 
     def __str__(self):

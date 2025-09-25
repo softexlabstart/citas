@@ -17,7 +17,7 @@ class Horario(models.Model):
     ]
 
     colaborador = models.ForeignKey('Colaborador', on_delete=models.CASCADE, related_name='horarios', null=True, blank=True)
-    dia_semana = models.IntegerField(choices=DIA_SEMANA_CHOICES)
+    dia_semana = models.IntegerField(choices=DIA_SEMANA_CHOICES, db_index=True)
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
 
@@ -27,7 +27,7 @@ class Horario(models.Model):
 
 
 class Servicio(models.Model):
-    nombre = models.CharField(max_length=100)
+    nombre = models.CharField(max_length=100, db_index=True)
     descripcion = models.TextField(blank=True, null=True)
     duracion_estimada = models.IntegerField(default=30) # Duration in minutes
     precio = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text=_("Precio del servicio"))
@@ -40,8 +40,8 @@ class Servicio(models.Model):
 
 class Colaborador(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='colaboradores')
-    nombre = models.CharField(max_length=100)
-    email = models.EmailField(max_length=254, blank=True, null=True)
+    nombre = models.CharField(max_length=100, db_index=True)
+    email = models.EmailField(max_length=254, blank=True, null=True, db_index=True)
     servicios = models.ManyToManyField('Servicio', related_name='colaboradores', blank=True)
     descripcion = models.TextField(blank=True, null=True)
     metadata = models.JSONField(blank=True, null=True)
@@ -54,8 +54,8 @@ class Bloqueo(models.Model):
     """Represents a block of time when a resource is unavailable for non-appointment reasons."""
     colaborador = models.ForeignKey(Colaborador, on_delete=models.CASCADE, related_name='bloqueos', null=True, blank=True)
     motivo = models.CharField(max_length=100, help_text=_("Ej: Almuerzo, Reunión, Cita personal"))
-    fecha_inicio = models.DateTimeField()
-    fecha_fin = models.DateTimeField()
+    fecha_inicio = models.DateTimeField(db_index=True)
+    fecha_fin = models.DateTimeField(db_index=True)
 
     def __str__(self):
         colaborador_nombre = self.colaborador.nombre if self.colaborador else _("Sin asignar")
@@ -72,8 +72,8 @@ class Cita(models.Model):
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='citas', null=True, blank=True)
-    nombre = models.CharField(max_length=100)
-    fecha = models.DateTimeField()
+    nombre = models.CharField(max_length=100, db_index=True)
+    fecha = models.DateTimeField(db_index=True)
     servicios = models.ManyToManyField(Servicio, related_name='citas')
     colaboradores = models.ManyToManyField('Colaborador', related_name='citas', blank=True)
     confirmado = models.BooleanField(default=False)
