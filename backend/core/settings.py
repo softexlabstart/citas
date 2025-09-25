@@ -55,10 +55,12 @@ INSTALLED_APPS = [
     'organizacion',
     'marketing',
     'axes',
+    'csp',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'csp.middleware.CSPMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware', 
@@ -209,6 +211,17 @@ REST_FRAMEWORK = {
 # Axes configuration
 AXES_FAILURE_LIMIT = 5  # Lock out after 5 failed attempts
 AXES_COOLOFF_TIME = 1   # Wait 1 hour before allowing attempts again
+
+# CSP Configuration
+CSP_DEFAULT_SRC = ('self',)
+CSP_SCRIPT_SRC = ('self', 'http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3002', 'http://127.0.0.1:3002', 'http://appcitas.softex-labs.xyz', 'http://16.52.17.116')
+CSP_STYLE_SRC = ('self', 'unsafe-inline', 'http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3002', 'http://127.0.0.1:3002', 'http://appcitas.softex-labs.xyz', 'http://16.52.17.116')
+CSP_IMG_SRC = ('self', 'data:')
+CSP_FONT_SRC = ('self',)
+CSP_CONNECT_SRC = ('self', 'http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3002', 'http://127.0.0.1:3002', 'http://appcitas.softex-labs.xyz', 'http://16.52.17.116')
+CSP_FRAME_ANCESTORS = ('none',)
+CSP_BASE_URI = ('self',)
+CSP_FORM_ACTION = ('self',)
 
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = config('SMTP_HOST', default='')

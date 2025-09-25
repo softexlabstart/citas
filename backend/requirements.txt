@@ -18,3 +18,4 @@ redis==5.0.7 # Redis client
 django-redis==5.4.0 # For Redis caching
 celery==5.4.0 # For background tasks
 django-axes==6.2.0 # For brute-force attack protection
+django-csp==3.7 # For Content-Security-Policy
