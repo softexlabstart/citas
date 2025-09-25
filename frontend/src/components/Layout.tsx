@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import moment from 'moment';
-import { HouseDoor, Briefcase, CalendarCheck, CalendarWeek, BarChart, Gear, QuestionCircle, Search, People, Megaphone, Building } from 'react-bootstrap-icons';
+import { HouseDoor, Briefcase, CalendarCheck, CalendarWeek, BarChart, Gear, QuestionCircle, Search, People, Megaphone, Building, PlusCircle } from 'react-bootstrap-icons';
 import '../styles/custom.css';
 
 interface LayoutProps {
@@ -81,9 +81,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <Search className="nav-icon" /> {t('availability')}
                   </Nav.Link>
                   {user?.is_staff && (
-                    <Nav.Link as={Link} to="/organization" onClick={handleClose} className="nav-link-custom">
-                      <Building className="nav-icon" /> Organización
-                    </Nav.Link>
+                    <>
+                      <Nav.Link as={Link} to="/organization" onClick={handleClose} className="nav-link-custom">
+                        <Building className="nav-icon" /> Gestionar Organización
+                      </Nav.Link>
+                      <Nav.Link as={Link} to="/register-organization" onClick={handleClose} className="nav-link-custom">
+                        <PlusCircle className="nav-icon" /> Crear Nueva Organización
+                      </Nav.Link>
+                    </>
                   )}
                   {(user?.is_staff || user?.perfil?.is_sede_admin || user?.groups.includes('SedeAdmin')) && (
                     <>
