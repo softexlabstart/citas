@@ -6,6 +6,12 @@ import { Service } from './interfaces/Service';
 import { Recurso } from './interfaces/Recurso';
 import { Sede } from './interfaces/Sede'; // Added Sede import
 import { Client } from './interfaces/Client';
+import { 
+    MultiTenantRegistrationData, 
+    InvitationData, 
+    OrganizationInfo, 
+    OrganizationMembersResponse 
+} from './interfaces/Organization';
 
 export interface PaginatedResponse<T> {
     count: number;
@@ -272,3 +278,22 @@ export const getPersonalData = () => api.get<any>('/api/auth/user/personal-data/
 export const deleteAccount = () => api.delete('/api/auth/user/delete-account/'); // New function for deleting account
 
 export const updateDataProcessingOptOut = (optOutStatus: boolean) => api.patch('/api/auth/user/', { perfil: { data_processing_opt_out: optOutStatus } });
+
+// Funciones para Sistema Multi-Tenant (New)
+export const registerWithOrganization = async (data: MultiTenantRegistrationData) => {
+    const response = await api.post('/api/usuarios/register-organization/', data);
+    return response.data;
+};
+
+export const getOrganizationInfo = () => api.get<OrganizationInfo>('/api/usuarios/organization/');
+
+export const getOrganizationMembers = (sedeId?: number) => {
+    const params = new URLSearchParams();
+    if (sedeId) {
+        params.append('sede_id', String(sedeId));
+    }
+    const queryString = params.toString();
+    return api.get<OrganizationMembersResponse>(`/api/usuarios/organization/members/${queryString ? `?${queryString}` : ''}`);
+};
+
+export const sendInvitation = (invitation: InvitationData) => api.post('/api/usuarios/organization/invite/', invitation);

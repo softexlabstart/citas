@@ -78,6 +78,11 @@ const LoginPage: React.FC = () => {
                             <p className="mt-4 text-center">
                                 ¿No tienes cuenta? <Link to="/register">Registrarse</Link>
                             </p>
+                            <p className="text-center">
+                                <Link to="/register-organization" className="text-primary fw-bold">
+                                    Crear Nueva Organización
+                                </Link>
+                            </p>
                         </Card.Body>
                     </Card>
                 </Col>
