@@ -88,7 +88,6 @@ class NextAvailabilityView(APIView):
             return Response({'error': str(e)}, status=400)
 
 
-@method_decorator(cache_page(60 * 15), name='list')
 class ServicioViewSet(viewsets.ModelViewSet):
     queryset = Servicio.objects.select_related('sede').all()
     serializer_class = ServicioSerializer
