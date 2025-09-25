@@ -183,7 +183,7 @@ const EditProfilePage: React.FC = () => {
 
     return (
         <Container className="mt-5">
-            <h2>{t('edit_profile')}</h2>
+            <h2>{t('editar perfil')}</h2>
             <Form onSubmit={handleSubmit}>
                 <Row>
                     <Col md={6}>
