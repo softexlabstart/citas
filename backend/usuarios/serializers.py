@@ -24,9 +24,25 @@ class PerfilUsuarioSerializer(serializers.ModelSerializer):
         has_sedes_administradas = obj.sedes_administradas.exists()
         return is_in_admin_group or has_sedes_administradas
 
+class PerfilUsuarioRegistrationSerializer(serializers.ModelSerializer):
+    """Serializer simplificado para registro de usuarios."""
+    
+    class Meta:
+        model = PerfilUsuario
+        fields = ('timezone', 'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento', 'has_consented_data_processing')
+        extra_kwargs = {
+            'timezone': {'required': False, 'default': 'America/Bogota'},
+            'telefono': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'ciudad': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'barrio': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'genero': {'required': False, 'allow_null': True},
+            'fecha_nacimiento': {'required': False, 'allow_null': True},
+            'has_consented_data_processing': {'required': False, 'default': False},
+        }
+
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False) # Make password optional for updates
-    perfil = PerfilUsuarioSerializer(required=False) # Make perfil optional for registration
+    perfil = PerfilUsuarioRegistrationSerializer(required=False) # Use registration serializer
     groups = serializers.SerializerMethodField(read_only=True) # Make groups read_only
 
     class Meta:
