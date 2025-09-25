@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('organizacion', '0004_organizacion_alter_sede_nombre_sede_organizacion'),
-        ('usuarios', '0005_perfilusuario_data_processing_opt_out_and_more'),
+        ('usuarios', '0004_perfilusuario_barrio_perfilusuario_ciudad_and_more'),
     ]
 
     operations = [
