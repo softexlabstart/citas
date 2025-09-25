@@ -1,7 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 import pytz
-from organizacion.models import Sede
+from organizacion.models import Sede, Organizacion
+from organizacion.managers import OrganizacionManager
 from datetime import date
 
 class PerfilUsuario(models.Model):
@@ -13,6 +14,7 @@ class PerfilUsuario(models.Model):
     ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
+    organizacion = models.ForeignKey(Organizacion, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
     timezone = models.CharField(max_length=100, choices=TIMEZONE_CHOICES, default='UTC')
     sede = models.ForeignKey(Sede, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
     sedes_administradas = models.ManyToManyField(Sede, related_name='administradores', blank=True)
@@ -25,6 +27,9 @@ class PerfilUsuario(models.Model):
     fecha_nacimiento = models.DateField(blank=True, null=True)
     has_consented_data_processing = models.BooleanField(default=False) # New field for consent
     data_processing_opt_out = models.BooleanField(default=False) # New field for opting out of data processing
+
+    objects = OrganizacionManager(organization_filter_path='organizacion')
+    all_objects = models.Manager()
 
     def __str__(self):
         return self.user.username

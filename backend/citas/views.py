@@ -94,6 +94,7 @@ class ServicioViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
     def get_queryset(self):
+        # Use the custom manager which automatically filters by organization
         queryset = super().get_queryset()
         user = self.request.user
         sede_id = self.request.query_params.get('sede_id')
@@ -101,7 +102,7 @@ class ServicioViewSet(viewsets.ModelViewSet):
         if sede_id:
             return queryset.filter(sede_id=sede_id)
 
-        # If user is authenticated, they can see all services.
+        # If user is authenticated, they can see all services in their organization.
         # Write permissions are handled by IsAdminOrSedeAdminOrReadOnly.
         if user.is_authenticated:
             return queryset
@@ -145,12 +146,13 @@ class CitaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
-        # Start with an optimized base queryset to solve N+1 issues
+        # Start with an optimized base queryset using the custom manager
+        # This automatically filters by organization
         base_queryset = Cita.objects.select_related('user', 'sede').prefetch_related('servicios', 'colaboradores')
 
-        # Refactored permission-based filtering for clarity and correctness
+        # Additional permission-based filtering for clarity and correctness
         if user.is_staff:
-            # Staff users can see all appointments across all sedes
+            # Staff users can see all appointments across all sedes in their organization
             queryset = base_queryset.all()
         else:
             try:
@@ -364,6 +366,7 @@ class HorarioViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
     
     def get_queryset(self):
+        # Use the custom manager which automatically filters by organization
         user = self.request.user
         if user.is_staff:
             return super().get_queryset()
@@ -403,6 +406,7 @@ class AppointmentReportView(APIView):
         end_date = end_date + timedelta(days=1)
 
         # **CRITICAL SECURITY FIX**: Filter initial queryset based on user permissions
+        # The custom manager automatically filters by organization
         user = request.user
         if user.is_staff:
             base_queryset = Cita.objects.all()
@@ -484,6 +488,7 @@ class SedeReportView(APIView):
                 raise PermissionDenied(_("You do not have permission to access this report."))
 
         # Determine which sedes the user can report on
+        # The custom manager automatically filters by organization
         if user.is_staff:
             administered_sedes = Sede.objects.all()
         else:

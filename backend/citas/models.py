@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
 from organizacion.models import Sede
+from organizacion.managers import OrganizacionManager
 
 # Create your models here.
 
@@ -21,6 +22,9 @@ class Horario(models.Model):
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
 
+    objects = OrganizacionManager(organization_filter_path='colaborador__sede__organizacion')
+    all_objects = models.Manager()
+
     def __str__(self):
         colaborador_nombre = self.colaborador.nombre if self.colaborador else _("Sin asignar")
         return f"{colaborador_nombre} - {self.get_dia_semana_display()} ({self.hora_inicio} - {self.hora_fin})"
@@ -33,6 +37,9 @@ class Servicio(models.Model):
     precio = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text=_("Precio del servicio"))
     metadata = models.JSONField(blank=True, null=True)
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='servicios')
+
+    objects = OrganizacionManager(organization_filter_path='sede__organizacion')
+    all_objects = models.Manager()
 
     def __str__(self):
         return self.nombre
@@ -47,6 +54,9 @@ class Colaborador(models.Model):
     metadata = models.JSONField(blank=True, null=True)
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='colaboradores')
 
+    objects = OrganizacionManager(organization_filter_path='sede__organizacion')
+    all_objects = models.Manager()
+
     def __str__(self):
         return self.nombre
 
@@ -56,6 +66,9 @@ class Bloqueo(models.Model):
     motivo = models.CharField(max_length=100, help_text=_("Ej: Almuerzo, Reunión, Cita personal"))
     fecha_inicio = models.DateTimeField(db_index=True)
     fecha_fin = models.DateTimeField(db_index=True)
+
+    objects = OrganizacionManager(organization_filter_path='colaborador__sede__organizacion')
+    all_objects = models.Manager()
 
     def __str__(self):
         colaborador_nombre = self.colaborador.nombre if self.colaborador else _("Sin asignar")
@@ -80,6 +93,9 @@ class Cita(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente', db_index=True)
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='citas')
     comentario = models.TextField(blank=True, null=True)
+
+    objects = OrganizacionManager(organization_filter_path='sede__organizacion')
+    all_objects = models.Manager()
 
     def __str__(self):
         return f"{self.nombre} - {self.fecha}"
