@@ -16,7 +16,7 @@ class HorarioAdmin(admin.ModelAdmin):
     search_fields = ('colaborador__nombre', 'colaborador__sede__nombre')
     list_select_related = ('colaborador', 'colaborador__sede')
 
-    @admin.display(description='Sede')
+    @admin.display(description='Sede', ordering='colaborador__sede__nombre')
     def get_sede(self, obj):
         if obj.colaborador:
             return obj.colaborador.sede
