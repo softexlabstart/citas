@@ -5,7 +5,7 @@ from .models import PerfilUsuario
 @admin.register(PerfilUsuario)
 class PerfilUsuarioAdmin(admin.ModelAdmin):
     list_display = ('user', 'get_sede_nombre', 'organizacion')
-    search_fields = ('user__username', 'sede__nombre', 'organizacion__nombre')
+    search_fields = ('user__username',)
     list_filter = ('sede', 'organizacion')
     filter_horizontal = ('sedes_administradas',)
 

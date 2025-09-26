@@ -13,7 +13,7 @@ class HorarioAdmin(admin.ModelAdmin):
     form = HorarioAdminForm
     list_display = ('colaborador', 'get_sede', 'get_dia_semana_display_custom', 'hora_inicio', 'hora_fin')
     list_filter = ('colaborador__sede', 'dia_semana', 'colaborador')
-    search_fields = ('colaborador__nombre', 'colaborador__sede__nombre')
+    search_fields = ('colaborador__nombre',)
     list_select_related = ('colaborador', 'colaborador__sede')
 
     @admin.display(description='Sede')
@@ -71,8 +71,9 @@ class CitaAdmin(admin.ModelAdmin):
             cita.confirmado = True
             cita.estado = 'Confirmada'
             cita.save()
+            # Llama a la tarea de Celery en lugar de la función directamente
             send_appointment_email(
-                appointment=cita,
+                appointment_id=cita.id,
                 subject=f"Tu cita ha sido confirmada: {', '.join([s.nombre for s in cita.servicios.all()])}",
                 template_name='appointment_confirmation'
             )
@@ -89,11 +90,12 @@ class CitaAdmin(admin.ModelAdmin):
             cita.estado = 'Cancelada'
             cita.confirmado = False
             cita.save()
+            # Llama a la tarea de Celery
             send_appointment_email(
-                appointment=cita,
+                appointment_id=cita.id,
                 subject=f"Cancelación de Cita: {', '.join([s.nombre for s in cita.servicios.all()])}",
                 template_name='appointment_cancellation',
-                context={'original_fecha': original_fecha}
+                context={'original_fecha': original_fecha.isoformat()}
             )
             updated_count += 1
         self.message_user(request, f"{updated_count} citas han sido canceladas y notificadas.")
@@ -134,11 +136,11 @@ class CitaAdmin(admin.ModelAdmin):
 class BloqueoAdmin(admin.ModelAdmin):
     list_display = ('colaborador', 'get_sede', 'motivo', 'fecha_inicio', 'fecha_fin')
     list_filter = ('colaborador__sede', 'colaborador')
-    search_fields = ('motivo', 'colaborador__nombre', 'colaborador__sede__nombre')
+    search_fields = ('motivo', 'colaborador__nombre')
     date_hierarchy = 'fecha_inicio'
     list_select_related = ('colaborador', 'colaborador__sede')
 
-    @admin.display(description='Sede', ordering='colaborador__sede__nombre')
+    @admin.display(description='Sede')
     def get_sede(self, obj):
         if obj.colaborador:
             return obj.colaborador.sede
