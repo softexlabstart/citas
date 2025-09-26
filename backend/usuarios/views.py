@@ -82,15 +82,29 @@ class LoginView(APIView):
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = UserSerializer
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         username = request.data.get('username')
         email = request.data.get('email')
+        password = request.data.get('password')
+
         if User.objects.filter(username=username).exists():
             return Response({'error': 'El usuario ya existe'}, status=status.HTTP_400_BAD_REQUEST)
         if email and User.objects.filter(email=email).exists():
             return Response({'error': 'El email ya está registrado'}, status=status.HTTP_400_BAD_REQUEST)
-        return super().create(request, *args, **kwargs)
+
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=request.data.get('first_name', ''),
+            last_name=request.data.get('last_name', '')
+        )
+        PerfilUsuario.objects.create(user=user) # Create a default profile
+
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]

@@ -43,7 +43,7 @@ class PerfilUsuarioRegistrationSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False) # Make password optional for updates
-    perfil = PerfilUsuarioSerializer(read_only=True) # Changed to read-only PerfilUsuarioSerializer
+    perfil = PerfilUsuarioSerializer(required=False, allow_null=True)
     groups = serializers.SerializerMethodField(read_only=True) # Make groups read_only
 
     class Meta:
@@ -54,24 +54,9 @@ class UserSerializer(serializers.ModelSerializer):
         return [group.name for group in obj.groups.all()]
 
     def create(self, validated_data):
-        perfil_data = validated_data.pop('perfil', {})
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data.get('email', ''),
-            first_name=validated_data.get('first_name', ''),
-            last_name=validated_data.get('last_name', '')
-        )
-        user.set_password(validated_data['password'])
-        user.save()
-        
-        # Crear perfil con datos por defecto si no se proporcionan
-        PerfilUsuario.objects.create(
-            user=user, 
-            timezone=perfil_data.get('timezone', 'America/Bogota'),
-            has_consented_data_processing=perfil_data.get('has_consented_data_processing', False),
-            **{k: v for k, v in perfil_data.items() if k not in ['timezone', 'has_consented_data_processing']}
-        )
-        return user
+        # This serializer should not be used for creation directly anymore.
+        # The RegisterView uses its own logic or a dedicated registration serializer.
+        raise NotImplementedError("Use a dedicated registration serializer instead.")
 
     def update(self, instance, validated_data):
         perfil_data = validated_data.pop('perfil', {})
@@ -86,7 +71,8 @@ class UserSerializer(serializers.ModelSerializer):
         instance.save()
 
         # Update PerfilUsuario fields
-        perfil = instance.perfil
+        # Use get_or_create to handle users that might not have a profile yet.
+        perfil, created = PerfilUsuario.objects.get_or_create(user=instance)
         for attr, value in perfil_data.items():
             setattr(perfil, attr, value)
         perfil.save()
