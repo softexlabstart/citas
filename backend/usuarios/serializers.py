@@ -174,8 +174,18 @@ class ClientEmailSerializer(serializers.ModelSerializer):
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
-        serializer = UserSerializer(self.user).data
-        data.update({'user': serializer})
+        # Usar un bloque try-except para manejar usuarios sin perfil
+        try:
+            user_data = UserSerializer(self.user).data
+        except PerfilUsuario.DoesNotExist:
+            # Si no hay perfil, serializa solo los datos básicos del usuario
+            user_data = {
+                'id': self.user.id,
+                'username': self.user.username,
+                'email': self.user.email,
+                'groups': [group.name for group in self.user.groups.all()]
+            }
+        data.update({'user': user_data})
         return data
 
 
@@ -304,4 +314,3 @@ class InvitationSerializer(serializers.Serializer):
             except Sede.DoesNotExist:
                 raise serializers.ValidationError("La sede especificada no existe.")
         return value
-
