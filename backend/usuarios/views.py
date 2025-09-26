@@ -3,6 +3,9 @@ from rest_framework import status, generics, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from backend.organizacion.models import Sede
+from backend.usuarios.models import PerfilUsuario
 from .serializers import UserSerializer, MyTokenObtainPairSerializer, ClientSerializer, ClientEmailSerializer, MultiTenantRegistrationSerializer, InvitationSerializer, OrganizacionSerializer, SedeDetailSerializer
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from .permissions import IsSuperAdmin
@@ -58,10 +61,22 @@ class LoginView(APIView):
         if user:
             login(request, user)
             refresh = RefreshToken.for_user(user)
+            
+            # Manejar el caso donde el perfil no existe
+            try:
+                user_data = UserSerializer(user).data
+            except AttributeError: # O podría ser PerfilUsuario.DoesNotExist dependiendo del serializer
+                # Si no hay perfil, devolvemos los datos básicos del usuario
+                user_data = {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                }
+
             return Response({
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
-                'user': UserSerializer(user).data
+                'user': user_data
             })
         return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
 
