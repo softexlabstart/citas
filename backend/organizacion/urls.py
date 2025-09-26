@@ -1,8 +1,12 @@
-app_name = 'organizacion' # Added app_name
+from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import SedeViewSet
+from .views import SedeViewSet, CreateOrganizacionView
+
+app_name = 'organizacion'
 
 router = DefaultRouter()
 router.register(r'sedes', SedeViewSet)
 
-urlpatterns = router.urls
+urlpatterns = router.urls + [
+    path('organizaciones/', CreateOrganizacionView.as_view(), name='crear-organizacion'),
+]

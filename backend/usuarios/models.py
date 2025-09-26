@@ -14,7 +14,7 @@ class PerfilUsuario(models.Model):
     ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
-    organizacion = models.ForeignKey(Organizacion, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
+    organizacion = models.ForeignKey(Organizacion.Organizacion, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
     timezone = models.CharField(max_length=100, choices=TIMEZONE_CHOICES, default='UTC')
     sede = models.ForeignKey(Sede, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
     sedes_administradas = models.ManyToManyField(Sede, related_name='administradores', blank=True)

@@ -17,6 +17,7 @@ export interface User {
     first_name: string;
     last_name: string;
     is_staff: boolean;
+    is_superuser: boolean;
     perfil: PerfilUsuario; // Add the perfil field
     groups: string[];
 }

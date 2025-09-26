@@ -44,20 +44,6 @@ const App: React.FC = () => {
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
-              <Route path="/register-organization" element={<RegisterOrganizationPage />} />
-              
-              {/* Routes for all authenticated users */}
-              <Route element={<PrivateRoute />}>
-                <Route path="/" element={<Home />} />
-                <Route path="/appointments" element={<Appointments />} />
-                <Route path="/calendar" element={<AppointmentsCalendar />} />
-                <Route path="/disponibilidad" element={<Disponibilidad />} />
-                <Route path="/organization" element={<OrganizationPage />} />
-                <Route path="/user-guide" element={<UserGuide />} />
-                <Route path="/recurso-dashboard" element={<RecursoDashboard />} />
-                <Route path="/profile/edit" element={<EditProfilePage />} /> {/* New route for editing user profile */}
-              </Route>
-
               {/* Routes for admin users only */}
               <Route element={<AdminRoute />}>
                 <Route path="/services" element={<Services />} />
@@ -65,6 +51,8 @@ const App: React.FC = () => {
                 <Route path="/admin-settings" element={<AdminSettings />} />
                 <Route path="/clients" element={<Clients />} />
                 <Route path="/marketing" element={<MarketingPage />} />
+                <Route path="/organization" element={<OrganizationPage />} />
+                <Route path="/register-organization" element={<RegisterOrganizationPage />} />
               </Route>
             </Routes>
           </Suspense>

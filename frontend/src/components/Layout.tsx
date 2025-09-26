@@ -80,7 +80,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <Nav.Link as={Link} to="/disponibilidad" onClick={handleClose} className="nav-link-custom">
                     <Search className="nav-icon" /> {t('availability')}
                   </Nav.Link>
-                  {user?.is_staff && (
+                  {user?.is_superuser && (
                     <>
                       <Nav.Link as={Link} to="/organization" onClick={handleClose} className="nav-link-custom">
                         <Building className="nav-icon" /> Gestionar Organización
