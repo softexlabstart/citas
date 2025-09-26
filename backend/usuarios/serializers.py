@@ -20,6 +20,10 @@ class PerfilUsuarioSerializer(serializers.ModelSerializer):
         fields = ('timezone', 'sede', 'sedes_administradas', 'is_sede_admin', 'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento', 'has_consented_data_processing', 'data_processing_opt_out') # Added data_processing_opt_out
 
     def get_is_sede_admin(self, obj):
+        # Si el perfil no existe (obj es None), el usuario no puede ser admin de sede.
+        if not obj:
+            return False
+            
         user = obj.user
         is_in_admin_group = user.groups.filter(name='SedeAdmin').exists()
         has_sedes_administradas = obj.sedes_administradas.exists()
@@ -164,7 +168,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Usar un bloque try-except para manejar usuarios sin perfil
         try:
             user_data = UserSerializer(self.user).data
-        except PerfilUsuario.DoesNotExist:
+        except ObjectDoesNotExist:
             # Si no hay perfil, serializa solo los datos básicos del usuario
             user_data = {
                 'id': self.user.id,
