@@ -43,7 +43,7 @@ class PerfilUsuarioRegistrationSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False) # Make password optional for updates
-    perfil = PerfilUsuarioRegistrationSerializer(required=False) # Use registration serializer
+    perfil = PerfilUsuarioSerializer(read_only=True) # Changed to read-only PerfilUsuarioSerializer
     groups = serializers.SerializerMethodField(read_only=True) # Make groups read_only
 
     class Meta:
