@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from .forms import HorarioAdminForm
 from .reports import generate_excel_report, generate_pdf_report
 from .utils import send_appointment_email
+from organizacion.models import Sede
 
 @admin.register(Horario)
 class HorarioAdmin(admin.ModelAdmin):
@@ -56,6 +57,23 @@ class ColaboradorAdmin(admin.ModelAdmin):
             return qs.none()
         except AttributeError:
             return qs.none()
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "sede":
+            # Start with an unfiltered queryset
+            qs = Sede.all_objects.all()
+            # If the user is not a superuser, filter by their organization
+            if not request.user.is_superuser:
+                try:
+                    organizacion = request.user.perfil.organizacion
+                    if organizacion:
+                        qs = qs.filter(organizacion=organizacion)
+                    else:
+                        qs = qs.none()
+                except AttributeError:
+                    qs = qs.none()
+            kwargs["queryset"] = qs
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(Servicio)
