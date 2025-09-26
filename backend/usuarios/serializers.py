@@ -177,7 +177,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Usar un bloque try-except para manejar usuarios sin perfil
         try:
             user_data = UserSerializer(self.user).data
-        except PerfilUsuario.DoesNotExist:
+        except PerfilUsuario.DoesNotExist: # This should catch RelatedObjectDoesNotExist
             # Si no hay perfil, serializa solo los datos básicos del usuario
             user_data = {
                 'id': self.user.id,
