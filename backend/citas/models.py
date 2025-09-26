@@ -41,6 +41,9 @@ class Servicio(models.Model):
     objects = OrganizacionManager(organization_filter_path='sede__organizacion')
     all_objects = models.Manager()
 
+    class Meta:
+        unique_together = ('sede', 'nombre')
+
     def __str__(self):
         return self.nombre
 
@@ -56,6 +59,9 @@ class Colaborador(models.Model):
 
     objects = OrganizacionManager(organization_filter_path='sede__organizacion')
     all_objects = models.Manager()
+
+    class Meta:
+        unique_together = ('sede', 'nombre')
 
     def __str__(self):
         return self.nombre

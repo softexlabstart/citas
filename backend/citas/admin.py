@@ -12,9 +12,21 @@ from .utils import send_appointment_email
 class HorarioAdmin(admin.ModelAdmin):
     form = HorarioAdminForm
     list_display = ('colaborador', 'get_sede', 'get_dia_semana_display_custom', 'hora_inicio', 'hora_fin')
-    list_filter = ('colaborador__sede', 'dia_semana', 'colaborador')
+    list_filter = ('colaborador__sede__nombre', 'dia_semana', 'colaborador__nombre')
     search_fields = ('colaborador__nombre',)
     list_select_related = ('colaborador', 'colaborador__sede')
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        try:
+            organizacion = request.user.perfil.organizacion
+            if organizacion:
+                return qs.filter(colaborador__sede__organizacion=organizacion)
+            return qs.none()
+        except AttributeError:
+            return qs.none()
 
     @admin.display(description='Sede')
     def get_sede(self, obj):
@@ -29,30 +41,63 @@ class HorarioAdmin(admin.ModelAdmin):
 @admin.register(Colaborador)
 class ColaboradorAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'sede', 'descripcion')
-    list_filter = ('sede',)
+    list_filter = ('sede__nombre',)
     search_fields = ('nombre', 'sede__nombre')
     list_select_related = ('sede',)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        try:
+            organizacion = request.user.perfil.organizacion
+            if organizacion:
+                return qs.filter(sede__organizacion=organizacion)
+            return qs.none()
+        except AttributeError:
+            return qs.none()
 
 
 @admin.register(Servicio)
 class ServicioAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'sede', 'duracion_estimada', 'precio')
-    list_filter = ('sede',)
+    list_filter = ('sede__nombre',)
     search_fields = ('nombre', 'sede__nombre')
     list_select_related = ('sede',)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        try:
+            organizacion = request.user.perfil.organizacion
+            if organizacion:
+                return qs.filter(sede__organizacion=organizacion)
+            return qs.none()
+        except AttributeError:
+            return qs.none()
 
 
 @admin.register(Cita)
 class CitaAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'fecha', 'get_servicios_display', 'sede', 'confirmado', 'estado')
-    list_filter = ('sede', 'estado', 'confirmado', 'fecha', 'servicios')
+    list_filter = ('sede__nombre', 'estado', 'confirmado', 'fecha', 'servicios__nombre')
     search_fields = ('nombre', 'sede__nombre')
     list_select_related = ('sede', 'user')
     prefetch_related = ('servicios', 'colaboradores')
-    # 'list_editable' is removed for 'estado' and 'confirmado' to enforce using custom actions.
-    # This ensures that business logic, like sending email notifications, is always triggered
-    # when an appointment's status changes, preventing inconsistencies.
     actions = ['confirmar_citas', 'cancelar_citas', 'export_to_excel', 'export_to_pdf', 'marcar_asistio', 'marcar_no_asistio']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        try:
+            organizacion = request.user.perfil.organizacion
+            if organizacion:
+                return qs.filter(sede__organizacion=organizacion)
+            return qs.none()
+        except AttributeError:
+            return qs.none()
 
     @admin.display(description='Servicios')
     def get_servicios_display(self, obj):
@@ -71,7 +116,6 @@ class CitaAdmin(admin.ModelAdmin):
             cita.confirmado = True
             cita.estado = 'Confirmada'
             cita.save()
-            # Llama a la tarea de Celery en lugar de la función directamente
             send_appointment_email(
                 appointment_id=cita.id,
                 subject=f"Tu cita ha sido confirmada: {', '.join([s.nombre for s in cita.servicios.all()])}",
@@ -82,15 +126,12 @@ class CitaAdmin(admin.ModelAdmin):
     confirmar_citas.short_description = "Confirmar citas seleccionadas"
 
     def cancelar_citas(self, request, queryset):
-        # Iterate to ensure business logic (like sending emails) is triggered for each cancellation.
-        # This is more consistent than a bulk .update() which bypasses model save methods and signals.
         updated_count = 0
         for cita in queryset.filter(estado__in=['Pendiente', 'Confirmada']):
             original_fecha = cita.fecha
             cita.estado = 'Cancelada'
             cita.confirmado = False
             cita.save()
-            # Llama a la tarea de Celery
             send_appointment_email(
                 appointment_id=cita.id,
                 subject=f"Cancelación de Cita: {', '.join([s.nombre for s in cita.servicios.all()])}",
@@ -102,7 +143,6 @@ class CitaAdmin(admin.ModelAdmin):
     cancelar_citas.short_description = "Cancelar citas seleccionadas"
 
     def marcar_asistio(self, request, queryset):
-        # Only mark confirmed appointments as attended for logical consistency
         updated_count = 0
         for cita in queryset.filter(estado='Confirmada'):
             cita.estado = 'Asistio'
@@ -112,7 +152,6 @@ class CitaAdmin(admin.ModelAdmin):
     marcar_asistio.short_description = "Marcar como asistida"
 
     def marcar_no_asistio(self, request, queryset):
-        # A 'No Show' can happen for pending or confirmed appointments
         updated_count = 0
         for cita in queryset.filter(estado__in=['Pendiente', 'Confirmada']):
             cita.estado = 'No Asistio'
@@ -135,10 +174,22 @@ class CitaAdmin(admin.ModelAdmin):
 @admin.register(Bloqueo)
 class BloqueoAdmin(admin.ModelAdmin):
     list_display = ('colaborador', 'get_sede', 'motivo', 'fecha_inicio', 'fecha_fin')
-    list_filter = ('colaborador__sede', 'colaborador')
+    list_filter = ('colaborador__sede__nombre', 'colaborador__nombre')
     search_fields = ('motivo', 'colaborador__nombre')
     date_hierarchy = 'fecha_inicio'
     list_select_related = ('colaborador', 'colaborador__sede')
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        try:
+            organizacion = request.user.perfil.organizacion
+            if organizacion:
+                return qs.filter(colaborador__sede__organizacion=organizacion)
+            return qs.none()
+        except AttributeError:
+            return qs.none()
 
     @admin.display(description='Sede')
     def get_sede(self, obj):
@@ -153,6 +204,19 @@ class LogEntryAdmin(admin.ModelAdmin):
     list_filter = ('action_time', 'user', 'content_type')
     search_fields = ('user__username', 'object_repr')
     readonly_fields = ('action_time', 'user', 'content_type', 'object_id', 'object_repr', 'action_flag', 'change_message')
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        try:
+            organizacion = request.user.perfil.organizacion
+            if organizacion:
+                # Filter logs for users of the same organization
+                return qs.filter(user__perfil__organizacion=organizacion)
+            return qs.none()
+        except AttributeError:
+            return qs.none()
 
     def has_add_permission(self, request):
         return False
