@@ -21,7 +21,7 @@ def generate_excel_report(queryset):
         sheet.append([
             cita.nombre,
             cita.fecha.strftime('%Y-%m-%d %H:%M'),
-            cita.servicio.nombre,
+            ", ".join([s.nombre for s in cita.servicios.all()]),
             'Sí' if cita.confirmado else 'No',
             cita.estado
         ])
