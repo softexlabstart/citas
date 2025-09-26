@@ -30,7 +30,8 @@ class SedeAdmin(admin.ModelAdmin):
     list_select_related = ('organizacion',)
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        # Use all_objects to bypass the default OrganizacionManager
+        qs = self.model.all_objects.all()
         if request.user.is_superuser:
             return qs
         try:

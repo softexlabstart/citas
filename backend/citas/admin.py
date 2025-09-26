@@ -17,7 +17,7 @@ class HorarioAdmin(admin.ModelAdmin):
     list_select_related = ('colaborador', 'colaborador__sede')
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        qs = self.model.all_objects.all()
         if request.user.is_superuser:
             return qs
         try:
@@ -46,7 +46,7 @@ class ColaboradorAdmin(admin.ModelAdmin):
     list_select_related = ('sede',)
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        qs = self.model.all_objects.all()
         if request.user.is_superuser:
             return qs
         try:
@@ -66,7 +66,7 @@ class ServicioAdmin(admin.ModelAdmin):
     list_select_related = ('sede',)
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        qs = self.model.all_objects.all()
         if request.user.is_superuser:
             return qs
         try:
@@ -88,7 +88,7 @@ class CitaAdmin(admin.ModelAdmin):
     actions = ['confirmar_citas', 'cancelar_citas', 'export_to_excel', 'export_to_pdf', 'marcar_asistio', 'marcar_no_asistio']
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        qs = self.model.all_objects.all()
         if request.user.is_superuser:
             return qs
         try:
@@ -180,7 +180,7 @@ class BloqueoAdmin(admin.ModelAdmin):
     list_select_related = ('colaborador', 'colaborador__sede')
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        qs = self.model.all_objects.all()
         if request.user.is_superuser:
             return qs
         try:
