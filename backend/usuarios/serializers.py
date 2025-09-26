@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import PerfilUsuario
 from organizacion.models import Sede, Organizacion
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
@@ -177,7 +178,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Usar un bloque try-except para manejar usuarios sin perfil
         try:
             user_data = UserSerializer(self.user).data
-        except PerfilUsuario.DoesNotExist: # This should catch RelatedObjectDoesNotExist
+        except ObjectDoesNotExist:
             # Si no hay perfil, serializa solo los datos básicos del usuario
             user_data = {
                 'id': self.user.id,
