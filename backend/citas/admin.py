@@ -46,7 +46,7 @@ class ServicioAdmin(admin.ModelAdmin):
 class CitaAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'fecha', 'get_servicios_display', 'sede', 'confirmado', 'estado')
     list_filter = ('sede', 'estado', 'confirmado', 'fecha', 'servicios')
-    search_fields = ('nombre', 'servicios__nombre', 'sede__nombre')
+    search_fields = ('nombre', 'sede__nombre')
     list_select_related = ('sede', 'user')
     prefetch_related = ('servicios', 'colaboradores')
     # 'list_editable' is removed for 'estado' and 'confirmado' to enforce using custom actions.
