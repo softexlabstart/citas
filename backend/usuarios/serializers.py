@@ -14,6 +14,7 @@ class SedeSerializer(serializers.ModelSerializer):
 class PerfilUsuarioSerializer(serializers.ModelSerializer):
     sedes_administradas = SedeSerializer(many=True, read_only=True)
     is_sede_admin = serializers.SerializerMethodField()
+    sede = serializers.PrimaryKeyRelatedField(queryset=Sede.all_objects.all(), allow_null=True, required=False)
 
     class Meta:
         model = PerfilUsuario
