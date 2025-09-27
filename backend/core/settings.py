@@ -160,6 +160,11 @@ USE_I18N = True
 
 USE_L10N = True # Added for localized formatting of data
 
+# Custom format for Colombian Peso (COP)
+USE_THOUSAND_SEPARATOR = True
+THOUSAND_SEPARATOR = '.'
+DECIMAL_SEPARATOR = ','
+
 USE_TZ = True
 
 

@@ -34,7 +34,7 @@ class Servicio(models.Model):
     nombre = models.CharField(max_length=100, db_index=True)
     descripcion = models.TextField(blank=True, null=True)
     duracion_estimada = models.IntegerField(default=30) # Duration in minutes
-    precio = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text=_("Precio del servicio"))
+    precio = models.DecimalField(max_digits=10, decimal_places=0, default=0.00, help_text=_("Precio del servicio"))
     metadata = models.JSONField(blank=True, null=True)
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='servicios')
 
