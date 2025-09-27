@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Sede, Organizacion
@@ -17,5 +17,17 @@ class CreateOrganizacionView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class SedeViewSet(viewsets.ModelViewSet):
-    queryset = Sede.objects.all()
     serializer_class = SedeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superuser:
+            return Sede.all_objects.all()
+        try:
+            organizacion = user.perfil.organizacion
+            if organizacion:
+                return Sede.all_objects.filter(organizacion=organizacion)
+            return Sede.objects.none()
+        except AttributeError: # Catches if user has no perfil
+            return Sede.objects.none()
