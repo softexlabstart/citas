@@ -94,33 +94,20 @@ class ServicioViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        # Superusers can see all services
         if user.is_superuser:
-            return Servicio.all_objects.select_related('sede').all()
+            # Superusers see everything, so use all_objects
+            queryset = Servicio.all_objects.select_related('sede')
+        else:
+            # For regular users, the default manager 'objects' is already filtered by organization
+            queryset = Servicio.objects.select_related('sede')
 
-        # For regular users, filter by their organization
-        try:
-            organizacion = user.perfil.organizacion
-            if not organizacion:
-                return Servicio.objects.none()
-        except (AttributeError, PerfilUsuario.DoesNotExist):
-            return Servicio.objects.none()
-
-        # Get all sedes for the user's organization
-        sedes_organizacion = Sede.objects.filter(organizacion=organizacion)
-        base_queryset = Servicio.all_objects.filter(sede__in=sedes_organizacion).select_related('sede')
-
-        # Further filter by sede_id if provided in query params
         sede_id = self.request.query_params.get('sede_id')
         if sede_id:
-            # Ensure the requested sede belongs to the user's organization before filtering
-            if sedes_organizacion.filter(id=sede_id).exists():
-                return base_queryset.filter(sede_id=sede_id)
-            else:
-                # If user tries to access a sede from another org, return empty
-                return Servicio.objects.none()
+            # The base queryset is already org-filtered (for non-superusers),
+            # so we just need to filter by the requested sede.
+            queryset = queryset.filter(sede_id=sede_id)
 
-        return base_queryset
+        return queryset
 
 class BloqueoViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
     """API endpoint for managing resource blocks."""
@@ -769,33 +756,18 @@ class RecursoViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        # Superusers can see all collaborators
         if user.is_superuser:
-            return Colaborador.all_objects.select_related('sede').all()
+            # Superusers see everything, so use all_objects
+            queryset = Colaborador.all_objects.select_related('sede')
+        else:
+            # For regular users, the default manager 'objects' is already filtered by organization
+            queryset = Colaborador.objects.select_related('sede')
 
-        # For regular users, filter by their organization
-        try:
-            organizacion = user.perfil.organizacion
-            if not organizacion:
-                return Colaborador.objects.none()
-        except (AttributeError, PerfilUsuario.DoesNotExist):
-            return Colaborador.objects.none()
-
-        # Get all sedes for the user's organization
-        sedes_organizacion = Sede.objects.filter(organizacion=organizacion)
-        base_queryset = Colaborador.all_objects.filter(sede__in=sedes_organizacion).select_related('sede')
-
-        # Further filter by sede_id if provided in query params
         sede_id = self.request.query_params.get('sede_id')
         if sede_id:
-            # Ensure the requested sede belongs to the user's organization before filtering
-            if sedes_organizacion.filter(id=sede_id).exists():
-                queryset = base_queryset.filter(sede_id=sede_id)
-            else:
-                # If user tries to access a sede from another org, return empty
-                return Colaborador.objects.none()
-        else:
-            queryset = base_queryset
+            # The base queryset is already org-filtered (for non-superusers),
+            # so we just need to filter by the requested sede.
+            queryset = queryset.filter(sede_id=sede_id)
 
         # Exclude collaborators with an active block
         now = timezone.now()
