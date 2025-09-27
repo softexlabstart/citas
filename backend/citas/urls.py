@@ -8,10 +8,10 @@ from .views import (ServicioViewSet, CitaViewSet, HorarioViewSet,
                     NextAvailabilityView, RecursoCitaViewSet)
 
 router = DefaultRouter()
-router.register(r'servicios', ServicioViewSet)
+router.register(r'servicios', ServicioViewSet, basename='servicio')
 router.register(r'citas', CitaViewSet)
 router.register(r'horarios', HorarioViewSet)
-router.register(r'recursos', RecursoViewSet)
+router.register(r'recursos', RecursoViewSet, basename='recurso')
 router.register(r'bloqueos', BloqueoViewSet)
 router.register(r'recurso-citas', RecursoCitaViewSet, basename='recurso-cita')
 
