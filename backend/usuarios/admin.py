@@ -11,7 +11,7 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
     filter_horizontal = ('sedes_administradas',)
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        qs = self.model.all_objects.all()
         if request.user.is_superuser:
             return qs
         try:
