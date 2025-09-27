@@ -89,25 +89,38 @@ class NextAvailabilityView(APIView):
 
 
 class ServicioViewSet(viewsets.ModelViewSet):
-    queryset = Servicio.objects.select_related('sede').all()
     serializer_class = ServicioSerializer
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
     def get_queryset(self):
-        # Use the custom manager which automatically filters by organization
-        queryset = super().get_queryset()
         user = self.request.user
+        # Superusers can see all services
+        if user.is_superuser:
+            return Servicio.all_objects.select_related('sede').all()
+
+        # For regular users, filter by their organization
+        try:
+            organizacion = user.perfil.organizacion
+            if not organizacion:
+                return Servicio.objects.none()
+        except (AttributeError, PerfilUsuario.DoesNotExist):
+            return Servicio.objects.none()
+
+        # Get all sedes for the user's organization
+        sedes_organizacion = Sede.objects.filter(organizacion=organizacion)
+        base_queryset = Servicio.all_objects.filter(sede__in=sedes_organizacion).select_related('sede')
+
+        # Further filter by sede_id if provided in query params
         sede_id = self.request.query_params.get('sede_id')
-
         if sede_id:
-            return queryset.filter(sede_id=sede_id)
+            # Ensure the requested sede belongs to the user's organization before filtering
+            if sedes_organizacion.filter(id=sede_id).exists():
+                return base_queryset.filter(sede_id=sede_id)
+            else:
+                # If user tries to access a sede from another org, return empty
+                return Servicio.objects.none()
 
-        # If user is authenticated, they can see all services in their organization.
-        # Write permissions are handled by IsAdminOrSedeAdminOrReadOnly.
-        if user.is_authenticated:
-            return queryset
-        
-        return queryset.none()
+        return base_queryset
 
 class BloqueoViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
     """API endpoint for managing resource blocks."""
@@ -750,13 +763,41 @@ class RecursoCitaViewSet(viewsets.ReadOnlyModelViewSet):
         cita.save()
         return Response(CitaSerializer(cita).data)
 
-class RecursoViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
-    queryset = Colaborador.objects.all()
+class RecursoViewSet(viewsets.ModelViewSet):
     serializer_class = ColaboradorSerializer
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related('sede')
+        user = self.request.user
+        # Superusers can see all collaborators
+        if user.is_superuser:
+            return Colaborador.all_objects.select_related('sede').all()
+
+        # For regular users, filter by their organization
+        try:
+            organizacion = user.perfil.organizacion
+            if not organizacion:
+                return Colaborador.objects.none()
+        except (AttributeError, PerfilUsuario.DoesNotExist):
+            return Colaborador.objects.none()
+
+        # Get all sedes for the user's organization
+        sedes_organizacion = Sede.objects.filter(organizacion=organizacion)
+        base_queryset = Colaborador.all_objects.filter(sede__in=sedes_organizacion).select_related('sede')
+
+        # Further filter by sede_id if provided in query params
+        sede_id = self.request.query_params.get('sede_id')
+        if sede_id:
+            # Ensure the requested sede belongs to the user's organization before filtering
+            if sedes_organizacion.filter(id=sede_id).exists():
+                queryset = base_queryset.filter(sede_id=sede_id)
+            else:
+                # If user tries to access a sede from another org, return empty
+                return Colaborador.objects.none()
+        else:
+            queryset = base_queryset
+
+        # Exclude collaborators with an active block
         now = timezone.now()
         return queryset.exclude(
             bloqueos__fecha_inicio__lte=now,
