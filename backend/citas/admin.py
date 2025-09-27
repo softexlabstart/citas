@@ -29,6 +29,21 @@ class HorarioAdmin(admin.ModelAdmin):
         except AttributeError:
             return qs.none()
 
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "colaborador":
+            qs = Colaborador.all_objects.all()
+            if not request.user.is_superuser:
+                try:
+                    organizacion = request.user.perfil.organizacion
+                    if organizacion:
+                        qs = qs.filter(sede__organizacion=organizacion)
+                    else:
+                        qs = qs.none()
+                except AttributeError:
+                    qs = qs.none()
+            kwargs["queryset"] = qs
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
     @admin.display(description='Sede')
     def get_sede(self, obj):
         if obj.colaborador:
@@ -60,9 +75,7 @@ class ColaboradorAdmin(admin.ModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "sede":
-            # Start with an unfiltered queryset
             qs = Sede.all_objects.all()
-            # If the user is not a superuser, filter by their organization
             if not request.user.is_superuser:
                 try:
                     organizacion = request.user.perfil.organizacion
@@ -95,6 +108,20 @@ class ServicioAdmin(admin.ModelAdmin):
         except AttributeError:
             return qs.none()
 
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "sede":
+            qs = Sede.all_objects.all()
+            if not request.user.is_superuser:
+                try:
+                    organizacion = request.user.perfil.organizacion
+                    if organizacion:
+                        qs = qs.filter(organizacion=organizacion)
+                    else:
+                        qs = qs.none()
+                except AttributeError:
+                    qs = qs.none()
+            kwargs["queryset"] = qs
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 @admin.register(Cita)
 class CitaAdmin(admin.ModelAdmin):
@@ -116,6 +143,44 @@ class CitaAdmin(admin.ModelAdmin):
             return qs.none()
         except AttributeError:
             return qs.none()
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "sede":
+            qs = Sede.all_objects.all()
+            if not request.user.is_superuser:
+                try:
+                    organizacion = request.user.perfil.organizacion
+                    if organizacion:
+                        qs = qs.filter(organizacion=organizacion)
+                    else:
+                        qs = qs.none()
+                except AttributeError:
+                    qs = qs.none()
+            kwargs["queryset"] = qs
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if not request.user.is_superuser:
+            try:
+                organizacion = request.user.perfil.organizacion
+                if organizacion:
+                    if db_field.name == "servicios":
+                        kwargs["queryset"] = Servicio.all_objects.filter(sede__organizacion=organizacion)
+                    if db_field.name == "colaboradores":
+                        kwargs["queryset"] = Colaborador.all_objects.filter(sede__organizacion=organizacion)
+                else:
+                    if db_field.name in ["servicios", "colaboradores"]:
+                        kwargs["queryset"] = db_field.related_model.objects.none()
+            except AttributeError:
+                if db_field.name in ["servicios", "colaboradores"]:
+                    kwargs["queryset"] = db_field.related_model.objects.none()
+        else:
+            if db_field.name == "servicios":
+                kwargs["queryset"] = Servicio.all_objects.all()
+            if db_field.name == "colaboradores":
+                kwargs["queryset"] = Colaborador.all_objects.all()
+
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
 
     @admin.display(description='Servicios')
     def get_servicios_display(self, obj):
@@ -208,6 +273,21 @@ class BloqueoAdmin(admin.ModelAdmin):
             return qs.none()
         except AttributeError:
             return qs.none()
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "colaborador":
+            qs = Colaborador.all_objects.all()
+            if not request.user.is_superuser:
+                try:
+                    organizacion = request.user.perfil.organizacion
+                    if organizacion:
+                        qs = qs.filter(sede__organizacion=organizacion)
+                    else:
+                        qs = qs.none()
+                except AttributeError:
+                    qs = qs.none()
+            kwargs["queryset"] = qs
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     @admin.display(description='Sede')
     def get_sede(self, obj):
