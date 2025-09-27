@@ -75,17 +75,17 @@ class ColaboradorAdmin(admin.ModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "sede":
-            qs = Sede.all_objects.all()
-            if not request.user.is_superuser:
+            if request.user.is_superuser:
+                kwargs['queryset'] = Sede.all_objects.all()
+            else:
                 try:
                     organizacion = request.user.perfil.organizacion
                     if organizacion:
-                        qs = qs.filter(organizacion=organizacion)
+                        kwargs['queryset'] = Sede.all_objects.filter(organizacion=organizacion)
                     else:
-                        qs = qs.none()
+                        kwargs['queryset'] = Sede.objects.none()
                 except AttributeError:
-                    qs = qs.none()
-            kwargs["queryset"] = qs
+                    kwargs['queryset'] = Sede.objects.none()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
@@ -110,17 +110,17 @@ class ServicioAdmin(admin.ModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "sede":
-            qs = Sede.all_objects.all()
-            if not request.user.is_superuser:
+            if request.user.is_superuser:
+                kwargs['queryset'] = Sede.all_objects.all()
+            else:
                 try:
                     organizacion = request.user.perfil.organizacion
                     if organizacion:
-                        qs = qs.filter(organizacion=organizacion)
+                        kwargs['queryset'] = Sede.all_objects.filter(organizacion=organizacion)
                     else:
-                        qs = qs.none()
+                        kwargs['queryset'] = Sede.objects.none()
                 except AttributeError:
-                    qs = qs.none()
-            kwargs["queryset"] = qs
+                    kwargs['queryset'] = Sede.objects.none()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 @admin.register(Cita)

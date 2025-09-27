@@ -1,51 +1,34 @@
-# Arquitectura Multi-Tenant del Proyecto
+# Arquitectura Multi-Tenant
 
-Este documento describe la implementación de la arquitectura multi-tenant en este proyecto de Django.
+Este documento describe la implementación de la arquitectura multi-tenant en el proyecto de citas. El objetivo es que una única instancia de la aplicación pueda servir a múltiples organizaciones de forma aislada.
 
-## 1. Visión General
+## Concepto Clave
 
-Se utiliza un enfoque de **Base de Datos Compartida, Esquema Compartido**. Esto significa que todos los tenants (organizaciones) comparten la misma base de datos y las mismas tablas. La separación de datos se logra a nivel de aplicación, añadiendo una referencia a cada tenant en los datos que le pertenecen.
+El modelo principal que define a un "tenant" (inquilino) es la clase `Organizacion`. Cada `Organizacion` es una entidad independiente con sus propias sedes, colaboradores, servicios, citas y usuarios.
 
-## 2. Componentes Clave
+La separación de datos se logra a nivel de aplicación, no a nivel de base de datos. Esto significa que todos los datos de todas las organizaciones residen en las mismas tablas, pero se añade una clave foránea (`ForeignKey`) a `Organizacion` en los modelos relevantes para filtrar los datos.
 
-### a. El Modelo del Tenant (`Organizacion`)
+## Implementación
 
-- **Ubicación:** `backend/organizacion/models.py`
-- **Modelo Principal:** `Organizacion`
+### 1. Modelos Principales
 
-Este modelo es el pilar central. Cada instancia de `Organizacion` representa un tenant separado en el sistema.
+- **`organizacion.Organizacion`**: Es el modelo central que representa a un tenant.
+- **`organizacion.Sede`**: Cada sede pertenece a una `Organizacion`.
+- **`usuarios.PerfilUsuario`**: Cada usuario del sistema (que no sea superusuario) está vinculado a una `Organizacion` a través de su perfil.
+- **Modelos dependientes**: Modelos como `citas.Colaborador`, `citas.Servicio`, y `citas.Cita` están vinculados indirectamente a una `Organizacion` a través de su relación con `Sede`.
 
-### b. Aislamiento de Datos (Models y Managers)
+### 2. Aislamiento de Datos
 
-Para asegurar que una organización solo vea sus propios datos, se implementó lo siguiente:
+El aislamiento de datos se implementa principalmente a través de un gestor de modelos (`Manager`) personalizado:
 
-- **ForeignKeys:** Todos los modelos que deben ser aislados (como `Sede`, `Servicio`, `Colaborador`, `Cita`, etc.) tienen una relación `ForeignKey` que, directa o indirectamente, apunta al modelo `Organizacion`.
+- **`organizacion.managers.OrganizacionManager`**: Este es el gestor de modelos por defecto (`objects`) para los modelos que necesitan ser filtrados por organización (como `Sede`).
+- **Funcionamiento**: El `OrganizacionManager` sobreescribe el método `get_queryset()` para filtrar automáticamente los objetos basándose en la `organizacion` del usuario que realiza la solicitud. La organización del usuario se obtiene de `request.user.perfil.organizacion`.
+- **Acceso sin filtro**: Para poder acceder a todos los objetos sin el filtro automático (por ejemplo, en el panel de administración para un superusuario), los modelos también tienen un gestor secundario llamado `all_objects` (`models.Manager()`).
 
-- **`OrganizacionManager`:**
-    - **Ubicación:** `backend/organizacion/managers.py`
-    - Es el gestor de modelos (`objects`) por defecto para todos los modelos aislados.
-    - Su función es **filtrar automáticamente CUALQUIER consulta a la base de datos**. Intercepta las llamadas (`.all()`, `.filter()`, etc.) y añade un filtro para que solo se devuelvan los objetos que pertenecen a la organización activa en la petición actual.
+### 3. Panel de Administración de Django
 
-- **`all_objects` Manager:**
-    - Como el `OrganizacionManager` es muy agresivo, todos los modelos aislados también tienen un segundo gestor: `all_objects = models.Manager()`.
-    - Este gestor **no tiene ningún filtro** y se usa explícitamente en lugares donde necesitamos ver todos los datos, como en el panel de administración para un superusuario.
+Un desafío clave es el panel de administración, ya que por defecto usaría el `OrganizacionManager`, impidiendo a los superusuarios ver los objetos de todas las organizaciones.
 
-### c. Identificación del Tenant (Middleware)
+- **Solución**: En las clases `ModelAdmin` correspondientes (ej. `SedeAdmin`, `ColaboradorAdmin`), se sobreescribe el método `get_queryset()` para usar `all_objects` y mostrar todos los registros si el usuario es un superusuario.
+- **Filtrado de Desplegables**: Para los menús desplegables (claves foráneas como el campo `sede`), se sobreescribe el método `formfield_for_foreignkey`. Dentro de este método, se asigna manualmente un `queryset` que utiliza `all_objects` para los superusuarios, y un queryset filtrado por organización para los demás usuarios. Esto asegura que cada tipo de usuario vea las opciones correctas en los formularios.
 
-- **Ubicación:** `backend/organizacion/middleware.py`
-- **Clase:** `OrganizacionMiddleware`
-
-Este middleware se ejecuta en cada petición y su trabajo es averiguar a qué organización pertenece la petición actual. Lo hace de dos maneras:
-
-1.  **Para usuarios autenticados:** Revisa el perfil del usuario (`request.user.perfil.organizacion`) y establece esa como la organización activa.
-2.  **Para páginas públicas:** Revisa la URL en busca de un `slug` de organización (ej: `dominio.com/api/nombre-organizacion/...`) para identificar al tenant.
-
-Una vez identificada, guarda la organización activa en una variable `thread_local`, que es la que el `OrganizacionManager` usa para filtrar las consultas.
-
-### d. Panel de Administración (`admin.py`)
-
-El panel de administración requirió ajustes especiales para funcionar correctamente con el `OrganizacionManager`:
-
-- **`get_queryset()`:** En cada `ModelAdmin`, este método fue sobreescrito para usar `self.model.all_objects.all()` en lugar del gestor por defecto. Esto nos da una lista sin filtrar, sobre la cual aplicamos nuestra propia lógica: si el usuario es superusuario, ve todo; si no, filtramos por su organización.
-
-- **`formfield_for_foreignkey()` y `formfield_for_manytomany()`:** Estos métodos se sobreescribieron para controlar el contenido de los menús desplegables y cajas de selección en los formularios de creación/edición. Al igual que con `get_queryset`, se usa `all_objects` para asegurar que un superusuario pueda ver y asignar objetos de cualquier organización.

@@ -23,7 +23,12 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
             return qs.none()
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if not request.user.is_superuser:
+        if request.user.is_superuser:
+            if db_field.name == "sede":
+                kwargs["queryset"] = Sede.all_objects.all()
+            if db_field.name == "organizacion":
+                kwargs["queryset"] = Organizacion.objects.all()
+        else:
             try:
                 organizacion = request.user.perfil.organizacion
                 if organizacion:
@@ -41,7 +46,10 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
-        if not request.user.is_superuser:
+        if request.user.is_superuser:
+            if db_field.name == "sedes_administradas":
+                kwargs["queryset"] = Sede.all_objects.all()
+        else:
             try:
                 organizacion = request.user.perfil.organizacion
                 if organizacion and db_field.name == "sedes_administradas":

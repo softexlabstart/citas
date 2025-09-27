@@ -53,3 +53,5 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
+
+MULTITENANCY_README.md
