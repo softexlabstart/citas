@@ -14,11 +14,15 @@ class SedeSerializer(serializers.ModelSerializer):
 class PerfilUsuarioSerializer(serializers.ModelSerializer):
     sedes_administradas = SedeSerializer(many=True, read_only=True)
     is_sede_admin = serializers.SerializerMethodField()
-    sede = serializers.PrimaryKeyRelatedField(queryset=Sede.all_objects.all(), allow_null=True, required=False)
 
     class Meta:
         model = PerfilUsuario
-        fields = ('timezone', 'sede', 'sedes_administradas', 'is_sede_admin', 'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento', 'has_consented_data_processing', 'data_processing_opt_out') # Added data_processing_opt_out
+        fields = ('timezone', 'sede', 'sedes_administradas', 'is_sede_admin', 'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento', 'has_consented_data_processing', 'data_processing_opt_out')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'sede' in self.fields:
+            self.fields['sede'].queryset = Sede.all_objects.all()
 
     def get_is_sede_admin(self, obj):
         # Si el perfil no existe (obj es None), el usuario no puede ser admin de sede.
