@@ -5,7 +5,7 @@ from .views import SedeViewSet, CreateOrganizacionView
 app_name = 'organizacion'
 
 router = DefaultRouter()
-router.register(r'sedes', SedeViewSet)
+router.register(r'sedes', SedeViewSet, basename='sede')
 
 urlpatterns = router.urls + [
     path('organizaciones/', CreateOrganizacionView.as_view(), name='crear-organizacion'),
