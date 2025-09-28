@@ -58,6 +58,14 @@ class CitaSerializer(serializers.ModelSerializer):
         model = Cita
         fields = ['id', 'nombre', 'fecha', 'servicios', 'servicios_ids', 'confirmado', 'user', 'estado', 'colaboradores', 'colaboradores_ids', 'sede', 'sede_id', 'comentario']
 
+    def validate_servicios_ids(self, value):
+        """
+        Check that at least one service is provided.
+        """
+        if not value:
+            raise serializers.ValidationError("Debe seleccionar al menos un servicio.")
+        return value
+
     def validate_fecha(self, value):
         if self.instance and self.instance.estado == 'Cancelada':
             raise serializers.ValidationError("No se puede reprogramar una cita cancelada.")
