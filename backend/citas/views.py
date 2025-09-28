@@ -20,7 +20,7 @@ from .pagination import StandardResultsSetPagination
 from django.shortcuts import render
 from django import forms
 from organizacion.models import Sede
-from django.db.models import Count, Case, When, IntegerField, Sum, Value, DecimalField,F
+from django.db.models import Count, Case, When, IntegerField, Sum, Value, DecimalField, F, Prefetch
 from django.db.models.functions import Coalesce
 from .utils import send_appointment_email
 from django.views.decorators.cache import cache_page
@@ -453,7 +453,10 @@ class AppointmentReportView(APIView):
                 pass
             user_timezone = pytz.timezone(user_timezone_str)
 
-            for cita in queryset.select_related('user', 'sede').prefetch_related('servicios', 'colaboradores'):
+            servicios_prefetch = Prefetch('servicios', queryset=Servicio.all_objects.all())
+            colaboradores_prefetch = Prefetch('colaboradores', queryset=Colaborador.all_objects.all())
+
+            for cita in queryset.select_related('user', 'sede').prefetch_related(servicios_prefetch, colaboradores_prefetch):
                 local_fecha = cita.fecha.astimezone(user_timezone)
                 writer.writerow([
                     cita.id, cita.nombre, local_fecha.strftime('%Y-%m-%d %H:%M'),
