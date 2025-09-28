@@ -22,7 +22,7 @@ export interface User {
     groups: string[];
 }
 
-export interface RegisterUser extends Omit<User, 'id' | 'is_staff' | 'perfil' | 'groups'> {
+export interface RegisterUser extends Omit<User, 'id' | 'is_staff' | 'perfil' | 'groups' | 'is_superuser'> {
     password: string;
     timezone: string;
     has_consented_data_processing: boolean; // Added for registration consent
