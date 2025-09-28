@@ -199,7 +199,7 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
         raise ValueError("Debe proporcionar al menos un ID de servicio.")
 
     try:
-        sede = Sede.objects.get(id=sede_id)
+        sede = Sede.all_objects.get(id=sede_id)
     except Sede.DoesNotExist:
         raise ValueError(f"La sede con id={sede_id} no existe.")
 
