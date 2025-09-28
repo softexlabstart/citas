@@ -10,8 +10,8 @@ def send_appointment_confirmation_email(sender, instance, created, **kwargs):
     This uses the centralized email utility function.
     """
     if created:
-        send_appointment_email(
-            appointment=instance,
+        send_appointment_email.delay(
+            appointment_id=instance.id,
             subject=f"Confirmación de Cita: {', '.join([s.nombre for s in instance.servicios.all()])}",
             template_name='appointment_confirmation'
         )

@@ -227,13 +227,6 @@ class CitaViewSet(viewsets.ModelViewSet):
         # The 'sede' is already handled by the serializer's 'sede_id' field.
         cita = serializer.save(user=user)
 
-        # Send email notification in the background
-        send_appointment_email.delay(
-            appointment_id=cita.id,
-            subject=f"Confirmación de Cita: {', '.join([s.nombre for s in cita.servicios.all()])}",
-            template_name='appointment_confirmation'
-        )
-
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         if instance.estado == 'Cancelada':
