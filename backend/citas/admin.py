@@ -88,6 +88,21 @@ class ColaboradorAdmin(admin.ModelAdmin):
                     kwargs['queryset'] = Sede.objects.none()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == "servicios":
+            if request.user.is_superuser:
+                kwargs["queryset"] = Servicio.all_objects.all()
+            else:
+                try:
+                    organizacion = request.user.perfil.organizacion
+                    if organizacion:
+                        kwargs["queryset"] = Servicio.all_objects.filter(sede__organizacion=organizacion)
+                    else:
+                        kwargs["queryset"] = Servicio.objects.none()
+                except (AttributeError, PerfilUsuario.DoesNotExist):
+                    kwargs["queryset"] = Servicio.objects.none()
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
+
 
 @admin.register(Servicio)
 class ServicioAdmin(admin.ModelAdmin):
