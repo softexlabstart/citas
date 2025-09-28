@@ -441,11 +441,21 @@ class AppointmentReportView(APIView):
         if report_format == 'csv':
             response = HttpResponse(content_type='text/csv')
             response['Content-Disposition'] = 'attachment; filename="appointment_report.csv"'
+
             writer = csv.writer(response)
             writer.writerow([_('ID'), _('Nombre Cliente'), _('Fecha'), _('Servicios'), _('Sede'), _('Estado'), _('Confirmado'), _('Usuario')])
+
+            user_timezone_str = 'UTC'
+            try:
+                user_timezone_str = request.user.perfil.timezone
+            except (AttributeError, PerfilUsuario.DoesNotExist):
+                pass
+            user_timezone = pytz.timezone(user_timezone_str)
+
             for cita in queryset.select_related('user', 'sede').prefetch_related('servicios', 'colaboradores'):
+                local_fecha = cita.fecha.astimezone(user_timezone)
                 writer.writerow([
-                    cita.id, cita.nombre, cita.fecha.strftime('%Y-%m-%d %H:%M'),
+                    cita.id, cita.nombre, local_fecha.strftime('%Y-%m-%d %H:%M'),
                     ", ".join([s.nombre for s in cita.servicios.all()]),
                     cita.sede.nombre, cita.estado,
                     _('Sí') if cita.confirmado else _('No'),
