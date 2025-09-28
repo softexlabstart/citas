@@ -24,7 +24,7 @@ def check_appointment_availability(sede, servicios, colaboradores, fecha, cita_i
     cita_end_time = cita_start_time + timedelta(minutes=duracion_estimada)
 
     # Annotate existing appointments once outside the loop for efficiency.
-    existing_appointments = Cita.objects.annotate(
+    existing_appointments = Cita.all_objects.annotate(
         end_time=ExpressionWrapper(
             F('fecha') + F('servicios__duracion_estimada') * timedelta(minutes=1),
             output_field=DateTimeField()
@@ -34,7 +34,7 @@ def check_appointment_availability(sede, servicios, colaboradores, fecha, cita_i
     for colaborador in colaboradores:
         # 1. Check schedule
         dia_semana = fecha.weekday()
-        horarios_colaborador = Horario.objects.filter(colaborador=colaborador, dia_semana=dia_semana)
+        horarios_colaborador = Horario.all_objects.filter(colaborador=colaborador, dia_semana=dia_semana)
 
         if not horarios_colaborador.exists():
             raise ValidationError(f"El colaborador '{colaborador.nombre}' no tiene horarios definidos para el día seleccionado en esta sede.")
@@ -58,7 +58,7 @@ def check_appointment_availability(sede, servicios, colaboradores, fecha, cita_i
         day_start = timezone.make_aware(datetime.combine(fecha.date(), time.min))
         day_end = day_start + timedelta(days=1)
 
-        potential_conflicts = Cita.objects.filter(
+        potential_conflicts = Cita.all_objects.filter(
             colaboradores=colaborador,
             sede=sede,
             estado__in=['Pendiente', 'Confirmada'],
@@ -76,7 +76,7 @@ def check_appointment_availability(sede, servicios, colaboradores, fecha, cita_i
                 raise ValidationError(f"El colaborador '{colaborador.nombre}' ya tiene una cita agendada que se superpone con el horario solicitado.")
 
         # 3. Check for overlapping blocks
-        bloqueos_conflictivos = Bloqueo.objects.filter(
+        bloqueos_conflictivos = Bloqueo.all_objects.filter(
             colaborador=colaborador,
             fecha_inicio__lt=cita_end_time,
             fecha_fin__gt=cita_start_time
@@ -157,8 +157,8 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
     """
     try:
         fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-        colaborador = Colaborador.objects.get(id=colaborador_id)
-        servicios = Servicio.objects.filter(id__in=servicio_ids)
+        colaborador = Colaborador.all_objects.get(id=colaborador_id)
+        servicios = Servicio.all_objects.filter(id__in=servicio_ids)
         if not servicios.exists():
             raise ValueError('IDs de servicio inválidos.')
         duracion_total_servicios = sum(s.duracion_estimada for s in servicios)
@@ -168,11 +168,11 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
         raise ValueError('Formato de fecha, ID de colaborador o ID de servicio inválido.')
 
     dia_semana = fecha.weekday()
-    horarios_colaborador = Horario.objects.filter(colaborador=colaborador, dia_semana=dia_semana).order_by('hora_inicio')
+    horarios_colaborador = Horario.all_objects.filter(colaborador=colaborador, dia_semana=dia_semana).order_by('hora_inicio')
     if not horarios_colaborador.exists():
         return []
 
-    citas_del_dia = Cita.objects.filter(
+    citas_del_dia = Cita.all_objects.filter(
         colaboradores=colaborador, fecha__date=fecha, estado__in=['Pendiente', 'Confirmada']
     ).prefetch_related('servicios').annotate(
         duracion_total=Sum('servicios__duracion_estimada')
@@ -180,7 +180,7 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
     
     day_start = timezone.make_aware(datetime.combine(fecha, time.min))
     day_end = timezone.make_aware(datetime.combine(fecha, time.max))
-    bloqueos_del_dia = Bloqueo.objects.filter(
+    bloqueos_del_dia = Bloqueo.all_objects.filter(
         colaborador=colaborador,
         fecha_inicio__lte=day_end,
         fecha_fin__gte=day_start
@@ -203,7 +203,7 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
     except Sede.DoesNotExist:
         raise ValueError(f"La sede con id={sede_id} no existe.")
 
-    servicios = Servicio.objects.filter(id__in=servicio_ids)
+    servicios = Servicio.all_objects.filter(id__in=servicio_ids)
     if not servicios.exists():
         raise ValueError(f"Alguno de los servicios con ids={servicio_ids} no existe.")
 
@@ -215,7 +215,7 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
     intervalo = timedelta(minutes=duracion_total_servicios)
     step = timedelta(minutes=15)
 
-    colaboradores = Colaborador.objects.filter(
+    colaboradores = Colaborador.all_objects.filter(
         sede_id=sede_id,
         servicios__id__in=servicio_ids
     ).distinct()
@@ -231,13 +231,13 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
     day_start = timezone.make_aware(datetime.combine(timezone.now().date(), time.min))
     day_end = timezone.make_aware(datetime.combine(end_date, time.max))
 
-    all_horarios = Horario.objects.filter(colaborador_id__in=colaborador_ids).order_by('hora_inicio')
-    all_citas = Cita.objects.filter(
+    all_horarios = Horario.all_objects.filter(colaborador_id__in=colaborador_ids).order_by('hora_inicio')
+    all_citas = Cita.all_objects.filter(
         colaboradores__id__in=colaborador_ids, fecha__gte=day_start, fecha__lt=day_end, estado__in=['Pendiente', 'Confirmada']
     ).prefetch_related('servicios', 'colaboradores').annotate(
         duracion_total=Sum('servicios__duracion_estimada')
     ).order_by('fecha')
-    all_bloqueos = Bloqueo.objects.filter(colaborador_id__in=colaborador_ids, fecha_inicio__lte=day_end, fecha_fin__gte=day_start).order_by('fecha_inicio')
+    all_bloqueos = Bloqueo.all_objects.filter(colaborador_id__in=colaborador_ids, fecha_inicio__lte=day_end, fecha_fin__gte=day_start).order_by('fecha_inicio')
 
     horarios_by_colaborador = {cid: list(filter(lambda h: h.colaborador_id == cid, all_horarios)) for cid in colaborador_ids}
     citas_by_colaborador = {cid: list(filter(lambda c: cid in [col.id for col in c.colaboradores.all()], all_citas)) for cid in colaborador_ids}
@@ -271,4 +271,3 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
             break
     
     return all_found_slots
-
