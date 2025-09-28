@@ -5,9 +5,10 @@ from .models import PerfilUsuario
 
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
-    """
-    Create a PerfilUsuario instance for each new User, or update existing ones.
-    """
     if created:
         PerfilUsuario.objects.create(user=instance)
-    instance.perfil.save()
+    else:
+        try:
+            instance.perfil.save()
+        except PerfilUsuario.DoesNotExist:
+            PerfilUsuario.objects.create(user=instance)
