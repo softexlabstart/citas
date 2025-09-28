@@ -47,12 +47,12 @@ class BloqueoSerializer(serializers.ModelSerializer):
 
 class CitaSerializer(serializers.ModelSerializer):
     servicios = ServicioSerializer(many=True, read_only=True)
-    servicios_ids = serializers.PrimaryKeyRelatedField(queryset=Servicio.objects.all(), source='servicios', many=True, write_only=True)
+    servicios_ids = serializers.PrimaryKeyRelatedField(queryset=Servicio.all_objects.all(), source='servicios', many=True, write_only=True)
     user = UserSerializer(read_only=True)
     colaboradores = ColaboradorSerializer(many=True, read_only=True)
-    colaboradores_ids = serializers.PrimaryKeyRelatedField(queryset=Colaborador.objects.all(), source='colaboradores', many=True, write_only=True)
+    colaboradores_ids = serializers.PrimaryKeyRelatedField(queryset=Colaborador.all_objects.all(), source='colaboradores', many=True, write_only=True)
     sede = SedeSerializer(read_only=True)
-    sede_id = serializers.PrimaryKeyRelatedField(queryset=Sede.objects.all(), source='sede', write_only=True)
+    sede_id = serializers.PrimaryKeyRelatedField(queryset=Sede.all_objects.all(), source='sede', write_only=True)
 
     class Meta:
         model = Cita
