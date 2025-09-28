@@ -17,11 +17,14 @@ class OrganizacionMiddleware:
         
         # 1. Try to get organization from the authenticated user
         if request.user.is_authenticated:
+            print(f"[OrgMiddleware] User: {request.user.username}")
             try:
                 # The related_name in PerfilUsuario is 'perfil'
                 organizacion = request.user.perfil.organizacion
+                print(f"[OrgMiddleware] Org from profile: {organizacion}")
             except AttributeError:
                 # User might not have a profile or organization assigned
+                print("[OrgMiddleware] User has no profile or organization")
                 pass
 
         # 2. If no organization yet, try to get it from the URL

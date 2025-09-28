@@ -195,6 +195,9 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    def perform_create(self, serializer):
+        serializer.save(request=self.request)
+
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
         client = self.get_object()

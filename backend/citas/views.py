@@ -93,6 +93,7 @@ class ServicioViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
     def get_queryset(self):
+        print(f"[ServicioViewSet] User: {self.request.user.username}")
         user = self.request.user
         if user.is_superuser:
             # Superusers see everything, so use all_objects
@@ -100,12 +101,15 @@ class ServicioViewSet(viewsets.ModelViewSet):
         else:
             # For regular users, the default manager 'objects' is already filtered by organization
             queryset = Servicio.objects.select_related('sede')
+        
+        print(f"[ServicioViewSet] Initial queryset count: {queryset.count()}")
 
         sede_id = self.request.query_params.get('sede_id')
         if sede_id:
             # The base queryset is already org-filtered (for non-superusers),
             # so we just need to filter by the requested sede.
             queryset = queryset.filter(sede_id=sede_id)
+            print(f"[ServicioViewSet] Queryset count after sede_id filter: {queryset.count()}")
 
         return queryset
 

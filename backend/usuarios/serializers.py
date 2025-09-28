@@ -129,6 +129,11 @@ class ClientSerializer(serializers.ModelSerializer):
         perfil_fields = ['telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento']
         perfil_data = {field: validated_data.pop(field) for field in perfil_fields if field in validated_data}
         
+        # Get the organization from the user making the request
+        request = self.context.get('request')
+        if request and hasattr(request, 'user') and hasattr(request.user, 'perfil'):
+            perfil_data['organizacion'] = request.user.perfil.organizacion
+
         user = User.objects.create_user(**validated_data)
         PerfilUsuario.objects.create(user=user, **perfil_data)
         return user
