@@ -384,7 +384,7 @@ class HorarioViewSet(viewsets.ModelViewSet):
         return Horario.objects.none()
 
 class AppointmentReportView(APIView):
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
         start_date_str = request.query_params.get('start_date')
@@ -392,7 +392,7 @@ class AppointmentReportView(APIView):
         servicio_ids_str = request.query_params.get('servicio_ids')
         colaborador_id = request.query_params.get('colaborador_id') or request.query_params.get('recurso_id')
         estado = request.query_params.get('estado')
-        report_format = request.query_params.get('export', 'json') # Use 'export' to avoid conflict with DRF's 'format'
+        report_format = request.query_params.get('export', 'json')
 
         if not start_date_str or not end_date_str:
             return Response({"error": _("Please provide start_date and end_date query parameters (YYYY-MM-DD).")}, status=400)
@@ -403,28 +403,31 @@ class AppointmentReportView(APIView):
         except ValueError:
             return Response({"error": _("Invalid date format. Please use YYYY-MM-DD.")}, status=400)
 
-        # Ensure end_date includes the whole day
         end_date = end_date + timedelta(days=1)
 
-        # **CRITICAL SECURITY FIX**: Filter initial queryset based on user permissions
-        # The custom manager automatically filters by organization
         user = request.user
-        if user.is_staff:
-            base_queryset = Cita.objects.all()
-        else:
+        if user.is_superuser:
+            base_queryset = Cita.all_objects.all()
+        elif user.is_staff:
+            try:
+                organizacion = user.perfil.organizacion
+                if organizacion:
+                    base_queryset = Cita.all_objects.filter(sede__organizacion=organizacion)
+                else:
+                    base_queryset = Cita.objects.none()
+            except (AttributeError, PerfilUsuario.DoesNotExist):
+                base_queryset = Cita.objects.none()
+        else:  # Non-staff
             try:
                 perfil = user.perfil
                 if perfil.sedes_administradas.exists():
-                    base_queryset = Cita.objects.filter(sede__in=perfil.sedes_administradas.all())
+                    base_queryset = Cita.all_objects.filter(sede__in=perfil.sedes_administradas.all())
                 else:
-                    base_queryset = Cita.objects.filter(user=user)
-            except PerfilUsuario.DoesNotExist:
-                base_queryset = Cita.objects.filter(user=user)
+                    base_queryset = Cita.all_objects.filter(user=user)
+            except (AttributeError, PerfilUsuario.DoesNotExist):
+                base_queryset = Cita.all_objects.filter(user=user)
 
-        # Apply date and other filters to the permission-filtered queryset
-        queryset = base_queryset.filter(
-            fecha__range=(start_date, end_date)
-        )
+        queryset = base_queryset.filter(fecha__range=(start_date, end_date))
 
         if servicio_ids_str:
             servicio_ids = [int(s_id) for s_id in servicio_ids_str.split(',') if s_id.isdigit()]
@@ -438,40 +441,25 @@ class AppointmentReportView(APIView):
         if report_format == 'csv':
             response = HttpResponse(content_type='text/csv')
             response['Content-Disposition'] = 'attachment; filename="appointment_report.csv"'
-
             writer = csv.writer(response)
-            # Write header
             writer.writerow([_('ID'), _('Nombre Cliente'), _('Fecha'), _('Servicios'), _('Sede'), _('Estado'), _('Confirmado'), _('Usuario')])
-
-            # Write data rows
-            # Add 'sede' to select_related for performance optimization
             for cita in queryset.select_related('user', 'sede').prefetch_related('servicios', 'colaboradores'):
                 writer.writerow([
-                    cita.id,
-                    cita.nombre,
-                    cita.fecha.strftime('%Y-%m-%d %H:%M'),
+                    cita.id, cita.nombre, cita.fecha.strftime('%Y-%m-%d %H:%M'),
                     ", ".join([s.nombre for s in cita.servicios.all()]),
-                    cita.sede.nombre,
-                    cita.estado,
+                    cita.sede.nombre, cita.estado,
                     _('Sí') if cita.confirmado else _('No'),
                     cita.user.username if cita.user else _('N/A')
                 ])
             return response
-        else: # Default to JSON format
-            # Group by status and count
+        else:
             appointments_by_status = queryset.values('estado').annotate(count=Count('id'))
-
-            # Create a dictionary for quick lookups
             status_counts = {item['estado']: item['count'] for item in appointments_by_status}
-
-            # Build a list of objects, ensuring all statuses are present, using the model's choices
             report_list = [
                 {'estado': choice[0], 'count': status_counts.get(choice[0], 0)}
                 for choice in Cita.ESTADO_CHOICES
             ]
-
             total_revenue = queryset.filter(estado='Asistio').aggregate(total=Sum(F('servicios__precio')))['total'] or 0
-
             return Response({'report': report_list, 'total_revenue': total_revenue})
 
 class SedeReportView(APIView):
@@ -609,10 +597,17 @@ class SedeReportView(APIView):
 class ReportForm(forms.Form):
     start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), label=_("Fecha de Inicio"))
     end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), label=_("Fecha de Fin"))
-    servicios = forms.ModelMultipleChoiceField(queryset=Servicio.objects.all(), required=False, label=_("Servicios"))
-    colaborador = forms.ModelChoiceField(queryset=Colaborador.objects.all(), required=False, label=_("Colaborador"))
+    servicios = forms.ModelMultipleChoiceField(queryset=Servicio.objects.none(), required=False, label=_("Servicios"))
+    colaborador = forms.ModelChoiceField(queryset=Colaborador.objects.none(), required=False, label=_("Colaborador"))
     estado = forms.ChoiceField(choices=[('', _('Todos'))] + Cita.ESTADO_CHOICES, required=False, label=_("Estado"))
     report_format = forms.ChoiceField(choices=[('json', _('JSON (Resumen)')), ('csv', _('CSV (Detallado)'))], label=_("Formato de Reporte"))
+
+    def __init__(self, *args, **kwargs):
+        initial_queryset = kwargs.pop('initial_queryset', None)
+        super().__init__(*args, **kwargs)
+        if initial_queryset:
+            self.fields['servicios'].queryset = initial_queryset.get('servicios', Servicio.objects.none())
+            self.fields['colaborador'].queryset = initial_queryset.get('colaborador', Colaborador.objects.none())
 
 def admin_report_view(request):
     # Custom permission check for admin_report_view
