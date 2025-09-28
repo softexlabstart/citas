@@ -95,22 +95,26 @@ class ServicioViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         print(f"[ServicioViewSet] User: {self.request.user.username}")
         user = self.request.user
-        if user.is_superuser:
-            # Superusers see everything, so use all_objects
-            queryset = Servicio.all_objects.select_related('sede')
-        else:
-            # For regular users, the default manager 'objects' is already filtered by organization
-            queryset = Servicio.objects.select_related('sede')
-        
-        print(f"[ServicioViewSet] Initial queryset count: {queryset.count()}")
-
         sede_id = self.request.query_params.get('sede_id')
-        if sede_id:
-            # The base queryset is already org-filtered (for non-superusers),
-            # so we just need to filter by the requested sede.
-            queryset = queryset.filter(sede_id=sede_id)
-            print(f"[ServicioViewSet] Queryset count after sede_id filter: {queryset.count()}")
 
+        if sede_id:
+            # If a sede_id is provided, any user can see the services for that sede.
+            # This is the primary way clients will fetch services.
+            queryset = Servicio.all_objects.filter(sede_id=sede_id).select_related('sede')
+            print(f"[ServicioViewSet] Sede_id provided. Queryset count: {queryset.count()}")
+            return queryset
+
+        # If no sede_id is provided, then we fall back to organization-level filtering.
+        # This is typically for admin users browsing all services in their org.
+        if user.is_staff: # is_staff includes superusers
+            # For staff, use the default manager which filters by organization.
+            queryset = Servicio.objects.select_related('sede')
+            print(f"[ServicioViewSet] No sede_id. Staff user. Initial queryset count: {queryset.count()}")
+        else:
+            # Non-staff users MUST provide a sede_id to see any services.
+            print("[ServicioViewSet] No sede_id. Non-staff user. Returning empty queryset.")
+            queryset = Servicio.objects.none()
+        
         return queryset
 
 class BloqueoViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
