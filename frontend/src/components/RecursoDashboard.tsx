@@ -45,7 +45,7 @@ const RecursoDashboard = () => {
 
     return (
         <div>
-            <h1>Panel de Recurso</h1>
+            <h1>Panel de citas</h1>
             <h2>Mis Citas</h2>
             <Table striped bordered hover responsive>
                 <thead>

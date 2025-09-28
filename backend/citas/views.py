@@ -668,8 +668,8 @@ class ColaboradorCitaViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         user = self.request.user
         try:
-            colaborador = Colaborador.objects.get(usuario=user)
-            return Cita.objects.filter(colaboradores=colaborador).order_by('fecha')
+            colaborador = Colaborador.all_objects.get(usuario=user)
+            return Cita.all_objects.filter(colaboradores=colaborador).order_by('fecha')
         except Colaborador.DoesNotExist:
             return Cita.objects.none()
 
@@ -706,8 +706,8 @@ class RecursoCitaViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         user = self.request.user
         try:
-            recurso = Colaborador.objects.get(usuario=user)
-            return Cita.objects.filter(colaboradores=recurso).order_by('fecha')
+            recurso = Colaborador.all_objects.get(usuario=user)
+            return Cita.all_objects.filter(colaboradores=recurso).order_by('fecha')
         except Colaborador.DoesNotExist:
             # Log a warning or return an empty queryset gracefully
             print(f"WARNING: No Colaborador instance found for user: {user.username}")
