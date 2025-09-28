@@ -154,15 +154,15 @@ class CitaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
-        # Start with an optimized base queryset using the custom manager
-        # This automatically filters by organization
-        base_queryset = Cita.objects.select_related('user', 'sede').prefetch_related('servicios', 'colaboradores')
-
-        # Additional permission-based filtering for clarity and correctness
         if user.is_staff:
-            # Staff users can see all appointments across all sedes in their organization
+            # Staff users' queryset should be filtered by their organization.
+            # The default manager 'objects' handles this automatically.
+            base_queryset = Cita.objects.select_related('user', 'sede').prefetch_related('servicios', 'colaboradores')
             queryset = base_queryset.all()
         else:
+            # For non-staff users (clients, sede admins), we start with all objects
+            # and then apply specific permissions.
+            base_queryset = Cita.all_objects.select_related('user', 'sede').prefetch_related('servicios', 'colaboradores')
             try:
                 perfil = user.perfil
                 if perfil.sedes_administradas.exists():
