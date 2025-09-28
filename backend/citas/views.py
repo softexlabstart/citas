@@ -764,18 +764,17 @@ class RecursoViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_superuser:
-            # Superusers see everything, so use all_objects
-            queryset = Colaborador.all_objects.select_related('sede')
-        else:
-            # For regular users, the default manager 'objects' is already filtered by organization
-            queryset = Colaborador.objects.select_related('sede')
-
         sede_id = self.request.query_params.get('sede_id')
+
         if sede_id:
-            # The base queryset is already org-filtered (for non-superusers),
-            # so we just need to filter by the requested sede.
-            queryset = queryset.filter(sede_id=sede_id)
+            # If a sede_id is provided, any user can see the resources for that sede.
+            queryset = Colaborador.all_objects.filter(sede_id=sede_id).select_related('sede')
+        elif user.is_staff:
+            # For staff without a sede_id, use the default manager to filter by organization.
+            queryset = Colaborador.objects.select_related('sede')
+        else:
+            # Non-staff users MUST provide a sede_id to see any resources.
+            queryset = Colaborador.objects.none()
 
         # Exclude collaborators with an active block
         now = timezone.now()
