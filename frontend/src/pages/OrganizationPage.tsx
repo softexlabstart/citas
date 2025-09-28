@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getOrganizationInfo, getOrganizationMembers, sendInvitation } from '../api';
 import { OrganizationInfo, OrganizationMembersResponse, InvitationData } from '../interfaces/Organization';
 import { Container, Row, Col, Card, Button, Alert, Modal, Form, Table, Badge, Tabs, Tab } from 'react-bootstrap';
-import { Building, People, Plus, Envelope, MapPin, Phone } from 'react-bootstrap-icons';
+import { Building, People, Plus, Envelope, GeoAlt, Phone } from 'react-bootstrap-icons';
 import { useTranslation } from 'react-i18next';
 
 const OrganizationPage: React.FC = () => {
@@ -122,7 +122,7 @@ const OrganizationPage: React.FC = () => {
                                     {organizationInfo?.sedes.map((sede) => (
                                         <div key={sede.id} className="mb-2">
                                             <div className="d-flex align-items-center">
-                                                <MapPin className="me-2" />
+                                                <GeoAlt className="me-2" />
                                                 <div>
                                                     <strong>{sede.nombre}</strong>
                                                     {sede.direccion && <div className="text-muted small">{sede.direccion}</div>}
