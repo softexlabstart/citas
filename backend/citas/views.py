@@ -669,7 +669,8 @@ class ColaboradorCitaViewSet(viewsets.ReadOnlyModelViewSet):
         user = self.request.user
         try:
             colaborador = Colaborador.all_objects.get(usuario=user)
-            return Cita.all_objects.filter(colaboradores=colaborador).order_by('fecha')
+            servicios_prefetch = Prefetch('servicios', queryset=Servicio.all_objects.all())
+            return Cita.all_objects.filter(colaboradores=colaborador).prefetch_related(servicios_prefetch).order_by('fecha')
         except Colaborador.DoesNotExist:
             return Cita.objects.none()
 
@@ -707,7 +708,8 @@ class RecursoCitaViewSet(viewsets.ReadOnlyModelViewSet):
         user = self.request.user
         try:
             recurso = Colaborador.all_objects.get(usuario=user)
-            return Cita.all_objects.filter(colaboradores=recurso).order_by('fecha')
+            servicios_prefetch = Prefetch('servicios', queryset=Servicio.all_objects.all())
+            return Cita.all_objects.filter(colaboradores=recurso).prefetch_related(servicios_prefetch).order_by('fecha')
         except Colaborador.DoesNotExist:
             # Log a warning or return an empty queryset gracefully
             print(f"WARNING: No Colaborador instance found for user: {user.username}")
