@@ -13,23 +13,21 @@ def check_appointment_availability(sede, servicios, colaboradores, fecha, cita_i
     Lanza una ValidationError si no está disponible.
     """
     if not servicios:
-        raise ValidationError("Debe seleccionar al menos un servicio.")
+        raise ValidationError({
+            'detail': "Debe seleccionar al menos un servicio.",
+            'code': 'no_service_selected'
+        })
 
     try:
         duracion_estimada = sum(s.duracion_estimada for s in servicios)
     except AttributeError:
-        raise ValidationError("Uno de los servicios seleccionados no tiene una duración estimada válida.")
+        raise ValidationError({
+            'detail': "Uno de los servicios seleccionados no tiene una duración estimada válida.",
+            'code': 'invalid_service_duration'
+        })
 
     cita_start_time = fecha
     cita_end_time = cita_start_time + timedelta(minutes=duracion_estimada)
-
-    # Annotate existing appointments once outside the loop for efficiency.
-    existing_appointments = Cita.all_objects.annotate(
-        end_time=ExpressionWrapper(
-            F('fecha') + F('servicios__duracion_estimada') * timedelta(minutes=1),
-            output_field=DateTimeField()
-        )
-    )
 
     for colaborador in colaboradores:
         # 1. Check schedule
@@ -37,7 +35,10 @@ def check_appointment_availability(sede, servicios, colaboradores, fecha, cita_i
         horarios_colaborador = Horario.all_objects.filter(colaborador=colaborador, dia_semana=dia_semana)
 
         if not horarios_colaborador.exists():
-            raise ValidationError(f"El colaborador '{colaborador.nombre}' no tiene horarios definidos para el día seleccionado en esta sede.")
+            raise ValidationError({
+                'detail': f"El colaborador '{colaborador.nombre}' no tiene horarios definidos para el día seleccionado en esta sede.",
+                'code': 'no_schedule_defined'
+            })
 
         is_within_schedule = False
         for horario in horarios_colaborador:
@@ -52,7 +53,10 @@ def check_appointment_availability(sede, servicios, colaboradores, fecha, cita_i
                 break
         
         if not is_within_schedule:
-            raise ValidationError(f"El colaborador '{colaborador.nombre}' no está disponible en el horario solicitado en esta sede.")
+            raise ValidationError({
+                'detail': f"El colaborador '{colaborador.nombre}' no está disponible en el horario solicitado en esta sede.",
+                'code': 'outside_schedule'
+            })
 
         # 2. Check for overlapping appointments
         day_start = timezone.make_aware(datetime.combine(fecha.date(), time.min))
@@ -71,9 +75,11 @@ def check_appointment_availability(sede, servicios, colaboradores, fecha, cita_i
         for conflict in potential_conflicts:
             conflict_start = conflict.fecha
             conflict_end = conflict_start + timedelta(minutes=conflict.duracion_total or 0)
-            # Standard overlap check: (StartA < EndB) and (EndA > StartB)
             if cita_start_time < conflict_end and cita_end_time > conflict_start:
-                raise ValidationError(f"El colaborador '{colaborador.nombre}' ya tiene una cita agendada que se superpone con el horario solicitado.")
+                raise ValidationError({
+                    'detail': f"El colaborador '{colaborador.nombre}' ya tiene una cita agendada que se superpone con el horario solicitado.",
+                    'code': 'appointment_conflict'
+                })
 
         # 3. Check for overlapping blocks
         bloqueos_conflictivos = Bloqueo.all_objects.filter(
@@ -82,7 +88,10 @@ def check_appointment_availability(sede, servicios, colaboradores, fecha, cita_i
             fecha_fin__gt=cita_start_time
         )
         if bloqueos_conflictivos.exists():
-            raise ValidationError(f"El colaborador '{colaborador.nombre}' tiene un bloqueo de tiempo en el horario solicitado: {bloqueos_conflictivos.first().motivo}")
+            raise ValidationError({
+                'detail': f"El colaborador '{colaborador.nombre}' tiene un bloqueo de tiempo en el horario solicitado: {bloqueos_conflictivos.first().motivo}",
+                'code': 'block_conflict'
+            })
 
     return True
 
