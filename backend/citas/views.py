@@ -467,21 +467,22 @@ class SedeReportView(APIView):
 
     def get(self, request, *args, **kwargs):
         user = request.user
-        
-        # Permission Check: Only staff or sede admins can access
-        if not user.is_staff:
-            try:
-                if not user.perfil.sedes_administradas.exists():
-                    raise PermissionDenied(_("You do not have permission to access this report."))
-            except (AttributeError, PerfilUsuario.DoesNotExist):
-                raise PermissionDenied(_("You do not have permission to access this report."))
+        administered_sedes = None
 
-        # Determine which sedes the user can report on
-        # The custom manager automatically filters by organization
-        if user.is_staff:
-            administered_sedes = Sede.objects.all()
+        if user.is_superuser:
+            administered_sedes = Sede.all_objects.all()
         else:
-            administered_sedes = user.perfil.sedes_administradas.all()
+            try:
+                perfil = user.perfil
+                if perfil.sedes_administradas.exists():
+                    administered_sedes = perfil.sedes_administradas.all()
+                elif user.is_staff and perfil.organizacion:
+                    administered_sedes = Sede.all_objects.filter(organizacion=perfil.organizacion)
+            except (AttributeError, PerfilUsuario.DoesNotExist):
+                pass
+
+        if administered_sedes is None:
+            raise PermissionDenied(_("You do not have permission to access this report."))
 
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
@@ -499,26 +500,18 @@ class SedeReportView(APIView):
         except ValueError:
             return Response({"error": _("Invalid date format. Please use YYYY-MM-DD.")}, status=400)
 
-        # Ensure end_date includes the whole day
         end_date = end_date + timedelta(days=1)
 
-        # Start with a base queryset filtered by user permissions and date range
-        base_queryset = Cita.objects.filter(
+        base_queryset = Cita.all_objects.filter(
             sede__in=administered_sedes,
             fecha__range=(start_date, end_date)
         )
 
-        # Apply specific sede filter if provided and administered by the user
         if specific_sede_id:
-            try:
-                # Ensure the requested sede is one the user administers
-                if not administered_sedes.filter(id=specific_sede_id).exists():
-                    raise PermissionDenied(_("You do not administer the specified location."))
-                base_queryset = base_queryset.filter(sede_id=specific_sede_id)
-            except Sede.DoesNotExist:
-                return Response({"error": _("Specified location not found.")}, status=404)
+            if not administered_sedes.filter(id=specific_sede_id).exists():
+                raise PermissionDenied(_("You do not administer the specified location."))
+            base_queryset = base_queryset.filter(sede_id=specific_sede_id)
 
-        # Apply optional filters for service and resource to the base queryset
         if servicio_ids_str:
             servicio_ids = [int(s_id) for s_id in servicio_ids_str.split(',') if s_id.isdigit()]
             if servicio_ids:
@@ -526,17 +519,12 @@ class SedeReportView(APIView):
         if colaborador_id:
             base_queryset = base_queryset.filter(colaboradores__id=colaborador_id)
 
-        # Calculate total revenue from the base queryset, before applying the status filter.
-        # This ensures the total revenue reflects all attended appointments in the selected scope,
-        # regardless of the status filter applied to the detailed view.
         total_revenue = base_queryset.filter(estado='Asistio').aggregate(total=Sum(F('servicios__precio')))['total'] or 0
 
-        # Now, apply the optional estado filter to get the final queryset for the detailed report
         queryset = base_queryset
         if estado:
             queryset = queryset.filter(estado=estado)
 
-        # Aggregate data per sede
         report_data = queryset.values('sede__id', 'sede__nombre').annotate(
             total_citas=Count('id'),
             pendientes=Count(Case(When(estado='Pendiente', then=1), output_field=IntegerField())),
@@ -553,14 +541,12 @@ class SedeReportView(APIView):
             )
         ).order_by('sede__nombre')
 
-        # Prepare response
         response_data = []
         for item in report_data:
             response_data.append({
                 'sede_id': item['sede__id'],
                 'sede_nombre': item['sede__nombre'],
                 'total_citas': item['total_citas'],
-                # Convert the 'estados' object into a list of objects for easier frontend rendering
                 'estados': [
                     {'estado': 'Pendiente', 'count': item['pendientes']},
                     {'estado': 'Confirmada', 'count': item['confirmadas']},
@@ -571,19 +557,8 @@ class SedeReportView(APIView):
                 'ingresos': item['ingresos'] or 0
             })
         
-        # For services and resources, it's better to provide a separate breakdown per sede
-        # or aggregate them across all filtered appointments.        
-        # Let's provide a summary of services and resources used within the filtered set.
-        
-        # Services summary
-        services_summary = queryset.values('servicios__nombre').annotate(
-            count=Count('servicios__nombre')
-        ).order_by('servicios__nombre')
-
-        # Resources summary
-        resources_summary = queryset.values('colaboradores__nombre').annotate(
-            count=Count('colaboradores__nombre')
-        ).order_by('colaboradores__nombre')
+        services_summary = queryset.values('servicios__nombre').annotate(count=Count('servicios__nombre')).order_by('servicios__nombre')
+        resources_summary = queryset.values('colaboradores__nombre').annotate(count=Count('colaboradores__nombre')).order_by('colaboradores__nombre')
 
         final_response = {
             'reporte_por_sede': response_data,
