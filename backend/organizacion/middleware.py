@@ -1,5 +1,5 @@
 from django.urls import resolve
-from .thread_locals import set_current_organization
+from .thread_locals import set_current_organization, set_current_user
 from .models import Organizacion
 
 class OrganizacionMiddleware:
@@ -13,6 +13,8 @@ class OrganizacionMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        set_current_user(request.user if request.user.is_authenticated else None)
+
         organizacion = None
         
         # 1. Try to get organization from the authenticated user

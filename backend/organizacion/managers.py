@@ -1,5 +1,5 @@
 from django.db import models
-from .thread_locals import get_current_organization
+from .thread_locals import get_current_organization, get_current_user
 
 class OrganizacionManager(models.Manager):
     """
@@ -12,6 +12,11 @@ class OrganizacionManager(models.Manager):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        user = get_current_user()
+
+        if user and user.is_superuser:
+            return queryset
+
         organization = get_current_organization()
 
         if organization:
