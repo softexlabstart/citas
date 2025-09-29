@@ -222,4 +222,16 @@ export const EditProfilePage: React.FC = () => {
                         <Form.Group className="mb-3">
                             <Form.Label>{t('last_name')}</Form.Label>
                             <Form.Control type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                        </Form.G
+                        </Form.Group>
+                    </Col>
+                </Row>
+                <Button variant="primary" type="submit" className="mt-3">
+                    {t('save_changes')}
+                </Button>
+                <Button variant="secondary" onClick={handleCancel} className="mt-3 ms-2">
+                    {t('cancel')}
+                </Button>
+            </Form>
+        </Container>
+    );
+};
