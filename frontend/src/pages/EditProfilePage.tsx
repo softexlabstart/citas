@@ -16,6 +16,7 @@ const EditProfilePage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+    const [showOpposeConfirmModal, setShowOpposeConfirmModal] = useState(false);
     const [opposeDataProcessing, setOpposeDataProcessing] = useState(false); // Initialized to false, will be updated by useEffect
 
     // Form states
@@ -69,8 +70,12 @@ const EditProfilePage: React.FC = () => {
         fetchClientData();
     }, [user, t]); // Depend on user and t
 
-    const handleOpposeDataProcessingChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const newValue = event.target.checked;
+    const handleOpposeDataProcessingChange = () => {
+        setShowOpposeConfirmModal(true);
+    };
+
+    const handleConfirmOpposeDataProcessing = async () => {
+        const newValue = !opposeDataProcessing;
         setOpposeDataProcessing(newValue);
         try {
             await updateDataProcessingOptOut(newValue);
@@ -80,7 +85,13 @@ const EditProfilePage: React.FC = () => {
             toast.error(errorMessage);
             console.error('Error updating data processing preference:', err);
             setOpposeDataProcessing(!newValue); // Revert UI on error
+        } finally {
+            setShowOpposeConfirmModal(false);
         }
+    };
+
+    const handleCloseOpposeConfirmModal = () => {
+        setShowOpposeConfirmModal(false);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -211,92 +222,4 @@ const EditProfilePage: React.FC = () => {
                         <Form.Group className="mb-3">
                             <Form.Label>{t('last_name')}</Form.Label>
                             <Form.Control type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                        </Form.Group>
-                    </Col>
-                </Row>
-
-                <Row>
-                    <Col md={6}>
-                        <Form.Group className="mb-3">
-                            <Form.Label>{t('phone')}</Form.Label>
-                            <Form.Control type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-                        </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                        <Form.Group className="mb-3">
-                            <Form.Label>{t('city')}</Form.Label>
-                            <Form.Control type="text" value={ciudad} onChange={(e) => setCiudad(e.target.value)} />
-                        </Form.Group>
-                    </Col>
-                </Row>
-
-                <Row>
-                    <Col md={6}>
-                        <Form.Group className="mb-3">
-                            <Form.Label>{t('neighborhood')}</Form.Label>
-                            <Form.Control type="text" value={barrio} onChange={(e) => setBarrio(e.target.value)} />
-                        </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                        <Form.Group className="mb-3">
-                            <Form.Label>{t('gender')}</Form.Label>
-                            <Form.Control as="select" value={genero} onChange={(e) => setGenero(e.target.value)}>
-                                <option value="">{t('select_gender')}</option>
-                                <option value="M">{t('male')}</option>
-                                <option value="F">{t('female')}</option>
-                                <option value="O">{t('other')}</option>
-                            </Form.Control>
-                        </Form.Group>
-                    </Col>
-                </Row>
-
-                <Row>
-                    <Col md={6}>
-                        <Form.Group className="mb-3">
-                            <Form.Label>{t('date_of_birth')}</Form.Label>
-                            <Form.Control type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} />
-                        </Form.Group>
-                    </Col>
-                </Row>
-
-                <div className="d-flex justify-content-end mt-3">
-                    <Button variant="secondary" onClick={handleCancel} className="me-2">
-                        {t('cancel')}
-                    </Button>
-                    <Button variant="primary" type="submit" disabled={loading}>
-                        {loading ? <Spinner as="span" animation="border" size="sm" /> : t('save')}
-                    </Button>
-                </div>
-            </Form>
-
-            <div className="mt-3">
-                <Form.Check
-                    type="switch"
-                    id="oppose-data-processing-switch"
-                    label={t('oppose_data_processing')}
-                    checked={opposeDataProcessing}
-                    onChange={handleOpposeDataProcessingChange}
-                    className="mb-3"
-                />
-            </div>
-            <div className="mt-3 d-flex justify-content-between">
-                <Button variant="secondary" onClick={handleDownloadData}>
-                    {t('download_my_data')}
-                </Button>
-                <Button variant="danger" onClick={handleDeleteAccount}>
-                    {t('delete_my_account')}
-                </Button>
-            </div>
-
-            <ConfirmationModal
-                isOpen={showDeleteConfirmModal}
-                onClose={handleCloseDeleteConfirmModal}
-                onConfirm={handleConfirmDeleteAccount}
-                message={t('confirm_delete_account_message')}
-                title={t('confirm_delete_account_title')}
-            />
-        </Container>
-    );
-};
-
-export default EditProfilePage;
+                        </Form.G
