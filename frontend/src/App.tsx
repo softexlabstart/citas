@@ -53,7 +53,7 @@ const App: React.FC = () => {
                 <Route path="/availability" element={<Disponibilidad />} />
                 <Route path="/guide" element={<UserGuide />} />
                 <Route path="/recurso-dashboard" element={<RecursoDashboard />} />
-                <Route path="/profile" element={<EditProfilePage />} />
+                <Route path="/profile/edit" element={<EditProfilePage />} />
               </Route>
 
               {/* Routes for admin users only */}

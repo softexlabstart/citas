@@ -77,7 +77,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <Nav.Link as={Link} to="/calendar" onClick={handleClose} className="nav-link-custom">
                     <CalendarWeek className="nav-icon" /> {t('calendar')}
                   </Nav.Link>
-                  <Nav.Link as={Link} to="/disponibilidad" onClick={handleClose} className="nav-link-custom">
+                  <Nav.Link as={Link} to="/availability" onClick={handleClose} className="nav-link-custom">
                     <Search className="nav-icon" /> {t('availability')}
                   </Nav.Link>
                   {user?.is_superuser && (
@@ -106,7 +106,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       <Nav.Link as={Link} to="/admin-settings" onClick={handleClose} className="nav-link-custom">
                         <Gear className="nav-icon" /> {t('admin_settings')}
                       </Nav.Link>
-                      <Nav.Link as={Link} to="/user-guide" onClick={handleClose} className="nav-link-custom">
+                      <Nav.Link as={Link} to="/guide" onClick={handleClose} className="nav-link-custom">
                         <QuestionCircle className="nav-icon" /> {t('user_guide')}
                       </Nav.Link>
                     </>
