@@ -6,15 +6,19 @@ import { getServicios } from '../api';
 import { useApi } from '../hooks/useApi';
 import ServiceTableSkeleton from './ServiceTableSkeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
+import { useAuth } from '../hooks/useAuth';
 
 const Services: React.FC = () => {
   const { t } = useTranslation();
-  const { data: services, loading, error, request: fetchServices } = useApi<Service[], []>(getServicios);
+  const { user } = useAuth();
+  const { data: services, loading, error, request: fetchServices } = useApi<Service[], [string]>(getServicios);
 
   useEffect(() => {
-    fetchServices();
+    if (user?.perfil?.sede) {
+      fetchServices(String(user.perfil.sede));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   return (
     <Container className="mt-5">
