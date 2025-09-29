@@ -70,7 +70,8 @@ export const EditProfilePage: React.FC = () => {
         fetchClientData();
     }, [user, t]); // Depend on user and t
 
-    const handleOpposeDataProcessingChange = () => {
+    const handleOpposeSwitchClick = (e: React.MouseEvent<HTMLInputElement>) => {
+        e.preventDefault();
         setShowOpposeConfirmModal(true);
     };
 
@@ -232,6 +233,53 @@ export const EditProfilePage: React.FC = () => {
                     {t('cancel')}
                 </Button>
             </Form>
+
+            <hr />
+
+            <div className="mt-4">
+                <h4>{t('data_management')}</h4>
+                <p>{t('download_your_data_description')}</p>
+                <Button variant="info" onClick={handleDownloadData}>
+                    {t('download_my_data')}
+                </Button>
+            </div>
+
+            <div className="mt-4">
+                <Form.Group className="mb-3">
+                    <Form.Check
+                        type="switch"
+                        id="oppose-data-processing-switch"
+                        label={t('oppose_data_processing')}
+                        checked={opposeDataProcessing}
+                        onClick={handleOpposeSwitchClick}
+                        onChange={() => {}} // Empty onChange to satisfy React warning for controlled components
+                    />
+                </Form.Group>
+            </div>
+
+            <div className="mt-5 border-top pt-4">
+                <h4>{t('delete_account')}</h4>
+                <p>{t('delete_account_warning')}</p>
+                <Button variant="danger" onClick={handleDeleteAccount}>
+                    {t('delete_my_account')}
+                </Button>
+            </div>
+
+            <ConfirmationModal
+                isOpen={showDeleteConfirmModal}
+                onClose={handleCloseDeleteConfirmModal}
+                onConfirm={handleConfirmDeleteAccount}
+                title={t('confirm_account_deletion')}
+                message={t('are_you_sure_you_want_to_delete_account')}
+            />
+
+            <ConfirmationModal
+                isOpen={showOpposeConfirmModal}
+                onClose={handleCloseOpposeConfirmModal}
+                onConfirm={handleConfirmOpposeDataProcessing}
+                title={t('confirm_data_processing_opposition')}
+                message={t('are_you_sure_you_want_to_change_data_processing')}
+            />
         </Container>
     );
 };
