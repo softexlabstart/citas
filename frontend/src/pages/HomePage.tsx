@@ -51,7 +51,7 @@ const HomePage: React.FC = () => {
   }
 
   if (dashboardData) {
-    if (user.is_staff || user.perfil?.is_sede_admin) {
+    if (user.is_staff || user.perfil?.is_sede_admin || (user.perfil?.sedes_administradas && user.perfil.sedes_administradas.length > 0)) {
       return <AdminDashboard data={dashboardData as AdminDashboardSummary} />;
     }
     return <UserDashboard data={dashboardData as UserDashboardSummary} />;
