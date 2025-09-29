@@ -54,11 +54,11 @@ const App: React.FC = () => {
                 <Route path="/guide" element={<UserGuide />} />
                 <Route path="/recurso-dashboard" element={<RecursoDashboard />} />
                 <Route path="/profile/edit" element={<EditProfilePage />} />
+                <Route path="/services" element={<Services />} />
               </Route>
 
               {/* Routes for admin users only */}
               <Route element={<AdminRoute />}>
-                <Route path="/services" element={<Services />} />
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/admin-settings" element={<AdminSettings />} />
                 <Route path="/clients" element={<Clients />} />
