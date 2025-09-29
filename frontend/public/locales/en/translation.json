@@ -116,5 +116,9 @@
   "consent_privacy_policy": "in accordance with the <a href=\"https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=49981\" target=\"_blank\">Privacy Policy</a>",
   "request_opposition_sent": "Request to oppose data processing sent.",
   "active_blocks": "Active Blocks",
-  "past_blocks": "Block History"
+  "past_blocks": "Block History",
+  "are_you_sure_you_want_to_change_data_processing": "Are you sure you want to change your data processing preference?",
+  "confirm_data_processing_opposition": "Confirm Data Processing Opposition",
+  "delete_account": "Delete Account",
+  "delete_account_warning": "Warning: Deleting your account is irreversible and all your data will be lost."
 }

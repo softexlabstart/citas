@@ -288,5 +288,9 @@
   "already_have_account login": "¿Ya tienes una cuenta? Inicia sesión",
   "request_opposition_sent": "Solicitud de opisión enviada",
   "active_blocks": "Bloqueos Activos",
-  "past_blocks": "Historial de Bloqueos"
+  "past_blocks": "Historial de Bloqueos",
+  "are_you_sure_you_want_to_change_data_processing": "¿Estás seguro de que deseas cambiar tu preferencia de procesamiento de datos?",
+  "confirm_data_processing_opposition": "Confirmar Oposición al Procesamiento de Datos",
+  "delete_account": "Eliminar Cuenta",
+  "delete_account_warning": "Advertencia: La eliminación de tu cuenta es irreversible y se perderán todos tus datos."
 }
