@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import UserDashboard from '../components/UserDashboard';
-import AdminDashboard from '../components/AdminDashboard'; // Import AdminDashboard
+import AdminDashboard from '../components/AdminDashboard';
 import RecursoDashboard from '../components/RecursoDashboard';
-import { getDashboardSummary, UserDashboardSummary, AdminDashboardSummary } from '../api'; // Import AdminDashboardSummary
+import { getDashboardSummary, UserDashboardSummary, AdminDashboardSummary } from '../api';
 import { useTranslation } from 'react-i18next';
 
 const HomePage: React.FC = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const [dashboardData, setDashboardData] = useState<UserDashboardSummary | AdminDashboardSummary | null>(null); // Update state type
+  const [dashboardData, setDashboardData] = useState<UserDashboardSummary | AdminDashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,8 +27,15 @@ const HomePage: React.FC = () => {
       }
     };
 
-    if (user && !user.groups.includes('Recurso') && !user.groups.includes('Colaborador')) {
-      fetchDashboardData();
+    if (user) {
+      const isAdmin = user.is_staff || user.perfil?.is_sede_admin || (user.perfil?.sedes_administradas && user.perfil.sedes_administradas.length > 0);
+      const isColaborador = user.groups.includes('Recurso') || user.groups.includes('Colaborador');
+
+      if (isAdmin || !isColaborador) {
+        fetchDashboardData();
+      } else {
+        setLoading(false); // It's a colaborador but not an admin, no data needed for RecursoDashboard
+      }
     } else {
       setLoading(false);
     }
@@ -38,6 +45,9 @@ const HomePage: React.FC = () => {
     return <Navigate to="/login" />;
   }
 
+  const isAdmin = user.is_staff || user.perfil?.is_sede_admin || (user.perfil?.sedes_administradas && user.perfil.sedes_administradas.length > 0);
+  const isColaborador = user.groups.includes('Recurso') || user.groups.includes('Colaborador');
+
   if (loading) {
     return <div>{t('loading')}...</div>;
   }
@@ -46,14 +56,18 @@ const HomePage: React.FC = () => {
     return <div className="alert alert-danger">{error}</div>;
   }
 
-  if (user.groups.includes('Recurso') || user.groups.includes('Colaborador')) {
+  if (isAdmin) {
+    if (dashboardData) {
+      return <AdminDashboard data={dashboardData as AdminDashboardSummary} />;
+    }
+    return null; // Data is loading or there was an error, handled above
+  }
+
+  if (isColaborador) {
     return <RecursoDashboard />;
   }
 
   if (dashboardData) {
-    if (user.is_staff || user.perfil?.is_sede_admin || (user.perfil?.sedes_administradas && user.perfil.sedes_administradas.length > 0)) {
-      return <AdminDashboard data={dashboardData as AdminDashboardSummary} />;
-    }
     return <UserDashboard data={dashboardData as UserDashboardSummary} />;
   }
 
