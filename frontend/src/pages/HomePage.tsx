@@ -37,7 +37,7 @@ const HomePage: React.FC = () => {
   }
 
   if (user.is_staff || user.perfil?.is_sede_admin) {
-    return <Navigate to="/reports" />;
+    return <Navigate to="/appointments" />;
   }
 
   if (user.groups.includes('Recurso') || user.groups.includes('Colaborador')) {

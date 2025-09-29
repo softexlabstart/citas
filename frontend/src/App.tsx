@@ -48,6 +48,12 @@ const App: React.FC = () => {
 
               <Route element={<PrivateRoute />}>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/appointments" element={<Appointments />} />
+                <Route path="/calendar" element={<AppointmentsCalendar />} />
+                <Route path="/availability" element={<Disponibilidad />} />
+                <Route path="/guide" element={<UserGuide />} />
+                <Route path="/recurso-dashboard" element={<RecursoDashboard />} />
+                <Route path="/profile" element={<EditProfilePage />} />
               </Route>
 
               {/* Routes for admin users only */}
