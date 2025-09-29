@@ -8,7 +8,7 @@ import { getPersonalData, deleteAccount, updateDataProcessingOptOut, updateUserP
 import { Client } from '../interfaces/Client';
 import ConfirmationModal from '../components/ConfirmationModal';
 
-const EditProfilePage: React.FC = () => {
+export const EditProfilePage: React.FC = () => {
     const { t } = useTranslation();
     const { user, logout } = useAuth();
     const navigate = useNavigate();

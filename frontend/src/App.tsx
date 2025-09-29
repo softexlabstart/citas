@@ -23,7 +23,13 @@ const UserGuide = lazy(() => import('./components/UserGuide'));
 const RecursoDashboard = lazy(() => import('./components/RecursoDashboard'));
 const Clients = lazy(() => import('./components/Clients'));
 const MarketingPage = lazy(() => import('./pages/MarketingPage')); // Import MarketingPage
-const EditProfilePage = lazy(() => import('./pages/EditProfilePage'));
+// If EditProfilePage is a named export:
+const EditProfilePage = lazy(() =>
+  import('./pages/EditProfilePage').then(module => ({ default: module.EditProfilePage }))
+);
+
+// If EditProfilePage is already a default export, you can keep the original line:
+// const EditProfilePage = lazy(() => import('./pages/EditProfilePage'));
 const HomePage = lazy(() => import('./pages/HomePage'));
 
 // Centered spinner component for Suspense fallback
