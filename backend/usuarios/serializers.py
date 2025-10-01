@@ -1,3 +1,4 @@
+import logging
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import PerfilUsuario
@@ -139,21 +140,30 @@ class ClientSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
+        logging.error("--- ClientSerializer.update CALLED ---")
+        logging.error(f"Instance: {instance}")
+        logging.error(f"Validated data: {validated_data}")
         # User fields
         instance.username = validated_data.get('username', instance.username)
         instance.first_name = validated_data.get('first_name', instance.first_name)
         instance.last_name = validated_data.get('last_name', instance.last_name)
         instance.email = validated_data.get('email', instance.email)
+        logging.error("--- Calling instance.save() ---")
         instance.save()
+        logging.error("--- instance.save() finished ---")
 
         # Perfil fields
+        logging.error("--- Calling get_or_create for PerfilUsuario ---")
         perfil, created = PerfilUsuario.objects.get_or_create(user=instance)
+        logging.error(f"--- PerfilUsuario get_or_create finished. Created: {created} ---")
         perfil.telefono = validated_data.get('telefono', perfil.telefono)
         perfil.ciudad = validated_data.get('ciudad', perfil.ciudad)
         perfil.barrio = validated_data.get('barrio', perfil.barrio)
         perfil.genero = validated_data.get('genero', perfil.genero)
         perfil.fecha_nacimiento = validated_data.get('fecha_nacimiento', perfil.fecha_nacimiento)
+        logging.error("--- Calling perfil.save() ---")
         perfil.save()
+        logging.error("--- perfil.save() finished ---")
 
         return instance
 
