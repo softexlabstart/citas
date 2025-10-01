@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Row, Col, Form, Button, Card, Spinner, Alert, Table } from 'react-bootstrap';
+import React, { useState, useEffect, useRef } from 'react';
+import { Row, Col, Form, Button, Card, Spinner, Alert, Table, Dropdown, Badge } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import { useApi } from '../hooks/useApi';
@@ -29,6 +29,133 @@ const statusColorMap: { [key: string]: string } = {
     'Cancelada': '#dc3545', // Bootstrap 'danger'
     'Asistio': '#0dcaf0',   // Bootstrap 'info'
     'No Asistio': '#6c757d', // Bootstrap 'secondary'
+};
+
+// Multi-select dropdown component with search
+interface MultiSelectDropdownProps {
+    options: Service[];
+    selected: string[];
+    onChange: (selected: string[]) => void;
+    label: string;
+    placeholder: string;
+    isLoading?: boolean;
+}
+
+const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
+    options,
+    selected,
+    onChange,
+    label,
+    placeholder,
+    isLoading = false
+}) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [show, setShow] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    const filteredOptions = options.filter(option =>
+        option.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const handleToggle = (id: string) => {
+        if (selected.includes(id)) {
+            onChange(selected.filter(s => s !== id));
+        } else {
+            onChange([...selected, id]);
+        }
+    };
+
+    const handleClearAll = () => {
+        onChange([]);
+    };
+
+    const selectedServices = options.filter(s => selected.includes(String(s.id)));
+
+    return (
+        <div ref={dropdownRef}>
+            <Form.Label>{label}</Form.Label>
+            <Dropdown show={show} onToggle={(isOpen) => setShow(isOpen)}>
+                <Dropdown.Toggle
+                    variant="outline-secondary"
+                    className="w-100 text-start d-flex justify-content-between align-items-center"
+                    disabled={isLoading}
+                >
+                    <span className="text-truncate">
+                        {isLoading ? (
+                            <Spinner animation="border" size="sm" />
+                        ) : selectedServices.length > 0 ? (
+                            `${selectedServices.length} seleccionado(s)`
+                        ) : (
+                            placeholder
+                        )}
+                    </span>
+                </Dropdown.Toggle>
+
+                <Dropdown.Menu className="w-100" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                    <div className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                        <Form.Control
+                            type="text"
+                            placeholder="Buscar..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            autoFocus
+                        />
+                    </div>
+                    {selected.length > 0 && (
+                        <Dropdown.Item onClick={handleClearAll} className="text-danger">
+                            <small>✕ Limpiar selección ({selected.length})</small>
+                        </Dropdown.Item>
+                    )}
+                    <Dropdown.Divider />
+                    {filteredOptions.length > 0 ? (
+                        filteredOptions.map((option) => (
+                            <Dropdown.Item
+                                key={option.id}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    handleToggle(String(option.id));
+                                }}
+                                active={selected.includes(String(option.id))}
+                            >
+                                <Form.Check
+                                    type="checkbox"
+                                    id={`service-${option.id}`}
+                                    label={option.nombre}
+                                    checked={selected.includes(String(option.id))}
+                                    onChange={() => {}} // Controlled by parent
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            </Dropdown.Item>
+                        ))
+                    ) : (
+                        <Dropdown.Item disabled>
+                            <small className="text-muted">No se encontraron servicios</small>
+                        </Dropdown.Item>
+                    )}
+                </Dropdown.Menu>
+            </Dropdown>
+            {selectedServices.length > 0 && (
+                <div className="mt-2 d-flex flex-wrap gap-1">
+                    {selectedServices.map(service => (
+                        <Badge
+                            key={service.id}
+                            bg="primary"
+                            className="d-flex align-items-center gap-1"
+                            style={{ cursor: 'pointer' }}
+                        >
+                            {service.nombre}
+                            <span
+                                onClick={() => handleToggle(String(service.id))}
+                                style={{ fontSize: '1.1em', fontWeight: 'bold' }}
+                            >
+                                ×
+                            </span>
+                        </Badge>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
 };
 
 const AppointmentsReport: React.FC = () => {
@@ -91,14 +218,6 @@ const AppointmentsReport: React.FC = () => {
         }
     };
 
-    const handleServiceChange = (serviceId: string) => {
-        setServicioIds(prev =>
-            prev.includes(serviceId)
-                ? prev.filter(id => id !== serviceId)
-                : [...prev, serviceId]
-        );
-    };
-
     // Updated chart data generation
     const generateChartData = () => {
         if (!reportData || !reportData.report) return null;
@@ -146,21 +265,14 @@ const AppointmentsReport: React.FC = () => {
                         <Row>
                             <Col md={6}>
                                 <Form.Group className="mb-3">
-                                    <Form.Label>{t('service')} ({t('optional')})</Form.Label>
-                                    {isLoadingFilters ? (
-                                        <Spinner animation="border" size="sm" />
-                                    ) : (
-                                        servicios?.map(s => (
-                                            <Form.Check
-                                                type="checkbox"
-                                                key={s.id}
-                                                id={`service-filter-${s.id}`}
-                                                label={s.nombre}
-                                                checked={servicioIds.includes(String(s.id))}
-                                                onChange={() => handleServiceChange(String(s.id))}
-                                            />
-                                        ))
-                                    )}
+                                    <MultiSelectDropdown
+                                        options={servicios || []}
+                                        selected={servicioIds}
+                                        onChange={setServicioIds}
+                                        label={`${t('service')} (${t('optional')})`}
+                                        placeholder="Seleccionar servicios..."
+                                        isLoading={isLoadingFilters}
+                                    />
                                 </Form.Group>
                             </Col>
                             <Col md={6}>
