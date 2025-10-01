@@ -37,19 +37,40 @@ class WelcomeView(APIView):
             "status": "ok"
         })
 
-class ColaboradorViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
+class ColaboradorViewSet(viewsets.ModelViewSet):
     queryset = Colaborador.objects.all()
     serializer_class = ColaboradorSerializer
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related('sede')
-        now = timezone.now()
+        print(f"[ColaboradorViewSet] User: {self.request.user.username}")
+        user = self.request.user
+        sede_id = self.request.query_params.get('sede_id')
+
+        # Base queryset filtered by organization (handled by the Colaborador manager)
+        queryset = Colaborador.objects.select_related('sede')
+
+        # Apply sede filtering if sede_id is provided
+        if sede_id:
+            queryset = queryset.filter(sede_id=sede_id)
+            print(f"[ColaboradorViewSet] Sede_id provided. Queryset count before block filter: {queryset.count()}")
+        else:
+            # If no sede_id is provided, show all resources for authenticated users
+            if user.is_authenticated:
+                print(f"[ColaboradorViewSet] No sede_id. Authenticated user. Queryset count before block filter: {queryset.count()}")
+            else:
+                print("[ColaboradorViewSet] No sede_id. Anonymous user. Returning empty queryset.")
+                return Colaborador.objects.none()
+
         # Exclude collaborators with an active block
-        return queryset.exclude(
+        now = timezone.now()
+        queryset = queryset.exclude(
             bloqueos__fecha_inicio__lte=now,
             bloqueos__fecha_fin__gte=now
         )
+
+        print(f"[ColaboradorViewSet] Final queryset count: {queryset.count()}")
+        return queryset
 
 
 class DisponibilidadView(APIView):
@@ -107,15 +128,16 @@ class ServicioViewSet(viewsets.ModelViewSet):
 
         # If no sede_id is provided, then we fall back to organization-level filtering.
         # This is typically for admin users browsing all services in their org.
-        if user.is_staff: # is_staff includes superusers
-            # For staff, use the default manager which filters by organization.
+        if user.is_authenticated:
+            # For authenticated users (including staff and non-staff), use the default manager
+            # which filters by organization.
             queryset = Servicio.objects.select_related('sede')
-            print(f"[ServicioViewSet] No sede_id. Staff user. Initial queryset count: {queryset.count()}")
+            print(f"[ServicioViewSet] No sede_id. Authenticated user. Initial queryset count: {queryset.count()}")
         else:
-            # Non-staff users MUST provide a sede_id to see any services.
-            print("[ServicioViewSet] No sede_id. Non-staff user. Returning empty queryset.")
+            # Anonymous users MUST provide a sede_id to see any services.
+            print("[ServicioViewSet] No sede_id. Anonymous user. Returning empty queryset.")
             queryset = Servicio.objects.none()
-        
+
         return queryset
 
 class BloqueoViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
