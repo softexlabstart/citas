@@ -177,11 +177,11 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
     def get_queryset(self):
         sede_admin_group = Group.objects.get(name='SedeAdmin')
         recurso_group = Group.objects.get(name='Recurso')
-        return User.objects.filter(is_staff=False)\
-            .exclude(groups=sede_admin_group)\
-            .exclude(groups=recurso_group)\
-            .exclude(email__isnull=True)\
-            .exclude(email__exact='')\
+        return User.objects.filter(is_staff=False) \
+            .exclude(groups=sede_admin_group) \
+            .exclude(groups=recurso_group) \
+            .exclude(email__isnull=True) \
+            .exclude(email__exact='') \
             .select_related('perfil')
 
     # Agregar paginación para evitar exponer grandes cantidades de datos
@@ -196,7 +196,7 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
         return Response(serializer.data)
 
     def perform_create(self, serializer):
-        serializer.save(request=self.request)
+        serializer.save()
 
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
