@@ -48,7 +48,8 @@ class ColaboradorViewSet(viewsets.ModelViewSet):
         sede_id = self.request.query_params.get('sede_id')
 
         # Base queryset using all_objects to bypass OrganizacionManager
-        queryset = Colaborador.all_objects.select_related('sede')
+        # Optimize with select_related to reduce DB queries
+        queryset = Colaborador.all_objects.select_related('sede', 'sede__organizacion')
 
         # Apply sede filtering if sede_id is provided
         if sede_id:
@@ -138,6 +139,11 @@ class ServicioViewSet(viewsets.ModelViewSet):
     serializer_class = ServicioSerializer
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
+    @method_decorator(cache_page(60 * 5))  # Cache for 5 minutes
+    def list(self, request, *args, **kwargs):
+        """Override list to add caching for GET requests"""
+        return super().list(request, *args, **kwargs)
+
     def get_queryset(self):
         print(f"[ServicioViewSet] User: {self.request.user.username if self.request.user.is_authenticated else 'Anonymous'}")
         user = self.request.user
@@ -146,7 +152,7 @@ class ServicioViewSet(viewsets.ModelViewSet):
         if sede_id:
             # If a sede_id is provided, any user can see the services for that sede.
             # This is the primary way clients will fetch services.
-            queryset = Servicio.all_objects.filter(sede_id=sede_id).select_related('sede')
+            queryset = Servicio.all_objects.filter(sede_id=sede_id).select_related('sede', 'sede__organizacion')
             print(f"[ServicioViewSet] Sede_id provided. Queryset count: {queryset.count()}")
             return queryset
 
@@ -154,7 +160,7 @@ class ServicioViewSet(viewsets.ModelViewSet):
         # This is typically for admin users browsing all services in their org.
         if user.is_authenticated:
             # For authenticated users, use all_objects and filter manually by organization
-            queryset = Servicio.all_objects.select_related('sede')
+            queryset = Servicio.all_objects.select_related('sede', 'sede__organizacion')
 
             # If user has an organization, filter by it
             try:
@@ -806,13 +812,19 @@ class RecursoViewSet(viewsets.ModelViewSet):
     serializer_class = ColaboradorSerializer
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
+    @method_decorator(cache_page(60 * 5))  # Cache for 5 minutes
+    def list(self, request, *args, **kwargs):
+        """Override list to add caching for GET requests"""
+        return super().list(request, *args, **kwargs)
+
     def get_queryset(self):
         print(f"[RecursoViewSet] User: {self.request.user.username if self.request.user.is_authenticated else 'Anonymous'}")
         user = self.request.user
         sede_id = self.request.query_params.get('sede_id')
 
         # Base queryset using all_objects to bypass OrganizacionManager
-        queryset = Colaborador.all_objects.select_related('sede')
+        # Optimize with select_related to reduce DB queries
+        queryset = Colaborador.all_objects.select_related('sede', 'sede__organizacion')
 
         if sede_id:
             # If a sede_id is provided, any user can see the resources for that sede.
