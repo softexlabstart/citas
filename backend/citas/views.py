@@ -38,29 +38,47 @@ class WelcomeView(APIView):
         })
 
 class ColaboradorViewSet(viewsets.ModelViewSet):
-    queryset = Colaborador.objects.all()
+    queryset = Colaborador.all_objects.all()
     serializer_class = ColaboradorSerializer
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
     def get_queryset(self):
-        print(f"[ColaboradorViewSet] User: {self.request.user.username}")
+        print(f"[ColaboradorViewSet] User: {self.request.user.username if self.request.user.is_authenticated else 'Anonymous'}")
         user = self.request.user
         sede_id = self.request.query_params.get('sede_id')
 
-        # Base queryset filtered by organization (handled by the Colaborador manager)
-        queryset = Colaborador.objects.select_related('sede')
+        # Base queryset using all_objects to bypass OrganizacionManager
+        queryset = Colaborador.all_objects.select_related('sede')
 
         # Apply sede filtering if sede_id is provided
         if sede_id:
             queryset = queryset.filter(sede_id=sede_id)
             print(f"[ColaboradorViewSet] Sede_id provided. Queryset count before block filter: {queryset.count()}")
         else:
-            # If no sede_id is provided, show all resources for authenticated users
+            # If no sede_id is provided, filter by organization for authenticated users
             if user.is_authenticated:
-                print(f"[ColaboradorViewSet] No sede_id. Authenticated user. Queryset count before block filter: {queryset.count()}")
+                try:
+                    if hasattr(user, 'perfil') and user.perfil.organizacion:
+                        org = user.perfil.organizacion
+                        queryset = queryset.filter(sede__organizacion=org)
+                        print(f"[ColaboradorViewSet] Filtered by organization '{org}'. Queryset count before block filter: {queryset.count()}")
+                    elif user.is_staff or user.is_superuser:
+                        # Staff/superusers without organization can see everything
+                        print(f"[ColaboradorViewSet] Staff/superuser without org. Showing all. Queryset count before block filter: {queryset.count()}")
+                    else:
+                        # Regular users without organization see nothing
+                        print(f"[ColaboradorViewSet] Regular user without organization. Returning empty queryset.")
+                        return Colaborador.all_objects.none()
+                except AttributeError:
+                    # User might not have a profile
+                    if user.is_staff or user.is_superuser:
+                        print(f"[ColaboradorViewSet] Staff/superuser without profile. Showing all. Queryset count before block filter: {queryset.count()}")
+                    else:
+                        print(f"[ColaboradorViewSet] User has no profile. Returning empty queryset.")
+                        return Colaborador.all_objects.none()
             else:
                 print("[ColaboradorViewSet] No sede_id. Anonymous user. Returning empty queryset.")
-                return Colaborador.objects.none()
+                return Colaborador.all_objects.none()
 
         # Exclude collaborators with an active block
         now = timezone.now()
@@ -115,7 +133,7 @@ class ServicioViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
     def get_queryset(self):
-        print(f"[ServicioViewSet] User: {self.request.user.username}")
+        print(f"[ServicioViewSet] User: {self.request.user.username if self.request.user.is_authenticated else 'Anonymous'}")
         user = self.request.user
         sede_id = self.request.query_params.get('sede_id')
 
@@ -129,14 +147,33 @@ class ServicioViewSet(viewsets.ModelViewSet):
         # If no sede_id is provided, then we fall back to organization-level filtering.
         # This is typically for admin users browsing all services in their org.
         if user.is_authenticated:
-            # For authenticated users (including staff and non-staff), use the default manager
-            # which filters by organization.
-            queryset = Servicio.objects.select_related('sede')
-            print(f"[ServicioViewSet] No sede_id. Authenticated user. Initial queryset count: {queryset.count()}")
+            # For authenticated users, use all_objects and filter manually by organization
+            queryset = Servicio.all_objects.select_related('sede')
+
+            # If user has an organization, filter by it
+            try:
+                if hasattr(user, 'perfil') and user.perfil.organizacion:
+                    org = user.perfil.organizacion
+                    queryset = queryset.filter(sede__organizacion=org)
+                    print(f"[ServicioViewSet] Filtered by organization '{org}'. Queryset count: {queryset.count()}")
+                elif user.is_staff or user.is_superuser:
+                    # Staff/superusers without organization can see everything
+                    print(f"[ServicioViewSet] Staff/superuser without org. Showing all. Queryset count: {queryset.count()}")
+                else:
+                    # Regular users without organization see nothing
+                    print(f"[ServicioViewSet] Regular user without organization. Returning empty queryset.")
+                    queryset = Servicio.all_objects.none()
+            except AttributeError as e:
+                # User might not have a profile
+                if user.is_staff or user.is_superuser:
+                    print(f"[ServicioViewSet] Staff/superuser. Showing all. Queryset count: {queryset.count()}")
+                else:
+                    print(f"[ServicioViewSet] User has no profile. Returning empty queryset.")
+                    queryset = Servicio.all_objects.none()
         else:
             # Anonymous users MUST provide a sede_id to see any services.
             print("[ServicioViewSet] No sede_id. Anonymous user. Returning empty queryset.")
-            queryset = Servicio.objects.none()
+            queryset = Servicio.all_objects.none()
 
         return queryset
 
