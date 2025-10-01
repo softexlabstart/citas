@@ -140,28 +140,38 @@ class ClientSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
-        logging.error("--- ClientSerializer.update CALLED ---")
-        logging.error(f"Instance: {instance}")
+        logging.error(f"--- ClientSerializer.update CALLED for user: {instance.username} ---")
         logging.error(f"Validated data: {validated_data}")
-        # User fields
+
+        # Update User fields first
         instance.username = validated_data.get('username', instance.username)
         instance.first_name = validated_data.get('first_name', instance.first_name)
         instance.last_name = validated_data.get('last_name', instance.last_name)
         instance.email = validated_data.get('email', instance.email)
-        logging.error("--- Calling instance.save() ---")
+        logging.error("--- Calling instance.save() [User] ---")
         instance.save()
-        logging.error("--- instance.save() finished ---")
+        logging.error("--- instance.save() [User] finished ---")
 
-        # Perfil fields
-        logging.error("--- Calling get_or_create for PerfilUsuario ---")
-        perfil, created = PerfilUsuario.objects.get_or_create(user=instance)
-        logging.error(f"--- PerfilUsuario get_or_create finished. Created: {created} ---")
+        # Now, handle the profile with extreme care.
+        try:
+            perfil = instance.perfil
+            logging.error(f"--- Found existing profile (ID: {perfil.id}) for user {instance.username} ---")
+        except PerfilUsuario.DoesNotExist:
+            logging.error(f"--- No profile found for user {instance.username}, creating a new one. ---")
+            # This is the only place a new profile should be created on update.
+            perfil = PerfilUsuario.objects.create(user=instance)
+        except Exception as e:
+            logging.error(f"--- UNEXPECTED ERROR GETTING PROFILE: {e} ---")
+            raise
+
+        # Update Perfil fields
         perfil.telefono = validated_data.get('telefono', perfil.telefono)
         perfil.ciudad = validated_data.get('ciudad', perfil.ciudad)
         perfil.barrio = validated_data.get('barrio', perfil.barrio)
         perfil.genero = validated_data.get('genero', perfil.genero)
         perfil.fecha_nacimiento = validated_data.get('fecha_nacimiento', perfil.fecha_nacimiento)
-        logging.error("--- Calling perfil.save() ---")
+        
+        logging.error(f"--- Calling perfil.save() for profile {perfil.id} ---")
         perfil.save()
         logging.error("--- perfil.save() finished ---")
 
