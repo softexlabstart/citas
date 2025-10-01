@@ -90,13 +90,14 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class ClientSerializer(serializers.ModelSerializer):
-    perfil = PerfilUsuarioSerializer(write_only=True, required=False)
-    telefono = serializers.CharField(source='perfil.telefono', required=False, allow_blank=True, allow_null=True)
-    ciudad = serializers.CharField(source='perfil.ciudad', required=False, allow_blank=True, allow_null=True)
-    barrio = serializers.CharField(source='perfil.barrio', required=False, allow_blank=True, allow_null=True)
-    genero = serializers.ChoiceField(source='perfil.genero', choices=PerfilUsuario.GENERO_CHOICES, required=False, allow_null=True)
-    fecha_nacimiento = serializers.DateField(source='perfil.fecha_nacimiento', required=False, allow_null=True)
+    # Perfil fields (now flat)
+    telefono = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    ciudad = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    barrio = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    genero = serializers.ChoiceField(choices=PerfilUsuario.GENERO_CHOICES, required=False, allow_null=True)
+    fecha_nacimiento = serializers.DateField(required=False, allow_null=True)
 
+    # Read-only fields
     full_name = serializers.SerializerMethodField(read_only=True)
     age = serializers.IntegerField(source='perfil.age', read_only=True)
 
@@ -105,11 +106,8 @@ class ClientSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'username', 'first_name', 'last_name', 'email',
             'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento',
-            'full_name', 'age', 'perfil'
+            'full_name', 'age'
         )
-        extra_kwargs = {
-            'perfil': {'write_only': True},
-        }
 
     def get_full_name(self, obj):
         if obj.first_name and obj.last_name:
@@ -125,14 +123,13 @@ class ClientSerializer(serializers.ModelSerializer):
             representation['barrio'] = perfil.barrio
             representation['genero'] = perfil.genero
             representation['fecha_nacimiento'] = perfil.fecha_nacimiento
-        # Remove the nested 'perfil' from the final output
-        if 'perfil' in representation:
-            representation.pop('perfil')
         return representation
 
     def create(self, validated_data):
-        perfil_data = validated_data.pop('perfil', {})
+        perfil_fields = ['telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento']
+        perfil_data = {field: validated_data.pop(field) for field in perfil_fields if field in validated_data}
         
+        # Get the organization from the user making the request
         request = self.context.get('request')
         if request and hasattr(request, 'user') and hasattr(request.user, 'perfil'):
             perfil_data['organizacion'] = request.user.perfil.organizacion
@@ -142,21 +139,21 @@ class ClientSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
-        perfil_data = validated_data.pop('perfil', {})
-
-        # Update User fields
+        # User fields
         instance.username = validated_data.get('username', instance.username)
         instance.first_name = validated_data.get('first_name', instance.first_name)
         instance.last_name = validated_data.get('last_name', instance.last_name)
         instance.email = validated_data.get('email', instance.email)
         instance.save()
 
-        # Update PerfilUsuario fields
-        if perfil_data:
-            perfil, created = PerfilUsuario.objects.get_or_create(user=instance)
-            for attr, value in perfil_data.items():
-                setattr(perfil, attr, value)
-            perfil.save()
+        # Perfil fields
+        perfil, created = PerfilUsuario.objects.get_or_create(user=instance)
+        perfil.telefono = validated_data.get('telefono', perfil.telefono)
+        perfil.ciudad = validated_data.get('ciudad', perfil.ciudad)
+        perfil.barrio = validated_data.get('barrio', perfil.barrio)
+        perfil.genero = validated_data.get('genero', perfil.genero)
+        perfil.fecha_nacimiento = validated_data.get('fecha_nacimiento', perfil.fecha_nacimiento)
+        perfil.save()
 
         return instance
 
