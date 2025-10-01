@@ -42,13 +42,13 @@ const AppointmentsReport: React.FC = () => {
     const [isExporting, setIsExporting] = useState(false);
 
     // API hooks
-    const { data: servicios, loading: loadingServicios, request: fetchServicios } = useApi<Service[], []>(getServicios);
-    const { data: recursos, loading: loadingRecursos, request: fetchRecursos } = useApi<Recurso[], []>(getRecursos);
+    const { data: servicios, loading: loadingServicios, request: fetchServicios } = useApi<Service[], [string | undefined]>(getServicios);
+    const { data: recursos, loading: loadingRecursos, request: fetchRecursos } = useApi<Recurso[], [string | undefined]>(getRecursos);
     const { data: reportData, loading: loadingReport, error: reportError, request: fetchReport } = useApi<ReportData, [string, string, string[] | undefined, string | undefined]>(getAppointmentsReport);
 
     useEffect(() => {
-        fetchServicios();
-        fetchRecursos();
+        fetchServicios(undefined);
+        fetchRecursos(undefined);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
