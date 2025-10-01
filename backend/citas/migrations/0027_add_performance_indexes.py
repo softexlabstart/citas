@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('citas', '0026_alter_colaborador_unique_together_and_more'),
+        ('citas', '0002_alter_servicio_precio'),
     ]
 
     operations = [
