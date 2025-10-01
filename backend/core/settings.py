@@ -107,6 +107,7 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD'),
         'HOST': config('DB_HOST', default='localhost'),
         'PORT': config('DB_PORT', default='5432'),
+        # Persistent connections for better performance with sync workers
         'CONN_MAX_AGE': 60,
     }
 }
