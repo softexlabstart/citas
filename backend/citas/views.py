@@ -82,12 +82,18 @@ class ColaboradorViewSet(viewsets.ModelViewSet):
 
         # Exclude collaborators with an active block
         now = timezone.now()
+        print(f"[ColaboradorViewSet] Before excluding blocks. Count: {queryset.count()}")
         queryset = queryset.exclude(
             bloqueos__fecha_inicio__lte=now,
             bloqueos__fecha_fin__gte=now
         )
 
-        print(f"[ColaboradorViewSet] Final queryset count: {queryset.count()}")
+        print(f"[ColaboradorViewSet] Final queryset count after excluding blocks: {queryset.count()}")
+
+        # Debug: print all colaboradores
+        for c in queryset:
+            print(f"[ColaboradorViewSet]   - {c.nombre} (ID: {c.id}, Sede: {c.sede.nombre if c.sede else 'N/A'})")
+
         return queryset
 
 

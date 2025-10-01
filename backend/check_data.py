@@ -46,7 +46,8 @@ print("\n4. COLABORADORES:")
 colaboradores = Colaborador.all_objects.all()
 print(f"   Total: {colaboradores.count()}")
 for colab in colaboradores[:10]:  # Mostrar solo los primeros 10
-    print(f"   - {colab.nombre} (Sede: {colab.sede.nombre if colab.sede else 'N/A'})")
+    org_nombre = colab.sede.organizacion.nombre if colab.sede and colab.sede.organizacion else 'N/A'
+    print(f"   - {colab.nombre} (Sede: {colab.sede.nombre if colab.sede else 'N/A'}, Org: {org_nombre})")
 if colaboradores.count() > 10:
     print(f"   ... y {colaboradores.count() - 10} más")
 
