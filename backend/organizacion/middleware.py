@@ -13,20 +13,21 @@ class OrganizacionMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        set_current_user(request.user if request.user.is_authenticated else None)
+        user = request.user if request.user.is_authenticated else None
+        set_current_user(user)
 
         organizacion = None
-        
+
         # 1. Try to get organization from the authenticated user
         if request.user.is_authenticated:
-            print(f"[OrgMiddleware] User: {request.user.username}")
+            print(f"[OrgMiddleware] User: {request.user.username}, is_staff: {request.user.is_staff}, is_superuser: {request.user.is_superuser}")
             try:
                 # The related_name in PerfilUsuario is 'perfil'
                 organizacion = request.user.perfil.organizacion
                 print(f"[OrgMiddleware] Org from profile: {organizacion}")
-            except AttributeError:
+            except AttributeError as e:
                 # User might not have a profile or organization assigned
-                print("[OrgMiddleware] User has no profile or organization")
+                print(f"[OrgMiddleware] User has no profile or organization: {e}")
                 pass
 
         # 2. If no organization yet, try to get it from the URL
