@@ -47,10 +47,16 @@ const AppointmentsReport: React.FC = () => {
     const { data: reportData, loading: loadingReport, error: reportError, request: fetchReport } = useApi<ReportData, [string, string, string[] | undefined, string | undefined]>(getAppointmentsReport);
 
     useEffect(() => {
+        console.log('[AppointmentsReport] Fetching servicios and recursos...');
         fetchServicios(undefined);
         fetchRecursos(undefined);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    useEffect(() => {
+        console.log('[AppointmentsReport] Servicios loaded:', servicios);
+        console.log('[AppointmentsReport] Recursos loaded:', recursos);
+    }, [servicios, recursos]);
 
     const handleGenerateReport = () => {
         if (!startDate || !endDate) {
