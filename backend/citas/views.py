@@ -807,22 +807,55 @@ class RecursoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
     def get_queryset(self):
+        print(f"[RecursoViewSet] User: {self.request.user.username if self.request.user.is_authenticated else 'Anonymous'}")
         user = self.request.user
         sede_id = self.request.query_params.get('sede_id')
 
+        # Base queryset using all_objects to bypass OrganizacionManager
+        queryset = Colaborador.all_objects.select_related('sede')
+
         if sede_id:
             # If a sede_id is provided, any user can see the resources for that sede.
-            queryset = Colaborador.all_objects.filter(sede_id=sede_id).select_related('sede')
-        elif user.is_staff:
-            # For staff without a sede_id, use the default manager to filter by organization.
-            queryset = Colaborador.objects.select_related('sede')
+            queryset = queryset.filter(sede_id=sede_id)
+            print(f"[RecursoViewSet] Sede_id provided. Queryset count before block filter: {queryset.count()}")
         else:
-            # Non-staff users MUST provide a sede_id to see any resources.
-            queryset = Colaborador.objects.none()
+            # If no sede_id is provided, filter by organization for authenticated users
+            if user.is_authenticated:
+                try:
+                    if hasattr(user, 'perfil') and user.perfil.organizacion:
+                        org = user.perfil.organizacion
+                        queryset = queryset.filter(sede__organizacion=org)
+                        print(f"[RecursoViewSet] Filtered by organization '{org}'. Queryset count before block filter: {queryset.count()}")
+                    elif user.is_staff or user.is_superuser:
+                        # Staff/superusers without organization can see everything
+                        print(f"[RecursoViewSet] Staff/superuser without org. Showing all. Queryset count before block filter: {queryset.count()}")
+                    else:
+                        # Regular users without organization see nothing
+                        print(f"[RecursoViewSet] Regular user without organization. Returning empty queryset.")
+                        return Colaborador.all_objects.none()
+                except AttributeError:
+                    # User might not have a profile
+                    if user.is_staff or user.is_superuser:
+                        print(f"[RecursoViewSet] Staff/superuser without profile. Showing all. Queryset count before block filter: {queryset.count()}")
+                    else:
+                        print(f"[RecursoViewSet] User has no profile. Returning empty queryset.")
+                        return Colaborador.all_objects.none()
+            else:
+                print("[RecursoViewSet] No sede_id. Anonymous user. Returning empty queryset.")
+                return Colaborador.all_objects.none()
 
         # Exclude collaborators with an active block
         now = timezone.now()
-        return queryset.exclude(
+        print(f"[RecursoViewSet] Before excluding blocks. Count: {queryset.count()}")
+        queryset = queryset.exclude(
             bloqueos__fecha_inicio__lte=now,
             bloqueos__fecha_fin__gte=now
         )
+
+        print(f"[RecursoViewSet] Final queryset count after excluding blocks: {queryset.count()}")
+
+        # Debug: print all recursos
+        for c in queryset:
+            print(f"[RecursoViewSet]   - {c.nombre} (ID: {c.id}, Sede: {c.sede.nombre if c.sede else 'N/A'})")
+
+        return queryset
