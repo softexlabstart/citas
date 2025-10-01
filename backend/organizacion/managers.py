@@ -14,7 +14,8 @@ class OrganizacionManager(models.Manager):
         queryset = super().get_queryset()
         user = get_current_user()
 
-        if user and user.is_superuser:
+        # Superusers and staff can see everything
+        if user and (user.is_superuser or user.is_staff):
             return queryset
 
         organization = get_current_organization()
