@@ -19,7 +19,7 @@ class HorarioSerializer(serializers.ModelSerializer):
 
 class ServicioSerializer(serializers.ModelSerializer):
     sede = SedeSerializer(read_only=True)
-    sede_id = serializers.PrimaryKeyRelatedField(queryset=Sede.objects.all(), source='sede', write_only=True)
+    sede_id = serializers.PrimaryKeyRelatedField(queryset=Sede.all_objects.all(), source='sede', write_only=True)
 
     class Meta:
         model = Servicio
@@ -27,7 +27,7 @@ class ServicioSerializer(serializers.ModelSerializer):
 
 class ColaboradorSerializer(serializers.ModelSerializer):
     sede = SedeSerializer(read_only=True)
-    sede_id = serializers.PrimaryKeyRelatedField(queryset=Sede.objects.all(), source='sede', write_only=True)
+    sede_id = serializers.PrimaryKeyRelatedField(queryset=Sede.all_objects.all(), source='sede', write_only=True)
     class Meta:
         model = Colaborador
         fields = ['id', 'nombre', 'email', 'descripcion', 'metadata', 'sede', 'sede_id']
