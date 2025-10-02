@@ -43,59 +43,68 @@ class ColaboradorViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
     def get_queryset(self):
-        print(f"[ColaboradorViewSet] User: {self.request.user.username if self.request.user.is_authenticated else 'Anonymous'}")
         user = self.request.user
         sede_id = self.request.query_params.get('sede_id')
-
-        # Base queryset using all_objects to bypass OrganizacionManager
-        # Optimize with select_related to reduce DB queries
         queryset = Colaborador.all_objects.select_related('sede', 'sede__organizacion')
+        now = timezone.now()
 
-        # Apply sede filtering if sede_id is provided
+        # SUPERUSUARIO: puede ver todos los colaboradores
+        if user.is_authenticated and user.is_superuser:
+            if sede_id:
+                queryset = queryset.filter(sede_id=sede_id)
+            # Excluir colaboradores con bloqueo activo
+            return queryset.exclude(
+                bloqueos__fecha_inicio__lte=now,
+                bloqueos__fecha_fin__gte=now
+            )
+
+        # ADMINISTRADOR DE SEDE: solo colaboradores de sus sedes
+        if user.is_authenticated and hasattr(user, 'perfil') and user.perfil.sedes_administradas.exists():
+            org = user.perfil.organizacion
+            queryset = queryset.filter(sede__organizacion=org)
+            if sede_id:
+                # Validar que la sede pertenece a su organización
+                queryset = queryset.filter(sede_id=sede_id)
+            # Excluir colaboradores con bloqueo activo
+            return queryset.exclude(
+                bloqueos__fecha_inicio__lte=now,
+                bloqueos__fecha_fin__gte=now
+            )
+
+        # COLABORADOR: puede ver colaboradores de su organización (para coordinación)
+        if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
+            colaborador = Colaborador.all_objects.get(usuario=user)
+            org = colaborador.sede.organizacion
+            queryset = queryset.filter(sede__organizacion=org)
+            if sede_id:
+                # Validar que la sede pertenece a su organización
+                queryset = queryset.filter(sede_id=sede_id)
+            # Excluir colaboradores con bloqueo activo
+            return queryset.exclude(
+                bloqueos__fecha_inicio__lte=now,
+                bloqueos__fecha_fin__gte=now
+            )
+
+        # CLIENTE: solo colaboradores si proporciona sede_id
+        if user.is_authenticated:
+            if sede_id:
+                queryset = queryset.filter(sede_id=sede_id)
+                # Excluir colaboradores con bloqueo activo
+                return queryset.exclude(
+                    bloqueos__fecha_inicio__lte=now,
+                    bloqueos__fecha_fin__gte=now
+                )
+            return Colaborador.all_objects.none()
+
+        # ANÓNIMO: debe proporcionar sede_id
         if sede_id:
             queryset = queryset.filter(sede_id=sede_id)
-            print(f"[ColaboradorViewSet] Sede_id provided. Queryset count before block filter: {queryset.count()}")
-        else:
-            # If no sede_id is provided, filter by organization for authenticated users
-            if user.is_authenticated:
-                try:
-                    if hasattr(user, 'perfil') and user.perfil.organizacion:
-                        org = user.perfil.organizacion
-                        queryset = queryset.filter(sede__organizacion=org)
-                        print(f"[ColaboradorViewSet] Filtered by organization '{org}'. Queryset count before block filter: {queryset.count()}")
-                    elif user.is_staff or user.is_superuser:
-                        # Staff/superusers without organization can see everything
-                        print(f"[ColaboradorViewSet] Staff/superuser without org. Showing all. Queryset count before block filter: {queryset.count()}")
-                    else:
-                        # Regular users without organization see nothing
-                        print(f"[ColaboradorViewSet] Regular user without organization. Returning empty queryset.")
-                        return Colaborador.all_objects.none()
-                except AttributeError:
-                    # User might not have a profile
-                    if user.is_staff or user.is_superuser:
-                        print(f"[ColaboradorViewSet] Staff/superuser without profile. Showing all. Queryset count before block filter: {queryset.count()}")
-                    else:
-                        print(f"[ColaboradorViewSet] User has no profile. Returning empty queryset.")
-                        return Colaborador.all_objects.none()
-            else:
-                print("[ColaboradorViewSet] No sede_id. Anonymous user. Returning empty queryset.")
-                return Colaborador.all_objects.none()
-
-        # Exclude collaborators with an active block
-        now = timezone.now()
-        print(f"[ColaboradorViewSet] Before excluding blocks. Count: {queryset.count()}")
-        queryset = queryset.exclude(
-            bloqueos__fecha_inicio__lte=now,
-            bloqueos__fecha_fin__gte=now
-        )
-
-        print(f"[ColaboradorViewSet] Final queryset count after excluding blocks: {queryset.count()}")
-
-        # Debug: print all colaboradores
-        for c in queryset:
-            print(f"[ColaboradorViewSet]   - {c.nombre} (ID: {c.id}, Sede: {c.sede.nombre if c.sede else 'N/A'})")
-
-        return queryset
+            # Excluir colaboradores con bloqueo activo
+            return queryset.exclude(
+                bloqueos__fecha_inicio__lte=now,
+                bloqueos__fecha_fin__gte=now
+            )
+        return Colaborador.all_objects.none()
 
 
 class DisponibilidadView(APIView):
@@ -145,49 +154,47 @@ class ServicioViewSet(viewsets.ModelViewSet):
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
-        print(f"[ServicioViewSet] User: {self.request.user.username if self.request.user.is_authenticated else 'Anonymous'}")
         user = self.request.user
         sede_id = self.request.query_params.get('sede_id')
+        queryset = Servicio.all_objects.select_related('sede', 'sede__organizacion')
 
-        if sede_id:
-            # If a sede_id is provided, any user can see the services for that sede.
-            # This is the primary way clients will fetch services.
-            queryset = Servicio.all_objects.filter(sede_id=sede_id).select_related('sede', 'sede__organizacion')
-            print(f"[ServicioViewSet] Sede_id provided. Queryset count: {queryset.count()}")
+        # SUPERUSUARIO: puede ver todos los servicios
+        if user.is_authenticated and user.is_superuser:
+            if sede_id:
+                return queryset.filter(sede_id=sede_id)
             return queryset
 
-        # If no sede_id is provided, then we fall back to organization-level filtering.
-        # This is typically for admin users browsing all services in their org.
+        # ADMINISTRADOR DE SEDE: solo servicios de sus sedes
+        if user.is_authenticated and hasattr(user, 'perfil') and user.perfil.sedes_administradas.exists():
+            org = user.perfil.organizacion
+            queryset = queryset.filter(sede__organizacion=org)
+            if sede_id:
+                # Validar que la sede pertenece a su organización
+                queryset = queryset.filter(sede_id=sede_id)
+            return queryset
+
+        # COLABORADOR: solo servicios de su sede/organización
+        if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
+            colaborador = Colaborador.all_objects.get(usuario=user)
+            org = colaborador.sede.organizacion
+            queryset = queryset.filter(sede__organizacion=org)
+            if sede_id:
+                # Validar que la sede pertenece a su organización
+                queryset = queryset.filter(sede_id=sede_id)
+            return queryset
+
+        # CLIENTE: solo servicios de sedes con sede_id proporcionado
         if user.is_authenticated:
-            # For authenticated users, use all_objects and filter manually by organization
-            queryset = Servicio.all_objects.select_related('sede', 'sede__organizacion')
+            if sede_id:
+                # Cliente puede ver servicios si proporciona sede_id
+                return queryset.filter(sede_id=sede_id)
+            # Sin sede_id, cliente no ve servicios
+            return Servicio.all_objects.none()
 
-            # If user has an organization, filter by it
-            try:
-                if hasattr(user, 'perfil') and user.perfil.organizacion:
-                    org = user.perfil.organizacion
-                    queryset = queryset.filter(sede__organizacion=org)
-                    print(f"[ServicioViewSet] Filtered by organization '{org}'. Queryset count: {queryset.count()}")
-                elif user.is_staff or user.is_superuser:
-                    # Staff/superusers without organization can see everything
-                    print(f"[ServicioViewSet] Staff/superuser without org. Showing all. Queryset count: {queryset.count()}")
-                else:
-                    # Regular users without organization see nothing
-                    print(f"[ServicioViewSet] Regular user without organization. Returning empty queryset.")
-                    queryset = Servicio.all_objects.none()
-            except AttributeError as e:
-                # User might not have a profile
-                if user.is_staff or user.is_superuser:
-                    print(f"[ServicioViewSet] Staff/superuser. Showing all. Queryset count: {queryset.count()}")
-                else:
-                    print(f"[ServicioViewSet] User has no profile. Returning empty queryset.")
-                    queryset = Servicio.all_objects.none()
-        else:
-            # Anonymous users MUST provide a sede_id to see any services.
-            print("[ServicioViewSet] No sede_id. Anonymous user. Returning empty queryset.")
-            queryset = Servicio.all_objects.none()
-
-        return queryset
+        # ANÓNIMO: debe proporcionar sede_id
+        if sede_id:
+            return queryset.filter(sede_id=sede_id)
+        return Servicio.all_objects.none()
 
 class BloqueoViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
     """API endpoint for managing resource blocks."""
@@ -225,29 +232,26 @@ class CitaViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        base_queryset = Cita.all_objects.select_related('user', 'sede', 'sede__organizacion').prefetch_related('servicios', 'colaboradores')
 
-        if user.is_staff:
-            # Staff users' queryset should be filtered by their organization.
-            # The default manager 'objects' handles this automatically.
-            base_queryset = Cita.objects.select_related('user', 'sede').prefetch_related('servicios', 'colaboradores')
+        # SUPERUSUARIO: puede ver todas las citas
+        if user.is_superuser:
             queryset = base_queryset.all()
-        else:
-            # For non-staff users (clients, sede admins), we start with all objects
-            # and then apply specific permissions.
-            base_queryset = Cita.all_objects.select_related('user', 'sede').prefetch_related('servicios', 'colaboradores')
-            try:
-                perfil = user.perfil
-                if perfil.sedes_administradas.exists():
-                    # Sede admins see appointments only from the sedes they manage
-                    queryset = base_queryset.filter(sede__in=perfil.sedes_administradas.all())
-                else:
-                    # Regular users see only their own appointments
-                    queryset = base_queryset.filter(user=user)
-            except PerfilUsuario.DoesNotExist:
-                # Users without a profile can only see their own appointments
-                queryset = base_queryset.filter(user=user)
 
-        # Apply search filter if provided
+        # ADMINISTRADOR DE SEDE: solo citas de las sedes que administra
+        elif hasattr(user, 'perfil') and user.perfil.sedes_administradas.exists():
+            queryset = base_queryset.filter(sede__in=user.perfil.sedes_administradas.all())
+
+        # COLABORADOR: solo citas asignadas a él
+        elif Colaborador.all_objects.filter(usuario=user).exists():
+            colaborador = Colaborador.all_objects.get(usuario=user)
+            queryset = base_queryset.filter(colaboradores=colaborador)
+
+        # CLIENTE: solo sus propias citas
+        else:
+            queryset = base_queryset.filter(user=user)
+
+        # Aplicar filtros adicionales
         search_term = self.request.query_params.get('search', None)
         if search_term:
             queryset = queryset.filter(nombre__icontains=search_term)
@@ -255,9 +259,6 @@ class CitaViewSet(viewsets.ModelViewSet):
         estado = self.request.query_params.get('estado')
         if estado:
             queryset = queryset.filter(estado=estado)
-        # The filter for 'Pendiente' and 'Confirmada' for non-staff was removed
-        # to allow users to see their cancelled appointments as well.
-        # If you want to hide them, you can add the filter back.
 
         return queryset.order_by('fecha')
 
@@ -282,32 +283,49 @@ class CitaViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-
-        # Check if a user_id is provided (for colaboradores creating on behalf of clients)
-        client_user_id = self.request.data.get('user_id')
-
-        # Check if the user is a colaborador
-        from .models import Colaborador
         from django.contrib.auth.models import User
 
+        # Verificar si se proporciona user_id (para colaboradores creando a nombre de clientes)
+        client_user_id = self.request.data.get('user_id')
+
+        # Determinar el rol del usuario
+        is_superuser = user.is_superuser
+        is_sede_admin = hasattr(user, 'perfil') and user.perfil.sedes_administradas.exists()
         is_colaborador = Colaborador.all_objects.filter(usuario=user).exists()
-        is_staff = user.is_staff
-        is_sede_admin = False
 
-        try:
-            is_sede_admin = user.perfil.is_sede_admin and user.perfil.sedes_administradas.exists()
-        except (AttributeError, PerfilUsuario.DoesNotExist):
-            pass
+        # Si se proporciona user_id, validar permisos
+        if client_user_id:
+            if not (is_superuser or is_sede_admin or is_colaborador):
+                raise PermissionDenied(_("No tienes permisos para crear citas a nombre de otros usuarios."))
 
-        # If user_id is provided and user is colaborador, staff, or sede admin
-        if client_user_id and (is_colaborador or is_staff or is_sede_admin):
             try:
                 client_user = User.objects.get(id=client_user_id)
+
+                # VALIDACIÓN MULTI-TENANT: Colaboradores solo pueden crear citas para clientes de su sede
+                if is_colaborador and not is_superuser and not is_sede_admin:
+                    colaborador = Colaborador.all_objects.get(usuario=user)
+                    sede_cita = serializer.validated_data.get('sede')
+
+                    # Verificar que la cita es para la sede del colaborador
+                    if sede_cita != colaborador.sede:
+                        raise PermissionDenied(_("Solo puedes crear citas para tu sede."))
+
+                    # Verificar que el cliente pertenece a la misma organización
+                    if hasattr(client_user, 'perfil'):
+                        if client_user.perfil.organizacion != colaborador.sede.organizacion:
+                            raise PermissionDenied(_("Solo puedes crear citas para clientes de tu organización."))
+
+                # VALIDACIÓN MULTI-TENANT: Administradores de sede solo para sus sedes
+                elif is_sede_admin and not is_superuser:
+                    sede_cita = serializer.validated_data.get('sede')
+                    if sede_cita not in user.perfil.sedes_administradas.all():
+                        raise PermissionDenied(_("Solo puedes crear citas para las sedes que administras."))
+
                 cita = serializer.save(user=client_user)
             except User.DoesNotExist:
                 raise PermissionDenied(_("El cliente especificado no existe."))
         else:
-            # Regular users create appointments for themselves
+            # Usuarios regulares crean citas para sí mismos
             cita = serializer.save(user=user)
 
     def update(self, request, *args, **kwargs):
@@ -820,6 +838,10 @@ class RecursoCitaViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(CitaSerializer(cita).data)
 
 class RecursoViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para recursos (colaboradores).
+    Multi-tenant: usuarios solo ven recursos de su organización.
+    """
     serializer_class = ColaboradorSerializer
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
@@ -829,56 +851,65 @@ class RecursoViewSet(viewsets.ModelViewSet):
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
-        print(f"[RecursoViewSet] User: {self.request.user.username if self.request.user.is_authenticated else 'Anonymous'}")
         user = self.request.user
         sede_id = self.request.query_params.get('sede_id')
-
-        # Base queryset using all_objects to bypass OrganizacionManager
-        # Optimize with select_related to reduce DB queries
         queryset = Colaborador.all_objects.select_related('sede', 'sede__organizacion')
-
-        if sede_id:
-            # If a sede_id is provided, any user can see the resources for that sede.
-            queryset = queryset.filter(sede_id=sede_id)
-            print(f"[RecursoViewSet] Sede_id provided. Queryset count before block filter: {queryset.count()}")
-        else:
-            # If no sede_id is provided, filter by organization for authenticated users
-            if user.is_authenticated:
-                try:
-                    if hasattr(user, 'perfil') and user.perfil.organizacion:
-                        org = user.perfil.organizacion
-                        queryset = queryset.filter(sede__organizacion=org)
-                        print(f"[RecursoViewSet] Filtered by organization '{org}'. Queryset count before block filter: {queryset.count()}")
-                    elif user.is_staff or user.is_superuser:
-                        # Staff/superusers without organization can see everything
-                        print(f"[RecursoViewSet] Staff/superuser without org. Showing all. Queryset count before block filter: {queryset.count()}")
-                    else:
-                        # Regular users without organization see nothing
-                        print(f"[RecursoViewSet] Regular user without organization. Returning empty queryset.")
-                        return Colaborador.all_objects.none()
-                except AttributeError:
-                    # User might not have a profile
-                    if user.is_staff or user.is_superuser:
-                        print(f"[RecursoViewSet] Staff/superuser without profile. Showing all. Queryset count before block filter: {queryset.count()}")
-                    else:
-                        print(f"[RecursoViewSet] User has no profile. Returning empty queryset.")
-                        return Colaborador.all_objects.none()
-            else:
-                print("[RecursoViewSet] No sede_id. Anonymous user. Returning empty queryset.")
-                return Colaborador.all_objects.none()
-
-        # Exclude collaborators with an active block
         now = timezone.now()
-        print(f"[RecursoViewSet] Before excluding blocks. Count: {queryset.count()}")
-        queryset = queryset.exclude(
-            bloqueos__fecha_inicio__lte=now,
-            bloqueos__fecha_fin__gte=now
-        )
 
-        print(f"[RecursoViewSet] Final queryset count after excluding blocks: {queryset.count()}")
+        # SUPERUSUARIO: puede ver todos los recursos
+        if user.is_authenticated and user.is_superuser:
+            if sede_id:
+                queryset = queryset.filter(sede_id=sede_id)
+            # Excluir recursos con bloqueo activo
+            return queryset.exclude(
+                bloqueos__fecha_inicio__lte=now,
+                bloqueos__fecha_fin__gte=now
+            )
 
-        # Debug: print all recursos
-        for c in queryset:
-            print(f"[RecursoViewSet]   - {c.nombre} (ID: {c.id}, Sede: {c.sede.nombre if c.sede else 'N/A'})")
+        # ADMINISTRADOR DE SEDE: solo recursos de sus sedes
+        if user.is_authenticated and hasattr(user, 'perfil') and user.perfil.sedes_administradas.exists():
+            org = user.perfil.organizacion
+            queryset = queryset.filter(sede__organizacion=org)
+            if sede_id:
+                # Validar que la sede pertenece a su organización
+                queryset = queryset.filter(sede_id=sede_id)
+            # Excluir recursos con bloqueo activo
+            return queryset.exclude(
+                bloqueos__fecha_inicio__lte=now,
+                bloqueos__fecha_fin__gte=now
+            )
 
-        return queryset
+        # COLABORADOR: puede ver recursos de su organización
+        if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
+            colaborador = Colaborador.all_objects.get(usuario=user)
+            org = colaborador.sede.organizacion
+            queryset = queryset.filter(sede__organizacion=org)
+            if sede_id:
+                # Validar que la sede pertenece a su organización
+                queryset = queryset.filter(sede_id=sede_id)
+            # Excluir recursos con bloqueo activo
+            return queryset.exclude(
+                bloqueos__fecha_inicio__lte=now,
+                bloqueos__fecha_fin__gte=now
+            )
+
+        # CLIENTE: solo recursos si proporciona sede_id
+        if user.is_authenticated:
+            if sede_id:
+                queryset = queryset.filter(sede_id=sede_id)
+                # Excluir recursos con bloqueo activo
+                return queryset.exclude(
+                    bloqueos__fecha_inicio__lte=now,
+                    bloqueos__fecha_fin__gte=now
+                )
+            return Colaborador.all_objects.none()
+
+        # ANÓNIMO: debe proporcionar sede_id
+        if sede_id:
+            queryset = queryset.filter(sede_id=sede_id)
+            # Excluir recursos con bloqueo activo
+            return queryset.exclude(
+                bloqueos__fecha_inicio__lte=now,
+                bloqueos__fecha_fin__gte=now
+            )
+        return Colaborador.all_objects.none()

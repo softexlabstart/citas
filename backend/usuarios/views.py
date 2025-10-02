@@ -169,20 +169,52 @@ class DeleteAccountView(APIView):
 class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
     """
     A viewset for viewing and managing client data.
-    Accessible to admin users and sede administrators.
+    Accessible to admin users, sede administrators, and colaboradores.
+
+    Multi-tenant: Solo se muestran clientes de la misma organización/sede.
     """
     serializer_class = ClientSerializer
-    permission_classes = [IsAdminOrSedeAdmin]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        sede_admin_group = Group.objects.get(name='SedeAdmin')
-        recurso_group = Group.objects.get(name='Recurso')
-        return User.objects.filter(is_staff=False) \
-            .exclude(groups=sede_admin_group) \
-            .exclude(groups=recurso_group) \
-            .exclude(email__isnull=True) \
-            .exclude(email__exact='') \
-            .select_related('perfil')
+        user = self.request.user
+
+        # Base queryset: usuarios que NO son staff, ni admins de sede, ni colaboradores
+        try:
+            sede_admin_group = Group.objects.get(name='SedeAdmin')
+            recurso_group = Group.objects.get(name='Recurso')
+            base_queryset = User.objects.filter(is_staff=False) \
+                .exclude(groups=sede_admin_group) \
+                .exclude(groups=recurso_group) \
+                .exclude(email__isnull=True) \
+                .exclude(email__exact='') \
+                .select_related('perfil')
+        except Group.DoesNotExist:
+            # Si los grupos no existen, filtrar solo por is_staff
+            base_queryset = User.objects.filter(is_staff=False) \
+                .exclude(email__isnull=True) \
+                .exclude(email__exact='') \
+                .select_related('perfil')
+
+        # SUPERUSUARIO: puede ver todos los clientes
+        if user.is_superuser:
+            return base_queryset
+
+        # ADMINISTRADOR DE SEDE: solo clientes de su organización
+        if hasattr(user, 'perfil') and user.perfil.sedes_administradas.exists():
+            org = user.perfil.organizacion
+            return base_queryset.filter(perfil__organizacion=org)
+
+        # COLABORADOR: solo clientes de su sede/organización
+        from citas.models import Colaborador
+        if Colaborador.all_objects.filter(usuario=user).exists():
+            colaborador = Colaborador.all_objects.get(usuario=user)
+            org = colaborador.sede.organizacion
+            # Filtrar clientes de la misma organización
+            return base_queryset.filter(perfil__organizacion=org)
+
+        # CLIENTE: no puede ver otros clientes
+        return User.objects.none()
 
     # Agregar paginación para evitar exponer grandes cantidades de datos
     page_size = 25
