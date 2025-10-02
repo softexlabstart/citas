@@ -14,6 +14,8 @@ venv.bak/
 pip-log.txt
 pip-delete-this-directory.txt
 instance/
+.vscode/
+.gitignore
 
 # Django
 db.sqlite3
@@ -116,7 +118,8 @@ Desktop.ini
 MULTITENANCY_README.md
 *.draft.md
 *.wip.md
-
+ROLES_Y_PERMISOS.md
+tatus --ignored
 # Secrets and credentials
 *.pem
 *.key
