@@ -3,20 +3,54 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.py[cod]
+*$py.class
 .Python
 env/
 venv/
 ENV/
+env.bak/
+venv.bak/
 pip-log.txt
 pip-delete-this-directory.txt
 instance/
+
+# Django
 db.sqlite3
 *.sqlite3
+*.db
 .env
+.env.local
+.env.*.local
+local_settings.py
+staticfiles/
+media/
+*.log
 
-# Node / Vue.js
+# Celery
+celerybeat-schedule
+celerybeat.pid
+*.pid
+*.sock
+
+# Testing / Coverage
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.pytest_cache/
+.hypothesis/
+*.cover
+*.py,cover
+.cache
+nosetests.xml
+coverage.xml
+*.coveragerc
+
+# Node / React / Frontend
 node_modules/
 dist/
+build/
 dist-ssr/
 .npm
 npm-debug.log*
@@ -28,11 +62,13 @@ lerna-debug.log*
 .pnp.js
 .pnp.cjs
 coverage/
-*.log
 .env.local
-.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 vite.config.ts.timestamp-*.mjs
 *.tsbuildinfo
+.turbo
 
 # Cypress
 /cypress/videos/
@@ -40,11 +76,20 @@ vite.config.ts.timestamp-*.mjs
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Desktop.ini
 
 # Editor & IDEs
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
 .idea/
 *.swp
 *~
@@ -53,5 +98,47 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
 
+# JetBrains
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+
+# Documentation (temporal/working files)
 MULTITENANCY_README.md
+*.draft.md
+*.wip.md
+
+# Secrets and credentials
+*.pem
+*.key
+*.cert
+.envrc
+secrets.json
+credentials.json
+
+# Backup files
+*.bak
+*.backup
+*.tmp
+*~
+
+# Compiled files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Mac OS
+.AppleDouble
+.LSOverride
