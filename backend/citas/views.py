@@ -14,7 +14,7 @@ from rest_framework.decorators import action
 from usuarios.models import PerfilUsuario
 from django.utils import timezone
 from .services import get_available_slots, find_next_available_slots, check_appointment_availability
-from .permissions import IsAdminOrSedeAdminOrReadOnly, IsOwnerOrAdminForCita
+from .permissions import IsAdminOrSedeAdminOrReadOnly, IsOwnerOrAdminForCita, IsColaboradorOrAdmin
 from .mixins import SedeFilteredMixin
 from .pagination import StandardResultsSetPagination
 from django.shortcuts import render
@@ -220,7 +220,7 @@ class BloqueoViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
 class CitaViewSet(viewsets.ModelViewSet):
     queryset = Cita.objects.all().order_by('fecha')
     serializer_class = CitaSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrAdminForCita]
+    permission_classes = [IsAuthenticated, IsColaboradorOrAdmin]
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
@@ -283,21 +283,32 @@ class CitaViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
 
-        # Check if the user is a sede administrator
-        is_sede_admin = False
-        if not user.is_staff:
-            try:
-                is_sede_admin = user.perfil.is_sede_admin and user.perfil.sedes_administradas.exists()
-            except (AttributeError, PerfilUsuario.DoesNotExist):
-                pass
+        # Check if a user_id is provided (for colaboradores creating on behalf of clients)
+        client_user_id = self.request.data.get('user_id')
 
-        # Sede admins are not allowed to create appointments for users via this endpoint
-        if is_sede_admin:
-            raise PermissionDenied(_("Los administradores de sede no pueden crear citas para usuarios desde esta vista."))
-        
-        # For regular users or staff, associate the appointment with the logged-in user.
-        # The 'sede' is already handled by the serializer's 'sede_id' field.
-        cita = serializer.save(user=user)
+        # Check if the user is a colaborador
+        from .models import Colaborador
+        from django.contrib.auth.models import User
+
+        is_colaborador = Colaborador.all_objects.filter(usuario=user).exists()
+        is_staff = user.is_staff
+        is_sede_admin = False
+
+        try:
+            is_sede_admin = user.perfil.is_sede_admin and user.perfil.sedes_administradas.exists()
+        except (AttributeError, PerfilUsuario.DoesNotExist):
+            pass
+
+        # If user_id is provided and user is colaborador, staff, or sede admin
+        if client_user_id and (is_colaborador or is_staff or is_sede_admin):
+            try:
+                client_user = User.objects.get(id=client_user_id)
+                cita = serializer.save(user=client_user)
+            except User.DoesNotExist:
+                raise PermissionDenied(_("El cliente especificado no existe."))
+        else:
+            # Regular users create appointments for themselves
+            cita = serializer.save(user=user)
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
