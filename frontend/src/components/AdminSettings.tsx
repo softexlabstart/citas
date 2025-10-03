@@ -96,6 +96,12 @@ const AdminSettings: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sedes, user]);
 
+    // Log cuando los datos cambien
+    useEffect(() => {
+        console.log('📦 AdminSettings - Servicios actualizados:', servicios?.length || 0, 'servicios');
+        console.log('👥 AdminSettings - Recursos actualizados:', recursos?.length || 0, 'recursos');
+    }, [servicios, recursos]);
+
     const handleOpenModal = (type: 'service' | 'resource', item: ServiceWithDetails | RecursoWithDetails | null = null) => {
         setModalType(type);
         setEditingItem(item);
