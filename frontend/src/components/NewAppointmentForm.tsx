@@ -7,6 +7,7 @@ import { CreateAppointmentPayload } from '../api';
 import { useApi } from '../hooks/useApi';
 import { useAppointmentForm } from '../hooks/useAppointmentForm';
 import { useAuth } from '../hooks/useAuth';
+import MultiSelectDropdown from './MultiSelectDropdown';
 
 interface NewAppointmentFormProps {
   onAppointmentAdded: () => void;
@@ -31,7 +32,6 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
   } = useAppointmentForm();
 
   const [selectedServicios, setSelectedServicios] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: availability, loading: slotsLoading, request: fetchAvailableSlots, error: availabilityError } = useApi<{ disponibilidad: any[] }, [string, number, string, string[]]>(getDisponibilidad);
   const { loading: isSubmitting, request: submitAppointment, error: submitError } = useApi(addAppointment);
@@ -63,11 +63,6 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
 
   const availableSlots = availability?.disponibilidad.filter(slot => slot.status === 'disponible') || [];
 
-  const filteredServicios = servicios.filter(service =>
-    service.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    service.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   useEffect(() => {
     if (date && selectedRecurso && selectedSede && selectedServicios.length > 0) {
       fetchAvailableSlots(date, parseInt(selectedRecurso, 10), selectedSede, selectedServicios);
@@ -81,12 +76,8 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
     }
   };
 
-  const handleServiceChange = (serviceId: string) => {
-    setSelectedServicios(prev =>
-      prev.includes(serviceId)
-        ? prev.filter(id => id !== serviceId)
-        : [...prev, serviceId]
-    );
+  const handleServiciosChange = (selected: string[]) => {
+    setSelectedServicios(selected);
   };
 
   const handleSelectNextAvailable = (slot: NextAvailableSlot) => {
@@ -154,36 +145,28 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
         </Form.Group>
 
         <Form.Group className="mb-3">
-          <Form.Label>{t('service_label')}</Form.Label>
-          {loadingServicios && <Spinner animation="border" size="sm" />}
           {!selectedSede || loadingServicios ? (
-            <p>{t('select_sede_first')}</p>
-          ) : (
             <>
-              <Form.Control
-                type="text"
-                placeholder={t('search_services')}
-                className="mb-2"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <div className="service-selection-container" style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #ced4da', borderRadius: '0.25rem' }}>
-                <ListGroup>
-                  {filteredServicios.map((service) => (
-                    <ListGroup.Item
-                      key={service.id}
-                      action
-                      active={selectedServicios.includes(String(service.id))}
-                      onClick={() => handleServiceChange(String(service.id))}
-                    >
-                      <strong>{service.nombre}</strong>
-                      <br />
-                      <small>{service.descripcion}</small>
-                    </ListGroup.Item>
-                  ))}
-                </ListGroup>
-              </div>
+              <Form.Label>{t('service_label')}</Form.Label>
+              {loadingServicios && <Spinner animation="border" size="sm" />}
+              {!selectedSede && <p className="text-muted">{t('select_sede_first')}</p>}
             </>
+          ) : (
+            <MultiSelectDropdown
+              options={servicios.map(s => ({
+                id: s.id,
+                nombre: s.nombre,
+                descripcion: s.descripcion
+              }))}
+              selected={selectedServicios}
+              onChange={handleServiciosChange}
+              label={t('service_label')}
+              placeholder={t('select_services') || 'Seleccionar servicios'}
+              isLoading={loadingServicios}
+              disabled={!selectedSede}
+              searchPlaceholder={t('search_services') || 'Buscar servicios...'}
+              showDescriptions={true}
+            />
           )}
         </Form.Group>
 
