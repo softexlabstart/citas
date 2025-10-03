@@ -62,6 +62,61 @@ class PublicCitaViewSet(viewsets.ModelViewSet):
                     }
                 )
 
+                # Asegurar que el usuario tenga perfil con la organización correcta
+                from usuarios.models import PerfilUsuario
+                from rest_framework.exceptions import ValidationError
+                organizacion = cita.sede.organizacion
+
+                if created:
+                    # Usuario nuevo: crear perfil
+                    PerfilUsuario.objects.create(
+                        usuario=user,
+                        organizacion=organizacion,
+                        nombre=cita.nombre or 'Invitado',
+                        telefono=cita.telefono_cliente or ''
+                    )
+                    logger.info(f"Perfil creado para usuario {user.email} con organización {organizacion.nombre}")
+                else:
+                    # Usuario existente con ese email
+                    if hasattr(user, 'perfil') and user.perfil is not None:
+                        if user.perfil.organizacion != organizacion:
+                            # Usuario existe en OTRA organización - crear nuevo usuario con username único
+                            import hashlib
+                            hash_suffix = hashlib.md5(organizacion.nombre.encode()).hexdigest()[:8]
+                            new_username = f"{email.split('@')[0]}_{hash_suffix}"
+
+                            user, user_created = User.objects.get_or_create(
+                                username=new_username,
+                                defaults={
+                                    'email': email,
+                                    'first_name': cita.nombre.split()[0] if cita.nombre else 'Invitado'
+                                }
+                            )
+
+                            if user_created:
+                                PerfilUsuario.objects.create(
+                                    usuario=user,
+                                    organizacion=organizacion,
+                                    nombre=cita.nombre or 'Invitado',
+                                    telefono=cita.telefono_cliente or ''
+                                )
+                                logger.info(f"Nuevo usuario '{new_username}' creado para {email} en {organizacion.nombre}")
+                        # Si es la misma organización, usar el usuario existente
+                    else:
+                        # Usuario sin perfil: crear perfil
+                        PerfilUsuario.objects.create(
+                            usuario=user,
+                            organizacion=organizacion,
+                            nombre=cita.nombre or user.first_name or 'Invitado',
+                            telefono=cita.telefono_cliente or ''
+                        )
+                        logger.info(f"Perfil creado para {user.email} en {organizacion.nombre}")
+
+                # Asociar el usuario a la cita si no está ya asociado
+                if not cita.user:
+                    cita.user = user
+                    cita.save()
+
                 # Eliminar tokens antiguos y crear uno nuevo
                 MagicLinkToken.objects.filter(user=user).delete()
                 magic_token = MagicLinkToken.objects.create(user=user)

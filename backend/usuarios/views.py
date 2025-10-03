@@ -460,43 +460,36 @@ class RequestHistoryLinkView(APIView):
         }
 
         try:
-            # Buscar usuario por email (puede ser User.email o email_cliente en Cita)
-            user = User.objects.filter(email=email).first()
+            # Buscar TODOS los usuarios con este email (puede haber múltiples en diferentes orgs)
+            users = User.objects.filter(email=email)
 
-            if user:
-                # Eliminar tokens antiguos del usuario para mantener limpia la BD
-                MagicLinkToken.objects.filter(user=user).delete()
+            if users.exists():
+                # Enviar magic link a cada usuario (uno por organización)
+                for user in users:
+                    # Eliminar tokens antiguos del usuario
+                    MagicLinkToken.objects.filter(user=user).delete()
 
-                # Crear nuevo token
-                magic_token = MagicLinkToken.objects.create(user=user)
+                    # Crear nuevo token
+                    magic_token = MagicLinkToken.objects.create(user=user)
 
-                # Construir el enlace mágico
-                # En producción, esto debería ser la URL del frontend
-                frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-                magic_link = f"{frontend_url}/magic-link-auth?token={magic_token.token}"
+                    # Construir el enlace mágico
+                    frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+                    magic_link = f"{frontend_url}/magic-link-auth?token={magic_token.token}"
 
-                # Enviar email
-                try:
-                    subject = 'Accede a tu historial de citas'
+                    # Obtener info de la organización del usuario
+                    org_name = ""
+                    if hasattr(user, 'perfil') and user.perfil and user.perfil.organizacion:
+                        org_name = f" - {user.perfil.organizacion.nombre}"
 
-                    # Contexto para el template
-                    context = {
-                        'user': user,
-                        'magic_link': magic_link,
-                        'expires_minutes': 15,
-                    }
-
-                    # Intentar usar template HTML si existe
+                    # Enviar email
                     try:
-                        html_message = render_to_string('emails/magic_link.html', context)
-                    except:
-                        html_message = None
+                        subject = f'Accede a tu historial de citas{org_name}'
 
-                    # Mensaje de texto plano como fallback
-                    plain_message = f"""
+                        # Mensaje de texto plano
+                        plain_message = f"""
 Hola {user.first_name or user.username},
 
-Has solicitado acceso a tu historial de citas.
+Has solicitado acceso a tu historial de citas{org_name}.
 
 Para acceder, haz clic en el siguiente enlace (válido por 15 minutos):
 
@@ -506,18 +499,17 @@ Si no solicitaste este acceso, puedes ignorar este correo.
 
 Saludos,
 El equipo de {getattr(settings, 'SITE_NAME', 'Citas')}
-                    """.strip()
+                        """.strip()
 
-                    send_mail(
-                        subject=subject,
-                        message=plain_message,
-                        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
-                        recipient_list=[email],
-                        html_message=html_message,
-                        fail_silently=False
-                    )
+                        send_mail(
+                            subject=subject,
+                            message=plain_message,
+                            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
+                            recipient_list=[email],
+                            fail_silently=False
+                        )
 
-                    logger.info(f"Magic link enviado exitosamente a {email}")
+                        logger.info(f"Magic link enviado a {email} para usuario {user.username}{org_name}")
 
                 except Exception as e:
                     logger.error(f"Error al enviar magic link a {email}: {str(e)}")
