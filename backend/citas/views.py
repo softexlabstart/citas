@@ -458,7 +458,7 @@ class DashboardSummaryView(APIView):
             summary = { 'citas_hoy': citas_hoy, 'pendientes_confirmacion': pendientes_confirmacion, 'ingresos_mes': ingresos_mes, 'proximas_citas': CitaSerializer(proximas_citas, many=True).data }
         else: # Regular user stats
             proxima_cita = base_queryset.filter( fecha__gte=timezone.now(), estado__in=['Pendiente', 'Confirmada'] ).order_by('fecha').first()
-            summary = { 'proxima_cita': CitaSerializer(proxima_cita).data if proxima_cita else None, }
+            summary = { 'proxima_cita': CitaSerializer(proxima_cita).data if proxima_cita else None }
             
         return Response(summary)
 
