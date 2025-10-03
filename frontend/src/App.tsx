@@ -7,6 +7,8 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import RegisterOrganizationPage from './pages/RegisterOrganizationPage';
 import OrganizationPage from './pages/OrganizationPage';
+import RequestMagicLinkPage from './pages/RequestMagicLinkPage';
+import MagicLinkAuthPage from './pages/MagicLinkAuthPage';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute'; // Import AdminRoute
 import { AuthProvider } from './contexts/AuthContext';
@@ -51,6 +53,8 @@ const App: React.FC = () => {
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/mis-citas" element={<RequestMagicLinkPage />} />
+              <Route path="/magic-link-auth" element={<MagicLinkAuthPage />} />
 
               <Route element={<PrivateRoute />}>
                 <Route path="/" element={<HomePage />} />

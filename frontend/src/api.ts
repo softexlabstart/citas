@@ -300,3 +300,14 @@ export const sendInvitation = (invitation: InvitationData) => api.post('/api/usu
 
 // Funciones para Organizacion
 export const createOrganization = (nombre: string) => api.post('/api/organizacion/organizaciones/', { nombre });
+
+// Funciones para Magic Link (Autenticación sin Contraseña)
+export const requestMagicLink = async (email: string) => {
+    const response = await api.post('/api/auth/request-history-link/', { email });
+    return response.data;
+};
+
+export const authenticateWithMagicLink = async (token: string) => {
+    const response = await api.post('/api/auth/access-history-with-token/', { token });
+    return response.data;
+};

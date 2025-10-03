@@ -1,5 +1,5 @@
 import React, { createContext, ReactNode, useState, useEffect, useCallback, useContext } from 'react';
-import { login as apiLogin, setupInterceptors } from '../api';
+import { login as apiLogin, setupInterceptors, authenticateWithMagicLink } from '../api';
 import { User } from '../interfaces/User';
 import useIdleTimer from '../hooks/useIdleTimer';
 import { toast } from 'react-toastify';
@@ -8,6 +8,7 @@ import 'react-toastify/dist/ReactToastify.css';
 interface AuthContextType {
     user: (User & { groups: string[] }) | null;
     login: (username: string, password: string) => Promise<void>;
+    loginWithMagicLink: (token: string) => Promise<void>;
     logout: (message?: string) => void;
 }
 
@@ -58,8 +59,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(response.user);
     };
 
+    const loginWithMagicLink = async (token: string) => {
+        const response = await authenticateWithMagicLink(token);
+        localStorage.setItem('token', response.access);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        setUser(response.user);
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, logout }}>
+        <AuthContext.Provider value={{ user, login, loginWithMagicLink, logout }}>
             {children}
         </AuthContext.Provider>
     );

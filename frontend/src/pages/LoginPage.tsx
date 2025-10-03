@@ -75,7 +75,14 @@ const LoginPage: React.FC = () => {
                                     </Button>
                                 </div>
                             </Form>
-                            <p className="mt-4 text-center">
+
+                            <div className="text-center my-3">
+                                <Link to="/mis-citas" className="text-decoration-none">
+                                    <small>¿Olvidaste tu contraseña? Accede con un enlace mágico</small>
+                                </Link>
+                            </div>
+
+                            <p className="mt-3 text-center">
                                 ¿No tienes cuenta? <Link to="/register">Registrarse</Link>
                             </p>
                             <p className="text-center">
