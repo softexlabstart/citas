@@ -3,4 +3,5 @@ export interface Service {
   nombre: string;
   descripcion: string;
   duracion_estimada?: number;
+  precio?: number;
 }

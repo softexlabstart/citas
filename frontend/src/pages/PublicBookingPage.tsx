@@ -182,7 +182,7 @@ const PublicBookingPage: React.FC = () => {
                                         multiple
                                         value={selectedServicios}
                                         onChange={(e) => {
-                                            const selected = Array.from(e.target.selectedOptions, option => option.value);
+                                            const selected = Array.from((e.target as unknown as HTMLSelectElement).selectedOptions, option => option.value);
                                             setSelectedServicios(selected);
                                         }}
                                         required
