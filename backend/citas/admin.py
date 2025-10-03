@@ -56,10 +56,10 @@ class HorarioAdmin(admin.ModelAdmin):
 
 @admin.register(Colaborador)
 class ColaboradorAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'sede', 'descripcion')
+    list_display = ('nombre', 'usuario', 'sede', 'descripcion')
     list_filter = ('sede__nombre',)
-    search_fields = ('nombre', 'sede__nombre')
-    list_select_related = ('sede',)
+    search_fields = ('nombre', 'usuario__username', 'sede__nombre')
+    list_select_related = ('sede', 'usuario')
 
     def get_queryset(self, request):
         qs = self.model.all_objects.all()
@@ -86,6 +86,38 @@ class ColaboradorAdmin(admin.ModelAdmin):
                         kwargs['queryset'] = Sede.objects.none()
                 except AttributeError:
                     kwargs['queryset'] = Sede.objects.none()
+
+        # Filtrar usuarios que pueden ser colaboradores (staff, admins de sede)
+        # NO mostrar clientes regulares
+        elif db_field.name == "usuario":
+            from django.contrib.auth.models import Group
+            from django.db.models import Q
+
+            # Usuarios que son staff o superuser
+            qs = User.objects.filter(Q(is_staff=True) | Q(is_superuser=True))
+
+            # O usuarios que son administradores de sede
+            try:
+                qs = qs | User.objects.filter(perfil__sedes_administradas__isnull=False).distinct()
+            except:
+                pass
+
+            # Filtrar por organización si no es superuser
+            if not request.user.is_superuser:
+                try:
+                    organizacion = request.user.perfil.organizacion
+                    if organizacion:
+                        qs = qs.filter(perfil__organizacion=organizacion)
+                    else:
+                        qs = User.objects.none()
+                except AttributeError:
+                    qs = User.objects.none()
+
+            kwargs['queryset'] = qs
+            kwargs['required'] = False  # El usuario es opcional
+            kwargs['blank'] = True
+            kwargs['help_text'] = 'Solo seleccionar si el colaborador tiene una cuenta de usuario (staff o admin de sede). Dejar vacío si es un colaborador externo.'
+
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
