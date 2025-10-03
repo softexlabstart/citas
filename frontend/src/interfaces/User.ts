@@ -3,11 +3,25 @@ export interface Sede {
     nombre: string;
 }
 
+export interface Organizacion {
+    id: number;
+    nombre: string;
+    slug: string;
+}
+
 export interface PerfilUsuario {
     timezone: string;
     sede: number | null; // Assuming sede is just an ID here
     sedes_administradas: Sede[];
     is_sede_admin: boolean;
+    organizacion?: Organizacion | null; // Organización del usuario
+    telefono?: string;
+    ciudad?: string;
+    barrio?: string;
+    genero?: string;
+    fecha_nacimiento?: string | null;
+    has_consented_data_processing?: boolean;
+    data_processing_opt_out?: boolean;
 }
 
 export interface User {

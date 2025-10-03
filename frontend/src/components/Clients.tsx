@@ -8,10 +8,12 @@ import { getClients, deleteClient } from '../api';
 import ClientForm from './ClientForm';
 import ClientHistoryModal from './ClientHistoryModal';
 import ConfirmationModal from './ConfirmationModal'; // Import ConfirmationModal
+import { useAuth } from '../hooks/useAuth';
 
 
 const Clients: React.FC = () => {
     const { t } = useTranslation();
+    const { user } = useAuth();
     const { data: clients, loading, error, request: fetchClients, setData: setClients } = useApi(getClients);
     const { loading: deleteLoading, error: deleteError, request: callDeleteClient } = useApi(deleteClient);
     const [showModal, setShowModal] = useState(false);
@@ -46,6 +48,13 @@ const Clients: React.FC = () => {
     };
 
     useEffect(() => {
+        console.log('🔍 Clients - Usuario actual:', {
+            username: user?.username,
+            is_staff: user?.is_staff,
+            is_sede_admin: user?.perfil?.is_sede_admin,
+            sedes_administradas: user?.perfil?.sedes_administradas,
+            organizacion: user?.perfil?.organizacion
+        });
         fetchClients();
     }, [fetchClients]);
 
@@ -95,7 +104,24 @@ const Clients: React.FC = () => {
             
             {loading && <Spinner animation="border" />}
             {error && <Alert variant="danger">{error}</Alert>}
-            {clients && (
+
+            {/* Debug info */}
+            {!loading && clients && clients.length === 0 && (
+                <Alert variant="warning">
+                    No se encontraron clientes.
+                    {user?.perfil?.is_sede_admin && !user?.is_staff && (
+                        <div className="mt-2">
+                            <strong>Nota para Admin de Sede:</strong> Solo verás clientes de tu organización.
+                            <br />
+                            Organización: {user?.perfil?.organizacion ? 'Asignada' : 'No asignada'}
+                            <br />
+                            Sedes administradas: {user?.perfil?.sedes_administradas?.length || 0}
+                        </div>
+                    )}
+                </Alert>
+            )}
+
+            {clients && clients.length > 0 && (
                 <Table striped bordered hover responsive>
                     <thead>
                         <tr>

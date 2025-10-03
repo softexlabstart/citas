@@ -55,13 +55,46 @@ const AdminSettings: React.FC = () => {
     const [processing, setProcessing] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deletingItemInfo, setDeletingItemInfo] = useState<{ type: 'service' | 'resource', id: number } | null>(null);
+    const [selectedSedeId, setSelectedSedeId] = useState<string | undefined>(undefined);
 
     useEffect(() => {
-        fetchServicios(undefined);
-        fetchRecursos(undefined);
         fetchSedes();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Fetch servicios y recursos cuando hay sedes disponibles
+    useEffect(() => {
+        console.log('🔍 AdminSettings - Sedes cargadas:', sedes);
+        console.log('👤 AdminSettings - Usuario:', {
+            is_staff: user?.is_staff,
+            is_sede_admin: user?.perfil?.is_sede_admin,
+            username: user?.username
+        });
+
+        if (sedes && sedes.length > 0) {
+            // Si el usuario es superuser, puede ver todos sin filtro
+            if (user?.is_staff) {
+                console.log('✅ AdminSettings - Usuario es staff, cargando sin filtro');
+                // Para superuser, obtener todo sin filtro (o usar la primera sede si prefieres)
+                fetchServicios(undefined);
+                fetchRecursos(undefined);
+            } else if (user?.perfil?.is_sede_admin) {
+                // Para admin de sede, usar la primera sede administrada
+                const primeraSedeId = sedes[0]?.id?.toString();
+                console.log('✅ AdminSettings - Usuario es sede admin, usando sede:', primeraSedeId);
+                setSelectedSedeId(primeraSedeId);
+                if (primeraSedeId) {
+                    fetchServicios(primeraSedeId);
+                    fetchRecursos(primeraSedeId);
+                }
+            } else {
+                console.log('⚠️ AdminSettings - Usuario no tiene permisos claros');
+            }
+        } else {
+            console.log('⏳ AdminSettings - Esperando sedes...');
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sedes, user]);
 
     const handleOpenModal = (type: 'service' | 'resource', item: ServiceWithDetails | RecursoWithDetails | null = null) => {
         setModalType(type);
@@ -123,10 +156,20 @@ const AdminSettings: React.FC = () => {
         try {
             if (modalType === 'service') {
                 await (editingItem ? updateServicio(editingItem.id, payload) : addServicio(payload));
-                fetchServicios(undefined);
+                // Refrescar con el sede_id correcto según el tipo de usuario
+                if (user?.is_staff) {
+                    fetchServicios(undefined);
+                } else {
+                    fetchServicios(selectedSedeId);
+                }
             } else if (modalType === 'resource') {
                 await (editingItem ? updateRecurso(editingItem.id, payload) : addRecurso(payload));
-                fetchRecursos(undefined);
+                // Refrescar con el sede_id correcto según el tipo de usuario
+                if (user?.is_staff) {
+                    fetchRecursos(undefined);
+                } else {
+                    fetchRecursos(selectedSedeId);
+                }
             }
             success = true;
         } catch (err: any) {
@@ -151,10 +194,20 @@ const AdminSettings: React.FC = () => {
         try {
             if (deletingItemInfo.type === 'service') {
                 await deleteServicio(deletingItemInfo.id);
-                fetchServicios(undefined);
+                // Refrescar con el sede_id correcto según el tipo de usuario
+                if (user?.is_staff) {
+                    fetchServicios(undefined);
+                } else {
+                    fetchServicios(selectedSedeId);
+                }
             } else if (deletingItemInfo.type === 'resource') {
                 await deleteRecurso(deletingItemInfo.id);
-                fetchRecursos(undefined);
+                // Refrescar con el sede_id correcto según el tipo de usuario
+                if (user?.is_staff) {
+                    fetchRecursos(undefined);
+                } else {
+                    fetchRecursos(selectedSedeId);
+                }
             }
             toast.success(t('item_deleted_successfully'));
         } catch (err: any) {
@@ -169,10 +222,33 @@ const AdminSettings: React.FC = () => {
         return <Container className="mt-5"><Alert variant="danger">Acceso denegado. No tienes permiso para ver esta página.</Alert></Container>;
     }
 
+    // Manejar cambio de sede
+    const handleSedeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newSedeId = e.target.value;
+        setSelectedSedeId(newSedeId || undefined);
+        if (newSedeId) {
+            fetchServicios(newSedeId);
+            fetchRecursos(newSedeId);
+        }
+    };
+
     return (
         <>
             <Container className="mt-5">
                 <h2>{t('admin_settings')}</h2>
+
+                {/* Selector de Sede para admin de sede */}
+                {!user?.is_staff && user?.perfil?.is_sede_admin && sedes && sedes.length > 1 && (
+                    <Form.Group className="mb-3" style={{ maxWidth: '300px' }}>
+                        <Form.Label>Filtrar por Sede:</Form.Label>
+                        <Form.Select value={selectedSedeId || ''} onChange={handleSedeChange}>
+                            {sedes.map(s => (
+                                <option key={s.id} value={s.id}>{s.nombre}</option>
+                            ))}
+                        </Form.Select>
+                    </Form.Group>
+                )}
+
                 <Tabs defaultActiveKey="services" id="admin-settings-tabs" className="mb-3">
                     <Tab eventKey="services" title={t('manage_services')}>
                         <Button className="mb-3" onClick={() => handleOpenModal('service')}>{t('new_service')}</Button>
