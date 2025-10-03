@@ -69,12 +69,19 @@ class IsClient(BasePermission):
 
 class IsAdminOrSedeAdminOrReadOnly(BasePermission):
     """
-    Permite lectura a todos, escritura solo a admins o administradores de sede.
+    Permite lectura a todos (incluyendo anónimos si proporcionan sede_id),
+    escritura solo a admins o administradores de sede.
     """
     def has_permission(self, request, view):
-        # Lectura permitida a cualquiera autenticado
+        # Lectura permitida a cualquiera (autenticado o anónimo con sede_id)
         if request.method in SAFE_METHODS:
-            return request.user and request.user.is_authenticated
+            # Si el usuario está autenticado, permitir
+            if request.user and request.user.is_authenticated:
+                return True
+            # Si es anónimo pero proporciona sede_id, permitir (para reservas públicas)
+            if request.query_params.get('sede_id'):
+                return True
+            return False
 
         # Escritura solo para superusers o admins de sede
         if not request.user or not request.user.is_authenticated:
