@@ -2,10 +2,11 @@
 app_name = 'citas' # Added app_name
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import (ServicioViewSet, CitaViewSet, HorarioViewSet, 
-                    AppointmentReportView, DisponibilidadView, RecursoViewSet, 
-                    SedeReportView, BloqueoViewSet, DashboardSummaryView, 
+from .views import (ServicioViewSet, CitaViewSet, HorarioViewSet,
+                    AppointmentReportView, DisponibilidadView, RecursoViewSet,
+                    SedeReportView, BloqueoViewSet, DashboardSummaryView,
                     NextAvailabilityView, RecursoCitaViewSet)
+from .views_public import PublicCitaViewSet
 
 router = DefaultRouter()
 router.register(r'servicios', ServicioViewSet, basename='servicio')
@@ -21,5 +22,7 @@ urlpatterns = [
     path('reports/sede_summary/', SedeReportView.as_view(), name='sede-reports-summary'),
     path('next-availability/', NextAvailabilityView.as_view(), name='next-availability'),
     path('disponibilidad/', DisponibilidadView.as_view(), name='disponibilidad'),
+    # Endpoint público para reservas de invitados
+    path('public-booking/', PublicCitaViewSet.as_view({'post': 'create'}), name='public-booking'),
     path('', include(router.urls)),
 ]

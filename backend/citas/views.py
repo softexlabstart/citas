@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated, AllowAny, BasePermission
 from .models import Cita, Servicio, Horario, Colaborador, Bloqueo
-from .serializers import CitaSerializer, ServicioSerializer, HorarioSerializer, ColaboradorSerializer, BloqueoSerializer
+from .serializers import CitaSerializer, ServicioSerializer, HorarioSerializer, ColaboradorSerializer, BloqueoSerializer, GuestCitaSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from datetime import datetime, timedelta, time

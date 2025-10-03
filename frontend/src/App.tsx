@@ -9,6 +9,7 @@ import RegisterOrganizationPage from './pages/RegisterOrganizationPage';
 import OrganizationPage from './pages/OrganizationPage';
 import RequestMagicLinkPage from './pages/RequestMagicLinkPage';
 import MagicLinkAuthPage from './pages/MagicLinkAuthPage';
+import PublicBookingPage from './pages/PublicBookingPage';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute'; // Import AdminRoute
 import { AuthProvider } from './contexts/AuthContext';
@@ -51,11 +52,14 @@ const App: React.FC = () => {
           <ToastContainer />
           <Suspense fallback={<CenteredSpinner />}> {/* Use the new spinner component */}
             <Routes>
+              {/* Rutas Públicas */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/agendar" element={<PublicBookingPage />} />
               <Route path="/mis-citas" element={<RequestMagicLinkPage />} />
               <Route path="/magic-link-auth" element={<MagicLinkAuthPage />} />
 
+              {/* Rutas Privadas */}
               <Route element={<PrivateRoute />}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/appointments" element={<Appointments />} />

@@ -311,3 +311,20 @@ export const authenticateWithMagicLink = async (token: string) => {
     const response = await api.post('/api/auth/access-history-with-token/', { token });
     return response.data;
 };
+
+// Funciones para Reservas Públicas (Invitados)
+export interface PublicBookingData {
+    nombre: string;
+    email_cliente: string;
+    telefono_cliente: string;
+    fecha: string;
+    servicios_ids: number[];
+    colaboradores_ids: number[];
+    sede_id: number;
+    comentario?: string;
+}
+
+export const createPublicBooking = async (bookingData: PublicBookingData) => {
+    const response = await api.post('/api/citas/public-booking/', bookingData);
+    return response.data;
+};

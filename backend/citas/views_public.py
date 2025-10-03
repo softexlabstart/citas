@@ -1,0 +1,120 @@
+"""
+Vistas públicas para el sistema de citas.
+Permiten a usuarios no autenticados agendar citas como invitados.
+"""
+from rest_framework import viewsets, status
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth.models import User
+import logging
+
+from .models import Cita
+from .serializers import GuestCitaSerializer
+from usuarios.models import MagicLinkToken
+
+logger = logging.getLogger(__name__)
+
+
+class PublicCitaViewSet(viewsets.ModelViewSet):
+    """
+    Endpoint público para que invitados puedan agendar citas.
+    No requiere autenticación.
+
+    POST /api/citas/public-booking/
+    {
+        "nombre": "Juan Pérez",
+        "email_cliente": "juan@example.com",
+        "telefono_cliente": "+57123456789",
+        "fecha": "2025-10-05T10:00:00Z",
+        "servicios_ids": [1, 2],
+        "colaboradores_ids": [1],
+        "sede_id": 1,
+        "comentario": "Comentario opcional"
+    }
+    """
+    queryset = Cita.objects.all()
+    serializer_class = GuestCitaSerializer
+    permission_classes = [AllowAny]
+    http_method_names = ['post']  # Solo permitir POST (crear citas)
+
+    def create(self, request, *args, **kwargs):
+        """
+        Crea una cita para un invitado y envía un magic link por email.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # Crear la cita
+        cita = serializer.save()
+
+        # Enviar magic link automáticamente
+        email = cita.email_cliente
+        if email:
+            try:
+                # Buscar o crear usuario para el email
+                user, created = User.objects.get_or_create(
+                    email=email,
+                    defaults={
+                        'username': email,
+                        'first_name': cita.nombre.split()[0] if cita.nombre else 'Invitado'
+                    }
+                )
+
+                # Eliminar tokens antiguos y crear uno nuevo
+                MagicLinkToken.objects.filter(user=user).delete()
+                magic_token = MagicLinkToken.objects.create(user=user)
+
+                # Construir el enlace mágico
+                frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+                magic_link = f"{frontend_url}/magic-link-auth?token={magic_token.token}"
+
+                # Preparar mensaje de email
+                servicios_nombres = ', '.join([s.nombre for s in cita.servicios.all()])
+                fecha_formateada = cita.fecha.strftime('%d/%m/%Y a las %H:%M')
+
+                subject = f'Cita Confirmada - {cita.sede.nombre}'
+                message = f"""
+Hola {cita.nombre},
+
+¡Tu cita ha sido confirmada exitosamente!
+
+📅 Fecha: {fecha_formateada}
+📍 Sede: {cita.sede.nombre}
+💼 Servicios: {servicios_nombres}
+
+Para ver los detalles de tu cita y tu historial completo, haz clic en el siguiente enlace:
+
+{magic_link}
+
+Este enlace es válido por 15 minutos y solo puede usarse una vez.
+
+Si no solicitaste esta cita, puedes ignorar este correo.
+
+¡Nos vemos pronto!
+Equipo de {getattr(settings, 'SITE_NAME', 'Citas')}
+                """.strip()
+
+                # Enviar email
+                send_mail(
+                    subject=subject,
+                    message=message,
+                    from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
+                    recipient_list=[email],
+                    fail_silently=True
+                )
+
+                logger.info(f"Cita creada y magic link enviado a {email} (ID cita: {cita.id})")
+
+            except Exception as e:
+                logger.error(f"Error enviando magic link para cita {cita.id}: {str(e)}")
+                # No fallar la creación de la cita si el email falla
+
+        return Response(
+            {
+                **serializer.data,
+                'message': 'Cita creada exitosamente. Se ha enviado un enlace a tu email para ver tus citas.'
+            },
+            status=status.HTTP_201_CREATED
+        )

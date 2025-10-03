@@ -89,3 +89,67 @@ class CitaSerializer(serializers.ModelSerializer):
         check_appointment_availability(sede, servicios, colaboradores, fecha, cita_id)
 
         return data
+
+
+class GuestCitaSerializer(serializers.ModelSerializer):
+    """
+    Serializer para citas creadas por invitados (sin cuenta de usuario).
+    Requiere email_cliente y permite crear citas sin autenticación.
+    """
+    servicios = ServicioSerializer(many=True, read_only=True)
+    servicios_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Servicio.all_objects.all(),
+        source='servicios',
+        many=True,
+        write_only=True
+    )
+    colaboradores = ColaboradorSerializer(many=True, read_only=True)
+    colaboradores_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Colaborador.all_objects.all(),
+        source='colaboradores',
+        many=True,
+        write_only=True
+    )
+    sede = SedeSerializer(read_only=True)
+    sede_id = serializers.PrimaryKeyRelatedField(
+        queryset=Sede.all_objects.all(),
+        source='sede',
+        write_only=True
+    )
+
+    class Meta:
+        model = Cita
+        fields = [
+            'id', 'nombre', 'email_cliente', 'telefono_cliente', 'fecha',
+            'servicios', 'servicios_ids', 'confirmado', 'estado',
+            'colaboradores', 'colaboradores_ids', 'sede', 'sede_id', 'comentario'
+        ]
+
+    def validate(self, data):
+        # Validar que se proporcione email_cliente para reservas de invitados
+        if not data.get('email_cliente'):
+            raise serializers.ValidationError({
+                'email_cliente': 'El email es requerido para reservas de invitados.'
+            })
+
+        # Validar disponibilidad
+        colaboradores = data.get('colaboradores', [])
+        fecha = data.get('fecha')
+        servicios = data.get('servicios', [])
+        sede = data.get('sede')
+        cita_id = self.instance.id if self.instance else None
+
+        if all([colaboradores, fecha, servicios, sede]):
+            check_appointment_availability(sede, servicios, colaboradores, fecha, cita_id)
+
+        return data
+
+    def validate_fecha(self, value):
+        if value < timezone.now():
+            raise serializers.ValidationError("No se pueden agendar citas en fechas pasadas.")
+        return value
+
+    def validate_servicios_ids(self, value):
+        if not value:
+            raise serializers.ValidationError("Debe seleccionar al menos un servicio.")
+        return value
