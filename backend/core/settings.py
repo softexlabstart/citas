@@ -200,6 +200,10 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Frontend URL for magic links in emails
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+
 CORS_ALLOWED_ORIGINS = [
     'http://16.52.17.116',
     'http://appcitas.softex-labs.xyz',
