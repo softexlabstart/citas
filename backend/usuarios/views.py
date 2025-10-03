@@ -291,7 +291,11 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
         # ADMINISTRADOR DE SEDE: solo clientes de su organización
         if hasattr(user, 'perfil') and user.perfil.sedes_administradas.exists():
             org = user.perfil.organizacion
-            return base_queryset.filter(perfil__organizacion=org)
+            if org:
+                return base_queryset.filter(perfil__organizacion=org)
+            else:
+                # Si el admin no tiene organización asignada, no puede ver clientes
+                return User.objects.none()
 
         # COLABORADOR: solo clientes de su sede/organización
         from citas.models import Colaborador
