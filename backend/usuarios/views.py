@@ -267,6 +267,10 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
     def get_queryset(self):
         user = self.request.user
 
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[ClientViewSet] Usuario: {user.username}, is_superuser: {user.is_superuser}")
+
         # Base queryset: usuarios que NO son staff, ni admins de sede, ni colaboradores
         try:
             sede_admin_group = Group.objects.get(name='SedeAdmin')
@@ -284,16 +288,23 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
                 .exclude(email__exact='') \
                 .select_related('perfil')
 
+        logger.info(f"[ClientViewSet] Base queryset count: {base_queryset.count()}")
+
         # SUPERUSUARIO: puede ver todos los clientes
         if user.is_superuser:
+            logger.info(f"[ClientViewSet] Usuario es SUPERUSER, devolviendo {base_queryset.count()} clientes")
             return base_queryset
 
         # ADMINISTRADOR DE SEDE: solo clientes de su organización
         if hasattr(user, 'perfil') and user.perfil.sedes_administradas.exists():
             org = user.perfil.organizacion
+            logger.info(f"[ClientViewSet] Usuario es ADMIN DE SEDE, organizacion: {org}")
             if org:
-                return base_queryset.filter(perfil__organizacion=org)
+                filtered = base_queryset.filter(perfil__organizacion=org)
+                logger.info(f"[ClientViewSet] Clientes filtrados por org: {filtered.count()}")
+                return filtered
             else:
+                logger.warning(f"[ClientViewSet] Admin de sede SIN organizacion asignada!")
                 # Si el admin no tiene organización asignada, no puede ver clientes
                 return User.objects.none()
 
