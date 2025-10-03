@@ -200,13 +200,13 @@ class UserDetailView(APIView):
     def get(self, request, *args, **kwargs):
         user = request.user
         # Preload related data for the user's profile
-        user = User.objects.prefetch_related('perfil__sedes_administradas').get(pk=user.pk)
+        user = User.objects.prefetch_related('perfil__sedes_administradas', 'perfil__organizacion').get(pk=user.pk)
         # Devuelve solo datos públicos, nunca información sensible
         data = UserSerializer(user).data
         # Elimina campos sensibles si existen
         data.pop('password', None)
         data.pop('last_login', None)
-        data.pop('is_superuser', None)
+        # NO eliminamos is_superuser - lo necesita el frontend para validaciones
         return Response(data)
 
     def put(self, request, *args, **kwargs):
