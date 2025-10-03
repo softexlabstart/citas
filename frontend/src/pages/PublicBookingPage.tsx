@@ -61,9 +61,25 @@ const PublicBookingPage: React.FC = () => {
             setSuccess(true);
         } catch (err: any) {
             console.error('Error al crear reserva:', err);
-            const errorMsg = err.response?.data?.error ||
+            let errorMsg = err.response?.data?.error ||
                            err.response?.data?.detail ||
                            'Error al crear la reserva. Por favor, inténtalo de nuevo.';
+
+            // If it's an array (from ValidationError), get the first message
+            if (Array.isArray(errorMsg)) {
+                errorMsg = errorMsg[0];
+            }
+
+            // If it's an appointment conflict, reload available slots
+            if (err.response?.data?.code === 'appointment_conflict' ||
+                (Array.isArray(err.response?.data?.code) && err.response?.data?.code[0] === 'appointment_conflict')) {
+                errorMsg += ' Por favor, selecciona otro horario.';
+                // Reload available slots
+                if (date && selectedRecurso && selectedSede && selectedServicios.length > 0) {
+                    fetchAvailableSlots(date, parseInt(selectedRecurso, 10), selectedSede, selectedServicios);
+                }
+            }
+
             setError(errorMsg);
         } finally {
             setLoading(false);
