@@ -16,6 +16,24 @@ class CreateOrganizacionView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+class OrganizacionPublicView(APIView):
+    """Vista pública para obtener información básica de una organización por slug."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, slug, *args, **kwargs):
+        try:
+            organizacion = Organizacion.objects.get(slug=slug)
+            return Response({
+                'id': organizacion.id,
+                'nombre': organizacion.nombre,
+                'slug': organizacion.slug
+            })
+        except Organizacion.DoesNotExist:
+            return Response({
+                'error': 'Organización no encontrada'
+            }, status=status.HTTP_404_NOT_FOUND)
+
 class SedeViewSet(viewsets.ModelViewSet):
     serializer_class = SedeSerializer
     # No permission_classes aquí - se define en get_permissions()

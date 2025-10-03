@@ -112,6 +112,88 @@ class RegisterView(generics.CreateAPIView):
         serializer = UserSerializer(user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+
+class RegisterByOrganizacionView(generics.CreateAPIView):
+    """
+    Vista para registro de usuarios asociados a una organización específica.
+    La organización se identifica mediante su slug en la URL.
+    """
+    serializer_class = UserSerializer
+    permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        from organizacion.models import Organizacion
+
+        organizacion_slug = kwargs.get('organizacion_slug')
+
+        # Validar que la organización existe
+        try:
+            organizacion = Organizacion.objects.get(slug=organizacion_slug)
+        except Organizacion.DoesNotExist:
+            return Response({
+                'error': 'Organización no encontrada. Verifica el enlace de registro.'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Validar datos del usuario
+        username = request.data.get('username')
+        email = request.data.get('email')
+        password = request.data.get('password')
+
+        if not username or not email or not password:
+            return Response({
+                'error': 'Los campos username, email y password son requeridos'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if User.objects.filter(username=username).exists():
+            return Response({
+                'error': 'El nombre de usuario ya existe'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if User.objects.filter(email=email).exists():
+            return Response({
+                'error': 'El email ya está registrado'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Crear usuario
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=request.data.get('first_name', ''),
+            last_name=request.data.get('last_name', '')
+        )
+
+        # Crear perfil asociado a la organización
+        perfil = PerfilUsuario.objects.create(
+            user=user,
+            organizacion=organizacion,
+            telefono=request.data.get('telefono', ''),
+            ciudad=request.data.get('ciudad', ''),
+            barrio=request.data.get('barrio', ''),
+            genero=request.data.get('genero', ''),
+            fecha_nacimiento=request.data.get('fecha_nacimiento', None),
+            has_consented_data_processing=request.data.get('has_consented_data_processing', False)
+        )
+
+        # Generar tokens JWT para login automático
+        refresh = RefreshToken.for_user(user)
+
+        serializer = UserSerializer(user)
+
+        return Response({
+            'message': f'Registro exitoso en {organizacion.nombre}',
+            'user': serializer.data,
+            'organizacion': {
+                'id': organizacion.id,
+                'nombre': organizacion.nombre,
+                'slug': organizacion.slug
+            },
+            'tokens': {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }
+        }, status=status.HTTP_201_CREATED)
+
 class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
 

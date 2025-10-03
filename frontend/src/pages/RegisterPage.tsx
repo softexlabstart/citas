@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { register } from '../api';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useParams } from 'react-router-dom';
 import { RegisterUser } from '../interfaces/User';
 import { Container, Row, Col, Card, Form, Button, Alert, InputGroup } from 'react-bootstrap';
 import { Person, Lock, Envelope, PersonBadge } from 'react-bootstrap-icons';
 import { useTranslation } from 'react-i18next'; // Import useTranslation
+import axios from 'axios';
 
 const RegisterPage: React.FC = () => {
     const { t } = useTranslation(); // Initialize useTranslation
+    const { organizacionSlug } = useParams<{ organizacionSlug?: string }>();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [email, setEmail] = useState('');
@@ -15,7 +17,27 @@ const RegisterPage: React.FC = () => {
     const [lastName, setLastName] = useState('');
     const [hasConsented, setHasConsented] = useState(false); // New state for consent
     const [error, setError] = useState<string | null>(null);
+    const [organizacionNombre, setOrganizacionNombre] = useState<string>('');
     const navigate = useNavigate();
+
+    useEffect(() => {
+        // Si hay slug de organización, obtener información de la organización
+        const fetchOrganizacion = async () => {
+            if (organizacionSlug) {
+                try {
+                    const API_URL = process.env.REACT_APP_API_URL;
+                    const response = await axios.get(`${API_URL}/api/organizacion/organizaciones/${organizacionSlug}/`);
+                    setOrganizacionNombre(response.data.nombre);
+                    setError(null);
+                } catch (error: any) {
+                    setError('Organización no encontrada. Verifica el enlace de registro.');
+                    setOrganizacionNombre('');
+                }
+            }
+        };
+
+        fetchOrganizacion();
+    }, [organizacionSlug]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -25,11 +47,44 @@ const RegisterPage: React.FC = () => {
         }
         try {
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            const newUser: RegisterUser = { username, password, email, first_name: firstName, last_name: lastName, timezone, has_consented_data_processing: hasConsented };
-            await register(newUser);
-            navigate('/login');
-        } catch (error) {
-            setError('Error al registrar. Por favor, verifica tus datos.');
+
+            if (organizacionSlug) {
+                // Registro con organización específica
+                const API_URL = process.env.REACT_APP_API_URL;
+                const response = await axios.post(`${API_URL}/api/register/${organizacionSlug}/`, {
+                    username,
+                    password,
+                    email,
+                    first_name: firstName,
+                    last_name: lastName,
+                    has_consented_data_processing: hasConsented
+                });
+
+                // Si el backend devuelve tokens, guardarlos y redirigir
+                if (response.data.tokens) {
+                    localStorage.setItem('access_token', response.data.tokens.access);
+                    localStorage.setItem('refresh_token', response.data.tokens.refresh);
+                    navigate('/');
+                } else {
+                    navigate('/login');
+                }
+            } else {
+                // Registro genérico (sin organización)
+                const newUser: RegisterUser = {
+                    username,
+                    password,
+                    email,
+                    first_name: firstName,
+                    last_name: lastName,
+                    timezone,
+                    has_consented_data_processing: hasConsented
+                };
+                await register(newUser);
+                navigate('/login');
+            }
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.error || 'Error al registrar. Por favor, verifica tus datos.';
+            setError(errorMessage);
             console.error('Failed to register', error);
         }
     };
@@ -46,7 +101,12 @@ const RegisterPage: React.FC = () => {
                 <Col xs={12} md={6} className="d-flex justify-content-center align-items-center">
                     <Card style={{ width: '24rem' }} className="shadow-lg border-0 card-transparent">
                         <Card.Body className="p-5">
-                            <Card.Title className="text-center mb-4 h2">{t('register')}</Card.Title>
+                            <Card.Title className="text-center mb-4 h2">
+                                {t('register')}
+                                {organizacionNombre && (
+                                    <div className="text-muted fs-6 mt-2">{organizacionNombre}</div>
+                                )}
+                            </Card.Title>
                             {error && <Alert variant="danger">{error}</Alert>}
                             <Form onSubmit={handleSubmit}>
                                 <Form.Group className="mb-3">

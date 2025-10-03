@@ -1,7 +1,7 @@
 app_name = 'usuarios'
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import LoginView, RegisterView, TimezoneView, UserDetailView, ClientViewSet, ClientEmailListView, PersonalDataView, DeleteAccountView, MultiTenantRegistrationView, OrganizationManagementView, InvitationView, OrganizationMembersView, RequestHistoryLinkView, AccessHistoryWithTokenView
+from .views import LoginView, RegisterView, RegisterByOrganizacionView, TimezoneView, UserDetailView, ClientViewSet, ClientEmailListView, PersonalDataView, DeleteAccountView, MultiTenantRegistrationView, OrganizationManagementView, InvitationView, OrganizationMembersView, RequestHistoryLinkView, AccessHistoryWithTokenView
 
 router = DefaultRouter()
 router.register(r'clients', ClientViewSet, basename='client')
@@ -10,6 +10,7 @@ urlpatterns = [
     path('', include(router.urls)),
     path('login/', LoginView.as_view(), name='login'),
     path('register/', RegisterView.as_view(), name='register'),
+    path('register/<slug:organizacion_slug>/', RegisterByOrganizacionView.as_view(), name='register_by_organization'),
     path('register-organization/', MultiTenantRegistrationView.as_view(), name='register_organization'),
     path('timezones/', TimezoneView.as_view(), name='timezones'),
     path('auth/user/', UserDetailView.as_view(), name='user_detail'),

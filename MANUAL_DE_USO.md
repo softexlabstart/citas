@@ -4,13 +4,14 @@
 1. [Introducción](#introducción)
 2. [Roles de Usuario](#roles-de-usuario)
 3. [Acceso al Sistema](#acceso-al-sistema)
-4. [Panel de Usuario Cliente](#panel-de-usuario-cliente)
-5. [Panel de Colaborador](#panel-de-colaborador)
-6. [Panel de Administrador de Sede](#panel-de-administrador-de-sede)
-7. [Panel de Superusuario](#panel-de-superusuario)
-8. [Gestión de Citas](#gestión-de-citas)
-9. [Generación de Informes](#generación-de-informes)
-10. [Preguntas Frecuentes](#preguntas-frecuentes)
+4. [Registro por Organización](#registro-por-organización)
+5. [Panel de Usuario Cliente](#panel-de-usuario-cliente)
+6. [Panel de Colaborador](#panel-de-colaborador)
+7. [Panel de Administrador de Sede](#panel-de-administrador-de-sede)
+8. [Panel de Superusuario](#panel-de-superusuario)
+9. [Gestión de Citas](#gestión-de-citas)
+10. [Generación de Informes](#generación-de-informes)
+11. [Preguntas Frecuentes](#preguntas-frecuentes)
 
 ---
 
