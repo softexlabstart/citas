@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Form, Button, Spinner, Alert, Modal, ListGroup } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
-import { getDisponibilidad, addAppointment, getNextAvailableSlots, NextAvailableSlot } from '../api';
+import { getDisponibilidad, addAppointment, getNextAvailableSlots, NextAvailableSlot, getClients } from '../api';
 import { CreateAppointmentPayload } from '../api';
 import { useApi } from '../hooks/useApi';
 import { useAppointmentForm } from '../hooks/useAppointmentForm';
 import { useAuth } from '../hooks/useAuth';
 import MultiSelectDropdown from './MultiSelectDropdown';
+import { Client } from '../interfaces/Client';
 
 interface NewAppointmentFormProps {
   onAppointmentAdded: () => void;
@@ -32,14 +33,32 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
   } = useAppointmentForm();
 
   const [selectedServicios, setSelectedServicios] = useState<string[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [isColaboradorOrAdmin, setIsColaboradorOrAdmin] = useState(false);
 
   const { data: availability, loading: slotsLoading, request: fetchAvailableSlots, error: availabilityError } = useApi<{ disponibilidad: any[] }, [string, number, string, string[]]>(getDisponibilidad);
   const { loading: isSubmitting, request: submitAppointment, error: submitError } = useApi(addAppointment);
   const { data: nextAvailable, loading: nextAvailableLoading, request: fetchNextAvailable, error: nextAvailableError } = useApi<NextAvailableSlot[], [string[], string]>(getNextAvailableSlots);
+  const { data: clients, loading: loadingClients, request: fetchClients } = useApi<Client[], []>(getClients);
 
   const [date, setDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
   const [showNextAvailableModal, setShowNextAvailableModal] = useState(false);
+
+  useEffect(() => {
+    // Verificar si el usuario es colaborador o admin
+    if (user) {
+      const isAdmin = user.is_staff || user.is_superuser;
+      const isSedeAdmin = user.perfil?.sedes_administradas?.length > 0;
+      // Un usuario es colaborador si tiene grupos asignados o es staff/sede admin
+      const hasSpecialRole = isAdmin || isSedeAdmin || (user.groups && user.groups.length > 0);
+
+      if (hasSpecialRole) {
+        setIsColaboradorOrAdmin(true);
+        fetchClients(); // Cargar clientes si es colaborador/admin
+      }
+    }
+  }, [user, fetchClients]);
 
   useEffect(() => {
     if (prefillData) {
@@ -93,6 +112,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
     setSelectedServicios([]);
     setSelectedRecurso('');
     setSelectedSlot('');
+    setSelectedClientId('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -101,7 +121,9 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
       toast.error(t('you_must_be_logged_in'));
       return;
     }
-    const newAppointment = {
+
+    // Construir el payload base
+    const newAppointment: any = {
       nombre: user.username,
       fecha: selectedSlot,
       servicios_ids: selectedServicios.map(id => parseInt(id, 10)),
@@ -109,6 +131,16 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
       sede_id: parseInt(selectedSede),
       estado: 'Pendiente' as const,
     };
+
+    // Si es colaborador/admin y seleccionó un cliente, agregar user_id
+    if (isColaboradorOrAdmin && selectedClientId) {
+      newAppointment.user_id = parseInt(selectedClientId, 10);
+      // Actualizar el nombre con el del cliente seleccionado
+      const selectedClient = clients?.find(c => c.id === parseInt(selectedClientId, 10));
+      if (selectedClient) {
+        newAppointment.nombre = selectedClient.username;
+      }
+    }
 
     const { success, error } = await submitAppointment(newAppointment);
 
@@ -143,6 +175,29 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
             ))}
           </Form.Control>
         </Form.Group>
+
+        {/* Selector de cliente - Solo para colaboradores y admins */}
+        {isColaboradorOrAdmin && (
+          <Form.Group className="mb-3">
+            <Form.Label>Cliente {selectedClientId ? '' : '(Opcional - déjalo vacío para crear cita a tu nombre)'}</Form.Label>
+            {loadingClients ? (
+              <Spinner animation="border" size="sm" />
+            ) : (
+              <Form.Control
+                as="select"
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
+              >
+                <option value="">-- Crear cita a mi nombre --</option>
+                {clients?.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.full_name || client.username} ({client.email})
+                  </option>
+                ))}
+              </Form.Control>
+            )}
+          </Form.Group>
+        )}
 
         <Form.Group className="mb-3">
           {!selectedSede || loadingServicios ? (
