@@ -79,7 +79,10 @@ class IsAdminOrSedeAdminOrReadOnly(BasePermission):
             if request.user and request.user.is_authenticated:
                 return True
             # Si es anónimo pero proporciona sede_id, permitir (para reservas públicas)
-            if request.query_params.get('sede_id'):
+            if hasattr(request, 'query_params') and request.query_params.get('sede_id'):
+                return True
+            # También verificar GET params
+            if hasattr(request, 'GET') and request.GET.get('sede_id'):
                 return True
             return False
 

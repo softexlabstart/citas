@@ -18,13 +18,14 @@ class CreateOrganizacionView(APIView):
 
 class SedeViewSet(viewsets.ModelViewSet):
     serializer_class = SedeSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    # No permission_classes aquí - se define en get_permissions()
 
     def get_permissions(self):
         # Allow public access for list action when organizacion_slug is provided
-        if self.action == 'list' and self.request.query_params.get('organizacion_slug'):
+        if self.action == 'list' and 'organizacion_slug' in self.request.query_params:
             return [permissions.AllowAny()]
-        return super().get_permissions()
+        # Require authentication for other actions
+        return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
         user = self.request.user
