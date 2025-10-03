@@ -473,7 +473,7 @@ class RequestHistoryLinkView(APIView):
                 # Construir el enlace mágico
                 # En producción, esto debería ser la URL del frontend
                 frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-                magic_link = f"{frontend_url}/mis-citas?token={magic_token.token}"
+                magic_link = f"{frontend_url}/magic-link-auth?token={magic_token.token}"
 
                 # Enviar email
                 try:
