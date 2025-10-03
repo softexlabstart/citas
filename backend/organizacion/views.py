@@ -20,14 +20,31 @@ class SedeViewSet(viewsets.ModelViewSet):
     serializer_class = SedeSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_permissions(self):
+        # Allow public access for list action when organizacion_slug is provided
+        if self.action == 'list' and self.request.query_params.get('organizacion_slug'):
+            return [permissions.AllowAny()]
+        return super().get_permissions()
+
     def get_queryset(self):
         user = self.request.user
-        if user.is_superuser:
-            return Sede.all_objects.all()
-        try:
-            organizacion = user.perfil.organizacion
-            if organizacion:
-                return Sede.all_objects.filter(organizacion=organizacion)
-            return Sede.objects.none()
-        except AttributeError: # Catches if user has no perfil
-            return Sede.objects.none()
+        organizacion_slug = self.request.query_params.get('organizacion_slug')
+
+        # If organizacion_slug is provided (public access), filter by slug
+        if organizacion_slug:
+            return Sede.all_objects.filter(organizacion__slug=organizacion_slug)
+
+        # Authenticated user access
+        if user.is_authenticated:
+            if user.is_superuser:
+                return Sede.all_objects.all()
+            try:
+                organizacion = user.perfil.organizacion
+                if organizacion:
+                    return Sede.all_objects.filter(organizacion=organizacion)
+                return Sede.objects.none()
+            except AttributeError: # Catches if user has no perfil
+                return Sede.objects.none()
+
+        # No access for unauthenticated without slug
+        return Sede.objects.none()

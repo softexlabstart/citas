@@ -55,7 +55,7 @@ const App: React.FC = () => {
               {/* Rutas Públicas */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
-              <Route path="/agendar" element={<PublicBookingPage />} />
+              <Route path="/agendar/:organizacionSlug" element={<PublicBookingPage />} />
               <Route path="/mis-citas" element={<RequestMagicLinkPage />} />
               <Route path="/magic-link-auth" element={<MagicLinkAuthPage />} />
 

@@ -5,21 +5,21 @@ import { Recurso } from '../interfaces/Recurso';
 import { getSedes, getServicios, getRecursos } from '../api';
 import { useApi } from './useApi';
 
-export const useAppointmentForm = () => {
+export const useAppointmentForm = (organizacionSlug?: string) => {
     // State for selected values
     const [selectedSede, setSelectedSede] = useState('');
     const [selectedRecurso, setSelectedRecurso] = useState('');
 
     // API hooks for data fetching
-    const { data: sedes, loading: loadingSedes, error: errorSedes, request: fetchSedes } = useApi<Sede[], []>(getSedes);
+    const { data: sedes, loading: loadingSedes, error: errorSedes, request: fetchSedes } = useApi<Sede[], [string?]>(getSedes);
     const { data: servicios, loading: loadingServicios, error: errorServicios, request: fetchServicios } = useApi<Service[], [string]>(getServicios);
     const { data: recursos, loading: loadingRecursos, error: errorRecursos, request: fetchRecursos } = useApi<Recurso[], [string]>(getRecursos);
 
-    // Fetch sedes on initial mount
+    // Fetch sedes on initial mount, optionally filtered by organization
     useEffect(() => {
-        fetchSedes();
+        fetchSedes(organizacionSlug);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [organizacionSlug]);
 
     // Fetch servicios and recursos when a sede is selected
     useEffect(() => {

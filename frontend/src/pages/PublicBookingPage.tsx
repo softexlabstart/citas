@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { CheckCircleFill } from 'react-bootstrap-icons';
 import { createPublicBooking, getServicios, getDisponibilidad, PublicBookingData } from '../api';
 import { useApi } from '../hooks/useApi';
@@ -8,6 +8,7 @@ import { useAppointmentForm } from '../hooks/useAppointmentForm';
 
 const PublicBookingPage: React.FC = () => {
     const navigate = useNavigate();
+    const { organizacionSlug } = useParams<{ organizacionSlug: string }>();
     const {
         sedes,
         servicios,
@@ -17,7 +18,7 @@ const PublicBookingPage: React.FC = () => {
         loadingSedes,
         setSelectedSede,
         setSelectedRecurso,
-    } = useAppointmentForm();
+    } = useAppointmentForm(organizacionSlug);
 
     const [nombre, setNombre] = useState('');
     const [email, setEmail] = useState('');

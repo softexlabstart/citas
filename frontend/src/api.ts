@@ -190,7 +190,10 @@ export type DashboardSummary = AdminDashboardSummary | UserDashboardSummary;
 export const getDashboardSummary = () => api.get<DashboardSummary>('/api/citas/dashboard/summary/');
 
 // Funciones para Sedes (New section)
-export const getSedes = () => api.get<Sede[]>('/api/organizacion/sedes/');
+export const getSedes = (organizacionSlug?: string) => {
+    const params = organizacionSlug ? `?organizacion_slug=${organizacionSlug}` : '';
+    return api.get<Sede[]>(`/api/organizacion/sedes/${params}`);
+};
 
 // Funciones para Reportes
 export const getAppointmentsReport = (startDate: string, endDate: string, servicioIds?: string[], recursoId?: string) => {
