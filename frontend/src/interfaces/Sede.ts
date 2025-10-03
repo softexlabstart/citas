@@ -4,4 +4,6 @@ export interface Sede {
   direccion: string;
   telefono: string;
   email: string;
+  organizacion_nombre?: string;
+  organizacion_slug?: string;
 }

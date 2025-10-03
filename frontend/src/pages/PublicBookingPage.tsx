@@ -121,6 +121,8 @@ const PublicBookingPage: React.FC = () => {
         );
     }
 
+    const organizacionNombre = sedes && sedes.length > 0 ? sedes[0].organizacion_nombre : null;
+
     return (
         <Container className="mt-5">
             <Row className="justify-content-center">
@@ -129,6 +131,9 @@ const PublicBookingPage: React.FC = () => {
                         <Card.Body>
                             <Card.Title className="text-center mb-4">
                                 <h2>Agenda tu Cita</h2>
+                                {organizacionNombre && (
+                                    <h4 className="text-primary">{organizacionNombre}</h4>
+                                )}
                                 <p className="text-muted">Completa el formulario para reservar</p>
                             </Card.Title>
 
