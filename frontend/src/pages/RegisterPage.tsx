@@ -62,8 +62,8 @@ const RegisterPage: React.FC = () => {
 
                 // Si el backend devuelve tokens, guardarlos y redirigir
                 if (response.data.tokens) {
-                    localStorage.setItem('access_token', response.data.tokens.access);
-                    localStorage.setItem('refresh_token', response.data.tokens.refresh);
+                    localStorage.setItem('token', response.data.tokens.access);
+                    localStorage.setItem('user', JSON.stringify(response.data.user));
                     navigate('/');
                 } else {
                     navigate('/login');
