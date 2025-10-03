@@ -48,13 +48,6 @@ const Clients: React.FC = () => {
     };
 
     useEffect(() => {
-        console.log('🔍 Clients - Usuario actual:', {
-            username: user?.username,
-            is_staff: user?.is_staff,
-            is_sede_admin: user?.perfil?.is_sede_admin,
-            sedes_administradas: user?.perfil?.sedes_administradas,
-            organizacion: user?.perfil?.organizacion
-        });
         fetchClients();
     }, [fetchClients]);
 

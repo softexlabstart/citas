@@ -64,45 +64,24 @@ const AdminSettings: React.FC = () => {
 
     // Fetch servicios y recursos cuando hay sedes disponibles
     useEffect(() => {
-        console.log('🔍 AdminSettings - Sedes cargadas:', sedes);
-        console.log('👤 AdminSettings - Usuario:', {
-            is_staff: user?.is_staff,
-            is_superuser: user?.is_superuser,
-            is_sede_admin: user?.perfil?.is_sede_admin,
-            username: user?.username,
-            perfil: user?.perfil
-        });
-
         if (sedes && sedes.length > 0) {
             // Si el usuario es superuser, puede ver todos sin filtro
             if (user?.is_superuser) {
-                console.log('✅ AdminSettings - Usuario es SUPERUSER, cargando sin filtro');
                 // Para superuser, obtener todo sin filtro
                 fetchServicios(undefined);
                 fetchRecursos(undefined);
             } else if (user?.perfil?.is_sede_admin) {
                 // Para admin de sede, usar la primera sede administrada
                 const primeraSedeId = sedes[0]?.id?.toString();
-                console.log('✅ AdminSettings - Usuario es sede admin, usando sede:', primeraSedeId);
                 setSelectedSedeId(primeraSedeId);
                 if (primeraSedeId) {
                     fetchServicios(primeraSedeId);
                     fetchRecursos(primeraSedeId);
                 }
-            } else {
-                console.log('⚠️ AdminSettings - Usuario no tiene permisos claros');
             }
-        } else {
-            console.log('⏳ AdminSettings - Esperando sedes...');
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sedes, user]);
-
-    // Log cuando los datos cambien
-    useEffect(() => {
-        console.log('📦 AdminSettings - Servicios actualizados:', servicios?.length || 0, 'servicios');
-        console.log('👥 AdminSettings - Recursos actualizados:', recursos?.length || 0, 'recursos');
-    }, [servicios, recursos]);
 
     const handleOpenModal = (type: 'service' | 'resource', item: ServiceWithDetails | RecursoWithDetails | null = null) => {
         setModalType(type);
