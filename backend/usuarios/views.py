@@ -511,9 +511,9 @@ El equipo de {getattr(settings, 'SITE_NAME', 'Citas')}
 
                         logger.info(f"Magic link enviado a {email} para usuario {user.username}{org_name}")
 
-                except Exception as e:
-                    logger.error(f"Error al enviar magic link a {email}: {str(e)}")
-                    # No revelar el error al usuario por seguridad
+                    except Exception as e:
+                        logger.error(f"Error al enviar magic link a {email}: {str(e)}")
+                        # No revelar el error al usuario por seguridad
 
         except Exception as e:
             logger.error(f"Error en RequestHistoryLinkView: {str(e)}")
