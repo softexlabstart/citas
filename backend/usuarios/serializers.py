@@ -12,13 +12,19 @@ class SedeSerializer(serializers.ModelSerializer):
         model = Sede
         fields = ('id', 'nombre')
 
+class OrganizacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Organizacion
+        fields = ('id', 'nombre', 'slug')
+
 class PerfilUsuarioSerializer(serializers.ModelSerializer):
     sedes_administradas = SedeSerializer(many=True, read_only=True)
+    organizacion = OrganizacionSerializer(read_only=True)
     is_sede_admin = serializers.SerializerMethodField()
 
     class Meta:
         model = PerfilUsuario
-        fields = ('timezone', 'sede', 'sedes_administradas', 'is_sede_admin', 'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento', 'has_consented_data_processing', 'data_processing_opt_out')
+        fields = ('timezone', 'sede', 'organizacion', 'sedes_administradas', 'is_sede_admin', 'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento', 'has_consented_data_processing', 'data_processing_opt_out')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
