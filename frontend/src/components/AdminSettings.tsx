@@ -67,15 +67,17 @@ const AdminSettings: React.FC = () => {
         console.log('🔍 AdminSettings - Sedes cargadas:', sedes);
         console.log('👤 AdminSettings - Usuario:', {
             is_staff: user?.is_staff,
+            is_superuser: user?.is_superuser,
             is_sede_admin: user?.perfil?.is_sede_admin,
-            username: user?.username
+            username: user?.username,
+            perfil: user?.perfil
         });
 
         if (sedes && sedes.length > 0) {
             // Si el usuario es superuser, puede ver todos sin filtro
-            if (user?.is_staff) {
-                console.log('✅ AdminSettings - Usuario es staff, cargando sin filtro');
-                // Para superuser, obtener todo sin filtro (o usar la primera sede si prefieres)
+            if (user?.is_superuser) {
+                console.log('✅ AdminSettings - Usuario es SUPERUSER, cargando sin filtro');
+                // Para superuser, obtener todo sin filtro
                 fetchServicios(undefined);
                 fetchRecursos(undefined);
             } else if (user?.perfil?.is_sede_admin) {
@@ -163,7 +165,7 @@ const AdminSettings: React.FC = () => {
             if (modalType === 'service') {
                 await (editingItem ? updateServicio(editingItem.id, payload) : addServicio(payload));
                 // Refrescar con el sede_id correcto según el tipo de usuario
-                if (user?.is_staff) {
+                if (user?.is_superuser) {
                     fetchServicios(undefined);
                 } else {
                     fetchServicios(selectedSedeId);
@@ -171,7 +173,7 @@ const AdminSettings: React.FC = () => {
             } else if (modalType === 'resource') {
                 await (editingItem ? updateRecurso(editingItem.id, payload) : addRecurso(payload));
                 // Refrescar con el sede_id correcto según el tipo de usuario
-                if (user?.is_staff) {
+                if (user?.is_superuser) {
                     fetchRecursos(undefined);
                 } else {
                     fetchRecursos(selectedSedeId);
@@ -201,7 +203,7 @@ const AdminSettings: React.FC = () => {
             if (deletingItemInfo.type === 'service') {
                 await deleteServicio(deletingItemInfo.id);
                 // Refrescar con el sede_id correcto según el tipo de usuario
-                if (user?.is_staff) {
+                if (user?.is_superuser) {
                     fetchServicios(undefined);
                 } else {
                     fetchServicios(selectedSedeId);
@@ -209,7 +211,7 @@ const AdminSettings: React.FC = () => {
             } else if (deletingItemInfo.type === 'resource') {
                 await deleteRecurso(deletingItemInfo.id);
                 // Refrescar con el sede_id correcto según el tipo de usuario
-                if (user?.is_staff) {
+                if (user?.is_superuser) {
                     fetchRecursos(undefined);
                 } else {
                     fetchRecursos(selectedSedeId);
@@ -244,7 +246,7 @@ const AdminSettings: React.FC = () => {
                 <h2>{t('admin_settings')}</h2>
 
                 {/* Selector de Sede para admin de sede */}
-                {!user?.is_staff && user?.perfil?.is_sede_admin && sedes && sedes.length > 1 && (
+                {!user?.is_superuser && user?.perfil?.is_sede_admin && sedes && sedes.length > 1 && (
                     <Form.Group className="mb-3" style={{ maxWidth: '300px' }}>
                         <Form.Label>Filtrar por Sede:</Form.Label>
                         <Form.Select value={selectedSedeId || ''} onChange={handleSedeChange}>
