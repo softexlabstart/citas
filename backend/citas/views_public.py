@@ -53,19 +53,40 @@ class PublicCitaViewSet(viewsets.ModelViewSet):
         email = cita.email_cliente
         if email:
             try:
-                # Buscar o crear usuario para el email
-                user, created = User.objects.get_or_create(
-                    email=email,
-                    defaults={
-                        'username': email,
-                        'first_name': cita.nombre.split()[0] if cita.nombre else 'Invitado'
-                    }
-                )
-
-                # Asegurar que el usuario tenga perfil con la organización correcta
                 from usuarios.models import PerfilUsuario
-                from rest_framework.exceptions import ValidationError
                 organizacion = cita.sede.organizacion
+
+                # Buscar usuario con este email que ya tenga perfil en esta organización
+                user = None
+                existing_users = User.objects.filter(email=email)
+
+                for existing_user in existing_users:
+                    if hasattr(existing_user, 'perfil') and existing_user.perfil.organizacion == organizacion:
+                        user = existing_user
+                        created = False
+                        break
+
+                # Si no existe, crear nuevo usuario
+                if not user:
+                    # Generar username único
+                    import hashlib
+                    if existing_users.exists():
+                        # Ya existe usuario con este email en otra org
+                        hash_suffix = hashlib.md5(organizacion.nombre.encode()).hexdigest()[:8]
+                        username = f"{email.split('@')[0]}_{hash_suffix}"
+                    else:
+                        # Primera vez con este email
+                        username = email
+
+                    user, created = User.objects.get_or_create(
+                        username=username,
+                        defaults={
+                            'email': email,
+                            'first_name': cita.nombre.split()[0] if cita.nombre else 'Invitado'
+                        }
+                    )
+                else:
+                    created = False
 
                 if created:
                     # Usuario nuevo: crear perfil
