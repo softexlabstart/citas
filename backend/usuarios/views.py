@@ -207,11 +207,17 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
 
         # COLABORADOR: solo clientes de su sede/organización
         from citas.models import Colaborador
+        from django.db.models import Q
         if Colaborador.all_objects.filter(usuario=user).exists():
             colaborador = Colaborador.all_objects.get(usuario=user)
             org = colaborador.sede.organizacion
-            # Filtrar clientes de la misma organización
-            return base_queryset.filter(perfil__organizacion=org)
+            sede = colaborador.sede
+
+            # Filtrar clientes que pertenezcan a la misma organización O a la misma sede
+            # Esto permite ver clientes que tienen sede asignada pero no organización
+            return base_queryset.filter(
+                Q(perfil__organizacion=org) | Q(perfil__sede=sede)
+            )
 
         # CLIENTE: no puede ver otros clientes
         return User.objects.none()
