@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from organizacion.models import Sede
-from .models import PerfilUsuario
+from .models import PerfilUsuario, MagicLinkToken
 from .serializers import UserSerializer, MyTokenObtainPairSerializer, ClientSerializer, ClientEmailSerializer, MultiTenantRegistrationSerializer, InvitationSerializer, OrganizacionSerializer, SedeDetailSerializer
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from .permissions import IsSuperAdmin
@@ -17,6 +17,12 @@ from rest_framework.decorators import action
 from django.db.models import Count, Q
 from citas.models import Cita
 from citas.serializers import CitaSerializer
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ClientEmailListView(generics.ListAPIView):
     serializer_class = ClientEmailSerializer
@@ -425,8 +431,169 @@ class OrganizationMembersView(APIView):
                 'miembros': UserSerializer(miembros, many=True).data,
                 'total': miembros.count()
             })
-            
+
         except PerfilUsuario.DoesNotExist:
             return Response({
                 'error': 'Usuario no tiene perfil configurado'
             }, status=status.HTTP_404_NOT_FOUND)
+
+
+class RequestHistoryLinkView(APIView):
+    """
+    Vista para solicitar un Magic Link de acceso al historial de citas.
+    Permite a cualquier usuario (incluidos invitados) solicitar acceso mediante email.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+
+        if not email:
+            return Response({
+                'error': 'El campo email es requerido'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Por seguridad, siempre devolver la misma respuesta genérica
+        # sin revelar si el usuario existe o no
+        generic_response = {
+            'message': 'Si el email existe en nuestro sistema, se ha enviado un enlace de acceso.'
+        }
+
+        try:
+            # Buscar usuario por email (puede ser User.email o email_cliente en Cita)
+            user = User.objects.filter(email=email).first()
+
+            if user:
+                # Eliminar tokens antiguos del usuario para mantener limpia la BD
+                MagicLinkToken.objects.filter(user=user).delete()
+
+                # Crear nuevo token
+                magic_token = MagicLinkToken.objects.create(user=user)
+
+                # Construir el enlace mágico
+                # En producción, esto debería ser la URL del frontend
+                frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+                magic_link = f"{frontend_url}/mis-citas?token={magic_token.token}"
+
+                # Enviar email
+                try:
+                    subject = 'Accede a tu historial de citas'
+
+                    # Contexto para el template
+                    context = {
+                        'user': user,
+                        'magic_link': magic_link,
+                        'expires_minutes': 15,
+                    }
+
+                    # Intentar usar template HTML si existe
+                    try:
+                        html_message = render_to_string('emails/magic_link.html', context)
+                    except:
+                        html_message = None
+
+                    # Mensaje de texto plano como fallback
+                    plain_message = f"""
+Hola {user.first_name or user.username},
+
+Has solicitado acceso a tu historial de citas.
+
+Para acceder, haz clic en el siguiente enlace (válido por 15 minutos):
+
+{magic_link}
+
+Si no solicitaste este acceso, puedes ignorar este correo.
+
+Saludos,
+El equipo de {getattr(settings, 'SITE_NAME', 'Citas')}
+                    """.strip()
+
+                    send_mail(
+                        subject=subject,
+                        message=plain_message,
+                        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
+                        recipient_list=[email],
+                        html_message=html_message,
+                        fail_silently=False
+                    )
+
+                    logger.info(f"Magic link enviado exitosamente a {email}")
+
+                except Exception as e:
+                    logger.error(f"Error al enviar magic link a {email}: {str(e)}")
+                    # No revelar el error al usuario por seguridad
+
+        except Exception as e:
+            logger.error(f"Error en RequestHistoryLinkView: {str(e)}")
+            # Continuar y devolver respuesta genérica
+
+        # Siempre devolver la misma respuesta
+        return Response(generic_response, status=status.HTTP_200_OK)
+
+
+class AccessHistoryWithTokenView(APIView):
+    """
+    Vista para validar un Magic Link token y generar tokens JWT de acceso.
+    El token se consume (se elimina) después de ser usado exitosamente.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        token_value = request.data.get('token')
+
+        if not token_value:
+            return Response({
+                'error': 'El campo token es requerido'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Buscar el token
+            magic_token = MagicLinkToken.objects.select_related('user').get(token=token_value)
+
+            # Verificar si el token es válido (no expirado)
+            if not magic_token.is_valid():
+                # Eliminar token expirado
+                magic_token.delete()
+                return Response({
+                    'error': 'El token ha expirado. Por favor, solicita un nuevo enlace.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Token válido: generar tokens JWT
+            user = magic_token.user
+            refresh = RefreshToken.for_user(user)
+
+            # Eliminar el token para que solo se pueda usar una vez
+            magic_token.delete()
+
+            # Preparar datos del usuario
+            try:
+                user_data = UserSerializer(user).data
+            except Exception as e:
+                logger.warning(f"Error al serializar usuario: {str(e)}")
+                user_data = {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                }
+
+            logger.info(f"Acceso exitoso con magic link para usuario {user.email}")
+
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'user': user_data,
+                'message': 'Autenticación exitosa'
+            }, status=status.HTTP_200_OK)
+
+        except MagicLinkToken.DoesNotExist:
+            return Response({
+                'error': 'Token inválido o ya utilizado'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            logger.error(f"Error en AccessHistoryWithTokenView: {str(e)}")
+            return Response({
+                'error': 'Error al procesar el token'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

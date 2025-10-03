@@ -1,7 +1,7 @@
 app_name = 'usuarios'
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import LoginView, RegisterView, TimezoneView, UserDetailView, ClientViewSet, ClientEmailListView, PersonalDataView, DeleteAccountView, MultiTenantRegistrationView, OrganizationManagementView, InvitationView, OrganizationMembersView
+from .views import LoginView, RegisterView, TimezoneView, UserDetailView, ClientViewSet, ClientEmailListView, PersonalDataView, DeleteAccountView, MultiTenantRegistrationView, OrganizationManagementView, InvitationView, OrganizationMembersView, RequestHistoryLinkView, AccessHistoryWithTokenView
 
 router = DefaultRouter()
 router.register(r'clients', ClientViewSet, basename='client')
@@ -20,4 +20,7 @@ urlpatterns = [
     path('organization/', OrganizationManagementView.as_view(), name='organization_management'),
     path('organization/members/', OrganizationMembersView.as_view(), name='organization_members'),
     path('organization/invite/', InvitationView.as_view(), name='organization_invite'),
+    # URLs para Magic Link
+    path('auth/request-history-link/', RequestHistoryLinkView.as_view(), name='request_history_link'),
+    path('auth/access-history-with-token/', AccessHistoryWithTokenView.as_view(), name='access_history_with_token'),
 ]

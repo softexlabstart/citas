@@ -100,6 +100,12 @@ class Cita(models.Model):
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='citas')
     comentario = models.TextField(blank=True, null=True)
 
+    # Campos para reservas de invitados (guest bookings)
+    email_cliente = models.EmailField(max_length=254, blank=True, null=True, db_index=True,
+                                      help_text=_("Email del cliente para reservas como invitado"))
+    telefono_cliente = models.CharField(max_length=20, blank=True, null=True,
+                                        help_text=_("Teléfono del cliente para reservas como invitado"))
+
     objects = OrganizacionManager(organization_filter_path='sede__organizacion')
     all_objects = models.Manager()
 
