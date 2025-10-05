@@ -87,8 +87,12 @@ class UserSerializer(serializers.ModelSerializer):
         instance.save()
 
         # Update PerfilUsuario fields
-        # Use get_or_create to handle users that might not have a profile yet.
-        perfil, created = PerfilUsuario.objects.get_or_create(user=instance)
+        # Handle profile with try-except to avoid race conditions
+        try:
+            perfil = instance.perfil
+        except PerfilUsuario.DoesNotExist:
+            perfil = PerfilUsuario.objects.create(user=instance)
+
         for attr, value in perfil_data.items():
             setattr(perfil, attr, value)
         perfil.save()
