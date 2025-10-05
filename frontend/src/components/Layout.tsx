@@ -90,7 +90,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       </Nav.Link>
                     </>
                   )}
-                  {(user?.is_staff || user?.perfil?.is_sede_admin || user?.groups.includes('SedeAdmin')) && (
+                  {(user?.is_staff || user?.perfil?.is_sede_admin || user?.groups.includes('SedeAdmin')) && !user?.groups.includes('Recurso') && (
                     <>
                       <hr className="my-2" />
                       <h6 className="text-muted ps-3 mt-2 mb-1">{t('admin_tools')}</h6>
