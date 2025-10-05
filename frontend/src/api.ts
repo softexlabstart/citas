@@ -250,7 +250,7 @@ export const register = async (user: RegisterUser) => {
     return response.data;
 };
 
-export const updateUserProfile = (userData: Partial<Client>) => api.patch<Client>('/api/auth/user/', { perfil: userData });
+export const updateUserProfile = (userData: Partial<Client>) => api.patch<Client>('/api/auth/user/', userData);
 
 // Funciones para Zonas Horarias
 export const getTimezones = () => api.get<string[]>('/api/timezones/');
