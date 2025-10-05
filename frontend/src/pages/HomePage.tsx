@@ -28,8 +28,8 @@ const HomePage: React.FC = () => {
     };
 
     if (user) {
-      const isAdmin = user.is_staff || user.perfil?.is_sede_admin || (user.perfil?.sedes_administradas && user.perfil.sedes_administradas.length > 0);
       const isColaborador = user.groups.includes('Recurso') || user.groups.includes('Colaborador');
+      const isAdmin = !isColaborador && (user.is_staff || user.perfil?.is_sede_admin || (user.perfil?.sedes_administradas && user.perfil.sedes_administradas.length > 0));
 
       if (isAdmin || !isColaborador) {
         fetchDashboardData();
@@ -45,8 +45,8 @@ const HomePage: React.FC = () => {
     return <Navigate to="/login" />;
   }
 
-  const isAdmin = user.is_staff || user.perfil?.is_sede_admin || (user.perfil?.sedes_administradas && user.perfil.sedes_administradas.length > 0);
   const isColaborador = user.groups.includes('Recurso') || user.groups.includes('Colaborador');
+  const isAdmin = !isColaborador && (user.is_staff || user.perfil?.is_sede_admin || (user.perfil?.sedes_administradas && user.perfil.sedes_administradas.length > 0));
 
   if (loading) {
     return <div>{t('loading')}...</div>;
@@ -56,15 +56,15 @@ const HomePage: React.FC = () => {
     return <div className="alert alert-danger">{error}</div>;
   }
 
+  if (isColaborador) {
+    return <RecursoDashboard />;
+  }
+
   if (isAdmin) {
     if (dashboardData) {
       return <AdminDashboard data={dashboardData as AdminDashboardSummary} />;
     }
     return null; // Data is loading or there was an error, handled above
-  }
-
-  if (isColaborador) {
-    return <RecursoDashboard />;
   }
 
   if (dashboardData) {
