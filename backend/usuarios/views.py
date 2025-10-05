@@ -214,7 +214,11 @@ class UserDetailView(APIView):
         serializer = UserSerializer(user, data=request.data, partial=False)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            # Reload user with prefetch to avoid OrganizationManager issues
+            user = User.objects.prefetch_related('perfil__sedes_administradas', 'perfil__organizacion').get(pk=user.pk)
+            response_data = UserSerializer(user).data
+            response_data.pop('password', None)
+            return Response(response_data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request, *args, **kwargs):
@@ -222,7 +226,11 @@ class UserDetailView(APIView):
         serializer = UserSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            # Reload user with prefetch to avoid OrganizationManager issues
+            user = User.objects.prefetch_related('perfil__sedes_administradas', 'perfil__organizacion').get(pk=user.pk)
+            response_data = UserSerializer(user).data
+            response_data.pop('password', None)
+            return Response(response_data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     
