@@ -10,6 +10,7 @@ django.setup()
 
 from citas.models import Cita, Colaborador, Servicio, Sede
 from django.utils import timezone
+from django.db.models import Prefetch
 from datetime import timedelta, time, datetime
 
 print("=" * 70)
@@ -60,7 +61,10 @@ all_citas = list(Cita._base_manager.filter(
     fecha__gte=day_start,
     fecha__lt=day_end,
     estado__in=['Pendiente', 'Confirmada']
-).distinct().prefetch_related('servicios', 'colaboradores').order_by('fecha'))
+).distinct().prefetch_related(
+        Prefetch('servicios', queryset=Servicio._base_manager.all()),
+        Prefetch('colaboradores', queryset=Colaborador._base_manager.all())
+    ).order_by('fecha'))
 
 print(f"\n✓ Citas encontradas en rango ({timezone.now().date()} a {timezone.now().date() + timedelta(days=days_to_check)}): {len(all_citas)}")
 

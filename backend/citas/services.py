@@ -2,7 +2,7 @@
 
 from datetime import datetime, time, timedelta
 from django.utils import timezone
-from django.db.models import F, ExpressionWrapper, DateTimeField, Sum
+from django.db.models import F, ExpressionWrapper, DateTimeField, Sum, Prefetch
 from rest_framework.exceptions import ValidationError
 from .models import Cita, Horario, Colaborador, Servicio, Bloqueo
 from organizacion.models import Sede
@@ -181,10 +181,13 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
     if not horarios_colaborador.exists():
         return []
 
-    # Use db_manager to bypass OrganizacionManager and see ALL real appointments
+    # Use _base_manager to bypass OrganizacionManager and see ALL real appointments
+    # Use Prefetch with _base_manager for many-to-many relations
     citas_del_dia = list(Cita._base_manager.filter(
         colaboradores=colaborador, fecha__date=fecha, estado__in=['Pendiente', 'Confirmada']
-    ).distinct().prefetch_related('servicios').order_by('fecha'))
+    ).distinct().prefetch_related(
+        Prefetch('servicios', queryset=Servicio._base_manager.all())
+    ).order_by('fecha'))
 
     # Calculate duracion_total for each cita
     for cita in citas_del_dia:
@@ -253,9 +256,13 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
 
     # Get all citas using the base manager directly from the model's _base_manager
     # This bypasses the OrganizacionManager completely
+    # CRITICAL: Use Prefetch with _base_manager for many-to-many relations
     all_citas = list(Cita._base_manager.filter(
         colaboradores__id__in=colaborador_ids, fecha__gte=day_start, fecha__lt=day_end, estado__in=['Pendiente', 'Confirmada']
-    ).distinct().prefetch_related('servicios', 'colaboradores').order_by('fecha'))
+    ).distinct().prefetch_related(
+        Prefetch('servicios', queryset=Servicio._base_manager.all()),
+        Prefetch('colaboradores', queryset=Colaborador._base_manager.all())
+    ).order_by('fecha'))
 
     logger.warning(f"[AVAIL DEBUG] Sede: {sede_id}, Servicios: {servicio_ids}")
     logger.warning(f"[AVAIL DEBUG] Colaboradores encontrados: {len(colaboradores)} - IDs: {colaborador_ids}")
