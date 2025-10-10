@@ -183,12 +183,31 @@ class ServicioViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(sede_id=sede_id)
             return queryset
 
-        # CLIENTE: solo servicios de sedes con sede_id proporcionado
+        # CLIENTE: servicios de sus sedes asignadas o sede principal
         if user.is_authenticated:
+            # Obtener las sedes a las que tiene acceso el usuario
+            sedes_acceso = []
+
+            if hasattr(user, 'perfil') and user.perfil:
+                # Agregar sedes múltiples si existen
+                if user.perfil.sedes.exists():
+                    sedes_acceso.extend(list(user.perfil.sedes.values_list('id', flat=True)))
+                # Agregar sede principal si existe
+                elif user.perfil.sede:
+                    sedes_acceso.append(user.perfil.sede.id)
+
+            # Si se proporciona sede_id, validar que tenga acceso
             if sede_id:
-                # Cliente puede ver servicios si proporciona sede_id
-                return queryset.filter(sede_id=sede_id)
-            # Sin sede_id, cliente no ve servicios
+                if int(sede_id) in sedes_acceso or not sedes_acceso:
+                    return queryset.filter(sede_id=sede_id)
+                # Si no tiene acceso a esa sede, no mostrar servicios
+                return Servicio.all_objects.none()
+
+            # Sin sede_id, mostrar servicios de todas sus sedes
+            if sedes_acceso:
+                return queryset.filter(sede_id__in=sedes_acceso)
+
+            # Si no tiene sedes asignadas, no ve servicios
             return Servicio.all_objects.none()
 
         # ANÓNIMO: debe proporcionar sede_id
