@@ -257,14 +257,14 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
         colaboradores__id__in=colaborador_ids, fecha__gte=day_start, fecha__lt=day_end, estado__in=['Pendiente', 'Confirmada']
     ).distinct().prefetch_related('servicios', 'colaboradores').order_by('fecha'))
 
-    logger.info(f"[find_next_available_slots] Sede: {sede_id}, Servicios: {servicio_ids}")
-    logger.info(f"[find_next_available_slots] Colaboradores encontrados: {len(colaboradores)} - IDs: {colaborador_ids}")
-    logger.info(f"[find_next_available_slots] Citas encontradas en rango: {len(all_citas)}")
+    logger.warning(f"[AVAIL DEBUG] Sede: {sede_id}, Servicios: {servicio_ids}")
+    logger.warning(f"[AVAIL DEBUG] Colaboradores encontrados: {len(colaboradores)} - IDs: {colaborador_ids}")
+    logger.warning(f"[AVAIL DEBUG] Citas encontradas en rango: {len(all_citas)}")
 
     # Calculate duracion_total for each cita after fetching
     for cita in all_citas:
         cita.duracion_total = sum(s.duracion_estimada for s in cita.servicios.all())
-        logger.info(f"[find_next_available_slots] Cita #{cita.id}: {cita.fecha} - Colaboradores: {[c.id for c in cita.colaboradores.all()]} - Duración: {cita.duracion_total}min")
+        logger.warning(f"[AVAIL DEBUG] Cita #{cita.id}: {cita.fecha} - Colaboradores: {[c.id for c in cita.colaboradores.all()]} - Duración: {cita.duracion_total}min")
 
     all_bloqueos = list(Bloqueo._base_manager.filter(colaborador_id__in=colaborador_ids, fecha_inicio__lte=day_end, fecha_fin__gte=day_start).order_by('fecha_inicio'))
 
@@ -291,12 +291,14 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
             bloqueos_del_dia = [b for b in bloqueos_by_colaborador.get(colaborador.id, []) if b.fecha_inicio.date() <= current_date and b.fecha_fin.date() >= current_date]
 
             if citas_del_dia:
-                logger.info(f"[find_next_available_slots] Colaborador {colaborador.nombre} ({colaborador.id}) - Fecha {current_date}: {len(citas_del_dia)} citas ocupadas")
+                logger.warning(f"[AVAIL DEBUG] Colaborador {colaborador.nombre} ({colaborador.id}) - Fecha {current_date}: {len(citas_del_dia)} citas ocupadas")
                 for c in citas_del_dia:
-                    logger.info(f"  - Cita #{c.id}: {c.fecha} - Duración: {c.duracion_total}min")
+                    logger.warning(f"[AVAIL DEBUG]   - Cita #{c.id}: {c.fecha} - Duración: {c.duracion_total}min")
+            else:
+                logger.warning(f"[AVAIL DEBUG] Colaborador {colaborador.nombre} ({colaborador.id}) - Fecha {current_date}: SIN citas ocupadas")
 
             slots = _generate_slots(current_date, horarios_colaborador, citas_del_dia, bloqueos_del_dia, intervalo, step, colaborador=colaborador)
-            logger.info(f"[find_next_available_slots] Colaborador {colaborador.nombre} - Slots generados: {len(slots)}")
+            logger.warning(f"[AVAIL DEBUG] Colaborador {colaborador.nombre} - Slots generados: {len(slots)}")
             daily_slots_for_all_colaboradores.extend(slots)
 
         daily_slots_for_all_colaboradores.sort(key=lambda x: x['start'])
