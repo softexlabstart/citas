@@ -181,7 +181,8 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
     if not horarios_colaborador.exists():
         return []
 
-    citas_del_dia = list(Cita.all_objects.filter(
+    # Use db_manager to bypass OrganizacionManager and see ALL real appointments
+    citas_del_dia = list(Cita.objects.db_manager('default').filter(
         colaboradores=colaborador, fecha__date=fecha, estado__in=['Pendiente', 'Confirmada']
     ).distinct().prefetch_related('servicios').order_by('fecha'))
 
@@ -191,7 +192,7 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
 
     day_start = timezone.make_aware(datetime.combine(fecha, time.min))
     day_end = timezone.make_aware(datetime.combine(fecha, time.max))
-    bloqueos_del_dia = Bloqueo.all_objects.filter(
+    bloqueos_del_dia = Bloqueo.objects.db_manager('default').filter(
         colaborador=colaborador,
         fecha_inicio__lte=day_end,
         fecha_fin__gte=day_start
@@ -245,11 +246,13 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
     day_start = timezone.make_aware(datetime.combine(timezone.now().date(), time.min))
     day_end = timezone.make_aware(datetime.combine(end_date, time.max))
 
-    all_horarios = list(Horario.all_objects.filter(colaborador_id__in=colaborador_ids).order_by('hora_inicio'))
-    # Use the base manager to bypass multi-tenant filtering for availability checks
-    # We need to see ALL real appointments to accurately determine slot availability
-    # Note: We use distinct() to avoid duplicate rows from many-to-many joins
-    all_citas = list(Cita.all_objects.filter(
+    # CRITICAL: Use objects.db_manager('default').all() to bypass OrganizacionManager
+    # This ensures we see ALL real appointments regardless of organization context
+    all_horarios = list(Horario.objects.db_manager('default').filter(colaborador_id__in=colaborador_ids).order_by('hora_inicio'))
+
+    # Get all citas using the base manager directly from the model's _base_manager
+    # This bypasses the OrganizacionManager completely
+    all_citas = list(Cita.objects.db_manager('default').filter(
         colaboradores__id__in=colaborador_ids, fecha__gte=day_start, fecha__lt=day_end, estado__in=['Pendiente', 'Confirmada']
     ).distinct().prefetch_related('servicios', 'colaboradores').order_by('fecha'))
 
@@ -262,7 +265,7 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
         cita.duracion_total = sum(s.duracion_estimada for s in cita.servicios.all())
         logger.info(f"[find_next_available_slots] Cita #{cita.id}: {cita.fecha} - Colaboradores: {[c.id for c in cita.colaboradores.all()]} - Duración: {cita.duracion_total}min")
 
-    all_bloqueos = list(Bloqueo.all_objects.filter(colaborador_id__in=colaborador_ids, fecha_inicio__lte=day_end, fecha_fin__gte=day_start).order_by('fecha_inicio'))
+    all_bloqueos = list(Bloqueo.objects.db_manager('default').filter(colaborador_id__in=colaborador_ids, fecha_inicio__lte=day_end, fecha_fin__gte=day_start).order_by('fecha_inicio'))
 
     horarios_by_colaborador = {cid: list(filter(lambda h: h.colaborador_id == cid, all_horarios)) for cid in colaborador_ids}
     # Build a dictionary mapping colaborador_id to their citas
