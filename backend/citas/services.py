@@ -166,8 +166,8 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
     """
     try:
         fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-        colaborador = Colaborador.all_objects.get(id=colaborador_id)
-        servicios = Servicio.all_objects.filter(id__in=servicio_ids)
+        colaborador = Colaborador.objects.db_manager('default').get(id=colaborador_id)
+        servicios = Servicio.objects.db_manager('default').filter(id__in=servicio_ids)
         if not servicios.exists():
             raise ValueError('IDs de servicio inválidos.')
         duracion_total_servicios = sum(s.duracion_estimada for s in servicios)
@@ -177,7 +177,7 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
         raise ValueError('Formato de fecha, ID de colaborador o ID de servicio inválido.')
 
     dia_semana = fecha.weekday()
-    horarios_colaborador = Horario.all_objects.filter(colaborador=colaborador, dia_semana=dia_semana).order_by('hora_inicio')
+    horarios_colaborador = Horario.objects.db_manager('default').filter(colaborador=colaborador, dia_semana=dia_semana).order_by('hora_inicio')
     if not horarios_colaborador.exists():
         return []
 
@@ -214,11 +214,11 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
         raise ValueError("Debe proporcionar al menos un ID de servicio.")
 
     try:
-        sede = Sede.all_objects.get(id=sede_id)
+        sede = Sede.objects.db_manager('default').get(id=sede_id)
     except Sede.DoesNotExist:
         raise ValueError(f"La sede con id={sede_id} no existe.")
 
-    servicios = Servicio.all_objects.filter(id__in=servicio_ids)
+    servicios = Servicio.objects.db_manager('default').filter(id__in=servicio_ids)
     if not servicios.exists():
         raise ValueError(f"Alguno de los servicios con ids={servicio_ids} no existe.")
 
@@ -230,7 +230,8 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
     intervalo = timedelta(minutes=duracion_total_servicios)
     step = timedelta(minutes=15)
 
-    colaboradores = Colaborador.all_objects.filter(
+    # Use db_manager to bypass OrganizacionManager and see ALL colaboradores
+    colaboradores = Colaborador.objects.db_manager('default').filter(
         sede_id=sede_id,
         servicios__id__in=servicio_ids
     ).distinct()
