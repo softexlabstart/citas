@@ -166,8 +166,8 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
     """
     try:
         fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-        colaborador = Colaborador.objects.db_manager('default').get(id=colaborador_id)
-        servicios = Servicio.objects.db_manager('default').filter(id__in=servicio_ids)
+        colaborador = Colaborador._base_manager.get(id=colaborador_id)
+        servicios = Servicio._base_manager.filter(id__in=servicio_ids)
         if not servicios.exists():
             raise ValueError('IDs de servicio inválidos.')
         duracion_total_servicios = sum(s.duracion_estimada for s in servicios)
@@ -177,12 +177,12 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
         raise ValueError('Formato de fecha, ID de colaborador o ID de servicio inválido.')
 
     dia_semana = fecha.weekday()
-    horarios_colaborador = Horario.objects.db_manager('default').filter(colaborador=colaborador, dia_semana=dia_semana).order_by('hora_inicio')
+    horarios_colaborador = Horario._base_manager.filter(colaborador=colaborador, dia_semana=dia_semana).order_by('hora_inicio')
     if not horarios_colaborador.exists():
         return []
 
     # Use db_manager to bypass OrganizacionManager and see ALL real appointments
-    citas_del_dia = list(Cita.objects.db_manager('default').filter(
+    citas_del_dia = list(Cita._base_manager.filter(
         colaboradores=colaborador, fecha__date=fecha, estado__in=['Pendiente', 'Confirmada']
     ).distinct().prefetch_related('servicios').order_by('fecha'))
 
@@ -192,7 +192,7 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
 
     day_start = timezone.make_aware(datetime.combine(fecha, time.min))
     day_end = timezone.make_aware(datetime.combine(fecha, time.max))
-    bloqueos_del_dia = Bloqueo.objects.db_manager('default').filter(
+    bloqueos_del_dia = Bloqueo._base_manager.filter(
         colaborador=colaborador,
         fecha_inicio__lte=day_end,
         fecha_fin__gte=day_start
@@ -214,11 +214,11 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
         raise ValueError("Debe proporcionar al menos un ID de servicio.")
 
     try:
-        sede = Sede.objects.db_manager('default').get(id=sede_id)
+        sede = Sede._base_manager.get(id=sede_id)
     except Sede.DoesNotExist:
         raise ValueError(f"La sede con id={sede_id} no existe.")
 
-    servicios = Servicio.objects.db_manager('default').filter(id__in=servicio_ids)
+    servicios = Servicio._base_manager.filter(id__in=servicio_ids)
     if not servicios.exists():
         raise ValueError(f"Alguno de los servicios con ids={servicio_ids} no existe.")
 
@@ -231,7 +231,7 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
     step = timedelta(minutes=15)
 
     # Use db_manager to bypass OrganizacionManager and see ALL colaboradores
-    colaboradores = Colaborador.objects.db_manager('default').filter(
+    colaboradores = Colaborador._base_manager.filter(
         sede_id=sede_id,
         servicios__id__in=servicio_ids
     ).distinct()
@@ -249,11 +249,11 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
 
     # CRITICAL: Use objects.db_manager('default').all() to bypass OrganizacionManager
     # This ensures we see ALL real appointments regardless of organization context
-    all_horarios = list(Horario.objects.db_manager('default').filter(colaborador_id__in=colaborador_ids).order_by('hora_inicio'))
+    all_horarios = list(Horario._base_manager.filter(colaborador_id__in=colaborador_ids).order_by('hora_inicio'))
 
     # Get all citas using the base manager directly from the model's _base_manager
     # This bypasses the OrganizacionManager completely
-    all_citas = list(Cita.objects.db_manager('default').filter(
+    all_citas = list(Cita._base_manager.filter(
         colaboradores__id__in=colaborador_ids, fecha__gte=day_start, fecha__lt=day_end, estado__in=['Pendiente', 'Confirmada']
     ).distinct().prefetch_related('servicios', 'colaboradores').order_by('fecha'))
 
@@ -266,7 +266,7 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
         cita.duracion_total = sum(s.duracion_estimada for s in cita.servicios.all())
         logger.info(f"[find_next_available_slots] Cita #{cita.id}: {cita.fecha} - Colaboradores: {[c.id for c in cita.colaboradores.all()]} - Duración: {cita.duracion_total}min")
 
-    all_bloqueos = list(Bloqueo.objects.db_manager('default').filter(colaborador_id__in=colaborador_ids, fecha_inicio__lte=day_end, fecha_fin__gte=day_start).order_by('fecha_inicio'))
+    all_bloqueos = list(Bloqueo._base_manager.filter(colaborador_id__in=colaborador_ids, fecha_inicio__lte=day_end, fecha_fin__gte=day_start).order_by('fecha_inicio'))
 
     horarios_by_colaborador = {cid: list(filter(lambda h: h.colaborador_id == cid, all_horarios)) for cid in colaborador_ids}
     # Build a dictionary mapping colaborador_id to their citas
