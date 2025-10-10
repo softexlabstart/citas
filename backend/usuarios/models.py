@@ -18,8 +18,9 @@ class PerfilUsuario(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
     organizacion = models.ForeignKey(Organizacion, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
     timezone = models.CharField(max_length=100, choices=TIMEZONE_CHOICES, default='UTC')
-    sede = models.ForeignKey(Sede, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
-    sedes_administradas = models.ManyToManyField(Sede, related_name='administradores', blank=True)
+    sede = models.ForeignKey(Sede, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios', help_text='Sede principal del usuario')
+    sedes = models.ManyToManyField(Sede, related_name='usuarios_multisede', blank=True, help_text='Sedes a las que tiene acceso el usuario')
+    sedes_administradas = models.ManyToManyField(Sede, related_name='administradores', blank=True, help_text='Sedes que puede administrar')
     
     # New fields for client data
     telefono = models.CharField(max_length=20, blank=True, null=True, db_index=True)

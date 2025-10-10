@@ -11,9 +11,30 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
     list_display = ('user', 'get_email', 'organizacion', 'get_sede_nombre', 'get_otros_perfiles')
     search_fields = ('user__username', 'user__email', 'nombre')
     list_filter = ('organizacion', 'sede')
-    filter_horizontal = ('sedes_administradas',)
+    filter_horizontal = ('sedes', 'sedes_administradas',)
     actions = ['crear_perfil_en_otra_organizacion']
     readonly_fields = ('get_otros_perfiles_detalle',)
+    fieldsets = (
+        ('Información de Usuario', {
+            'fields': ('user', 'organizacion', 'timezone')
+        }),
+        ('Sedes', {
+            'fields': ('sede', 'sedes', 'sedes_administradas'),
+            'description': 'Sede principal y sedes adicionales a las que tiene acceso'
+        }),
+        ('Datos Personales', {
+            'fields': ('telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento'),
+            'classes': ('collapse',)
+        }),
+        ('Consentimiento de Datos', {
+            'fields': ('has_consented_data_processing', 'data_processing_opt_out'),
+            'classes': ('collapse',)
+        }),
+        ('Información Multi-organización', {
+            'fields': ('get_otros_perfiles_detalle',),
+            'classes': ('collapse',)
+        }),
+    )
 
     def get_email(self, obj):
         return obj.user.email
@@ -111,18 +132,18 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if request.user.is_superuser:
-            if db_field.name == "sedes_administradas":
+            if db_field.name in ["sedes", "sedes_administradas"]:
                 kwargs["queryset"] = Sede.all_objects.all()
         else:
             try:
                 organizacion = request.user.perfil.organizacion
-                if organizacion and db_field.name == "sedes_administradas":
+                if organizacion and db_field.name in ["sedes", "sedes_administradas"]:
                     kwargs["queryset"] = Sede.all_objects.filter(organizacion=organizacion)
                 else:
                     kwargs["queryset"] = Sede.all_objects.none()
             except (AttributeError, PerfilUsuario.DoesNotExist):
                 kwargs["queryset"] = Sede.all_objects.none()
-        
+
         return super().formfield_for_manytomany(db_field, request, **kwargs)
 
     def get_sede_nombre(self, obj):
