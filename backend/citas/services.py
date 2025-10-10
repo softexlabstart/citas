@@ -181,12 +181,14 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
     if not horarios_colaborador.exists():
         return []
 
-    citas_del_dia = Cita.all_objects.filter(
+    citas_del_dia = list(Cita.all_objects.filter(
         colaboradores=colaborador, fecha__date=fecha, estado__in=['Pendiente', 'Confirmada']
-    ).prefetch_related('servicios').annotate(
-        duracion_total=Sum('servicios__duracion_estimada')
-    ).order_by('fecha')
-    
+    ).distinct().prefetch_related('servicios').order_by('fecha'))
+
+    # Calculate duracion_total for each cita
+    for cita in citas_del_dia:
+        cita.duracion_total = sum(s.duracion_estimada for s in cita.servicios.all())
+
     day_start = timezone.make_aware(datetime.combine(fecha, time.min))
     day_end = timezone.make_aware(datetime.combine(fecha, time.max))
     bloqueos_del_dia = Bloqueo.all_objects.filter(
@@ -194,7 +196,7 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
         fecha_inicio__lte=day_end,
         fecha_fin__gte=day_start
     ).order_by('fecha_inicio')
-    
+
     available_slots = _generate_slots(fecha, horarios_colaborador, citas_del_dia, bloqueos_del_dia, intervalo, step)
     available_slots.sort(key=lambda x: x['start'])
     return available_slots
