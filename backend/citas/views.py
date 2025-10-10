@@ -173,13 +173,39 @@ class ServicioViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(sede_id=sede_id)
             return queryset
 
-        # COLABORADOR: solo servicios de su sede/organización
+        # COLABORADOR: servicios de sus sedes asignadas o su organización
         if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
+            import logging
+            logger = logging.getLogger(__name__)
+
             colaborador = Colaborador.all_objects.get(usuario=user)
             org = colaborador.sede.organizacion
+
+            # Obtener sedes a las que tiene acceso desde su perfil
+            sedes_acceso = []
+            if hasattr(user, 'perfil') and user.perfil:
+                if user.perfil.sedes.exists():
+                    sedes_acceso = list(user.perfil.sedes.values_list('id', flat=True))
+                    logger.warning(f"[SERVICIOS DEBUG COLAB] Colaborador {user.username} tiene sedes múltiples: {sedes_acceso}")
+                elif user.perfil.sede:
+                    sedes_acceso = [user.perfil.sede.id]
+                    logger.warning(f"[SERVICIOS DEBUG COLAB] Colaborador {user.username} tiene sede principal: {user.perfil.sede.id}")
+
+            # Si tiene sedes específicas asignadas, mostrar solo servicios de esas sedes
+            if sedes_acceso:
+                if sede_id:
+                    # Validar que la sede solicitada esté en sus sedes asignadas
+                    if int(sede_id) in sedes_acceso:
+                        return queryset.filter(sede_id=sede_id)
+                    return Servicio.all_objects.none()
+                # Sin sede_id, mostrar servicios de todas sus sedes asignadas
+                logger.warning(f"[SERVICIOS DEBUG COLAB] Devolviendo servicios de sedes asignadas: {sedes_acceso}")
+                return queryset.filter(sede_id__in=sedes_acceso)
+
+            # Si no tiene sedes específicas, mostrar servicios de toda su organización (comportamiento anterior)
+            logger.warning(f"[SERVICIOS DEBUG COLAB] Colaborador sin sedes específicas, mostrando toda la org: {org.nombre}")
             queryset = queryset.filter(sede__organizacion=org)
             if sede_id:
-                # Validar que la sede pertenece a su organización
                 queryset = queryset.filter(sede_id=sede_id)
             return queryset
 
