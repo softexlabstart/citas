@@ -97,7 +97,7 @@ def check_appointment_availability(sede, servicios, colaboradores, fecha, cita_i
 
 def _generate_slots(current_date, horarios, citas, bloqueos, intervalo, step, colaborador=None):
     processed_slots = set()
-    
+
     daily_slots = []
 
     for horario in horarios:
@@ -243,15 +243,24 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
     all_horarios = list(Horario.all_objects.filter(colaborador_id__in=colaborador_ids).order_by('hora_inicio'))
     # Use the base manager to bypass multi-tenant filtering for availability checks
     # We need to see ALL real appointments to accurately determine slot availability
+    # Note: We use distinct() to avoid duplicate rows from many-to-many joins
     all_citas = list(Cita.all_objects.filter(
         colaboradores__id__in=colaborador_ids, fecha__gte=day_start, fecha__lt=day_end, estado__in=['Pendiente', 'Confirmada']
-    ).prefetch_related('servicios', 'colaboradores').annotate(
-        duracion_total=Sum('servicios__duracion_estimada')
-    ).order_by('fecha'))
+    ).distinct().prefetch_related('servicios', 'colaboradores').order_by('fecha'))
+
+    # Calculate duracion_total for each cita after fetching
+    for cita in all_citas:
+        cita.duracion_total = sum(s.duracion_estimada for s in cita.servicios.all())
+
     all_bloqueos = list(Bloqueo.all_objects.filter(colaborador_id__in=colaborador_ids, fecha_inicio__lte=day_end, fecha_fin__gte=day_start).order_by('fecha_inicio'))
 
     horarios_by_colaborador = {cid: list(filter(lambda h: h.colaborador_id == cid, all_horarios)) for cid in colaborador_ids}
-    citas_by_colaborador = {cid: list(filter(lambda c: cid in [col.id for col in c.colaboradores.all()], all_citas)) for cid in colaborador_ids}
+    # Build a dictionary mapping colaborador_id to their citas
+    citas_by_colaborador = {cid: [] for cid in colaborador_ids}
+    for cita in all_citas:
+        for colaborador in cita.colaboradores.all():
+            if colaborador.id in citas_by_colaborador:
+                citas_by_colaborador[colaborador.id].append(cita)
     bloqueos_by_colaborador = {cid: list(filter(lambda b: b.colaborador_id == cid, all_bloqueos)) for cid in colaborador_ids}
 
     for i in range(days_to_check):
