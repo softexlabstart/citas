@@ -14,7 +14,10 @@ const Services: React.FC = () => {
   const { data: services, loading, error, request: fetchServices } = useApi<Service[], [string]>(getServicios);
 
   useEffect(() => {
-    if (user?.perfil?.sede) {
+    // If user has multiple sedes, don't pass sede_id to let backend return all services
+    if (user?.perfil?.sedes && user.perfil.sedes.length > 1) {
+      fetchServices(''); // Empty string - backend will return all services for all user's sedes
+    } else if (user?.perfil?.sede) {
       fetchServices(String(user.perfil.sede));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

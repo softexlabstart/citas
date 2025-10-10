@@ -12,6 +12,7 @@ export interface Organizacion {
 export interface PerfilUsuario {
     timezone: string;
     sede: number | null; // Assuming sede is just an ID here
+    sedes: Sede[]; // Multiple sedes that the user has access to
     sedes_administradas: Sede[];
     is_sede_admin: boolean;
     organizacion?: Organizacion | null; // Organización del usuario
