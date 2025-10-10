@@ -240,13 +240,15 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
     day_start = timezone.make_aware(datetime.combine(timezone.now().date(), time.min))
     day_end = timezone.make_aware(datetime.combine(end_date, time.max))
 
-    all_horarios = Horario.all_objects.filter(colaborador_id__in=colaborador_ids).order_by('hora_inicio')
-    all_citas = Cita.all_objects.filter(
+    all_horarios = list(Horario.all_objects.filter(colaborador_id__in=colaborador_ids).order_by('hora_inicio'))
+    # Use the base manager to bypass multi-tenant filtering for availability checks
+    # We need to see ALL real appointments to accurately determine slot availability
+    all_citas = list(Cita.all_objects.filter(
         colaboradores__id__in=colaborador_ids, fecha__gte=day_start, fecha__lt=day_end, estado__in=['Pendiente', 'Confirmada']
     ).prefetch_related('servicios', 'colaboradores').annotate(
         duracion_total=Sum('servicios__duracion_estimada')
-    ).order_by('fecha')
-    all_bloqueos = Bloqueo.all_objects.filter(colaborador_id__in=colaborador_ids, fecha_inicio__lte=day_end, fecha_fin__gte=day_start).order_by('fecha_inicio')
+    ).order_by('fecha'))
+    all_bloqueos = list(Bloqueo.all_objects.filter(colaborador_id__in=colaborador_ids, fecha_inicio__lte=day_end, fecha_fin__gte=day_start).order_by('fecha_inicio'))
 
     horarios_by_colaborador = {cid: list(filter(lambda h: h.colaborador_id == cid, all_horarios)) for cid in colaborador_ids}
     citas_by_colaborador = {cid: list(filter(lambda c: cid in [col.id for col in c.colaboradores.all()], all_citas)) for cid in colaborador_ids}
