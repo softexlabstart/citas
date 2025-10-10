@@ -185,6 +185,9 @@ class ServicioViewSet(viewsets.ModelViewSet):
 
         # CLIENTE: servicios de sus sedes asignadas o sede principal
         if user.is_authenticated:
+            import logging
+            logger = logging.getLogger(__name__)
+
             # Obtener las sedes a las que tiene acceso el usuario
             sedes_acceso = []
 
@@ -192,12 +195,19 @@ class ServicioViewSet(viewsets.ModelViewSet):
                 # Agregar sedes múltiples si existen
                 if user.perfil.sedes.exists():
                     sedes_acceso.extend(list(user.perfil.sedes.values_list('id', flat=True)))
+                    logger.warning(f"[SERVICIOS DEBUG] Usuario {user.username} tiene sedes múltiples: {sedes_acceso}")
                 # Agregar sede principal si existe
                 elif user.perfil.sede:
                     sedes_acceso.append(user.perfil.sede.id)
+                    logger.warning(f"[SERVICIOS DEBUG] Usuario {user.username} tiene sede principal: {user.perfil.sede.id}")
+                else:
+                    logger.warning(f"[SERVICIOS DEBUG] Usuario {user.username} NO tiene sedes asignadas")
+            else:
+                logger.warning(f"[SERVICIOS DEBUG] Usuario {user.username} NO tiene perfil")
 
             # Si se proporciona sede_id, validar que tenga acceso
             if sede_id:
+                logger.warning(f"[SERVICIOS DEBUG] Se solicitó sede_id={sede_id}, sedes_acceso={sedes_acceso}")
                 if int(sede_id) in sedes_acceso or not sedes_acceso:
                     return queryset.filter(sede_id=sede_id)
                 # Si no tiene acceso a esa sede, no mostrar servicios
@@ -205,9 +215,11 @@ class ServicioViewSet(viewsets.ModelViewSet):
 
             # Sin sede_id, mostrar servicios de todas sus sedes
             if sedes_acceso:
+                logger.warning(f"[SERVICIOS DEBUG] Devolviendo servicios de sedes: {sedes_acceso}")
                 return queryset.filter(sede_id__in=sedes_acceso)
 
             # Si no tiene sedes asignadas, no ve servicios
+            logger.warning(f"[SERVICIOS DEBUG] Usuario sin sedes, devolviendo queryset vacío")
             return Servicio.all_objects.none()
 
         # ANÓNIMO: debe proporcionar sede_id
