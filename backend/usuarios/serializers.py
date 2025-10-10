@@ -18,7 +18,7 @@ class OrganizacionSerializer(serializers.ModelSerializer):
         fields = ('id', 'nombre', 'slug')
 
 class PerfilUsuarioSerializer(serializers.ModelSerializer):
-    sedes = SedeSerializer(many=True, read_only=True)
+    sedes = serializers.SerializerMethodField()
     sedes_administradas = SedeSerializer(many=True, read_only=True)
     organizacion = OrganizacionSerializer(read_only=True)
     is_sede_admin = serializers.SerializerMethodField()
@@ -26,6 +26,14 @@ class PerfilUsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = PerfilUsuario
         fields = ('timezone', 'sede', 'sedes', 'organizacion', 'sedes_administradas', 'is_sede_admin', 'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento', 'has_consented_data_processing', 'data_processing_opt_out')
+
+    def get_sedes(self, obj):
+        """Get all sedes using base manager to bypass organization filtering."""
+        if not obj:
+            return []
+        # Use all() without manager to get the actual M2M relationship
+        sedes = obj.sedes.all()
+        return SedeSerializer(sedes, many=True).data
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
