@@ -14,16 +14,10 @@ const Services: React.FC = () => {
   const { data: services, loading, error, request: fetchServices } = useApi<Service[], [string]>(getServicios);
 
   useEffect(() => {
-    console.log('[SERVICES DEBUG] User perfil:', user?.perfil);
-    console.log('[SERVICES DEBUG] User sedes:', user?.perfil?.sedes);
-    console.log('[SERVICES DEBUG] User groups:', user?.groups);
-
     // If user has multiple sedes, don't pass sede_id to let backend return all services
     if (user?.perfil?.sedes && user.perfil.sedes.length > 1) {
-      console.log('[SERVICES DEBUG] User has multiple sedes, fetching all services');
       fetchServices(''); // Empty string - backend will return all services for all user's sedes
     } else if (user?.perfil?.sede) {
-      console.log('[SERVICES DEBUG] User has single sede, fetching services for sede:', user.perfil.sede);
       fetchServices(String(user.perfil.sede));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
