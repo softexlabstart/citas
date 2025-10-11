@@ -76,7 +76,7 @@ class PerfilUsuarioRegistrationSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False) # Make password optional for updates
-    perfil = PerfilUsuarioSerializer(required=False, allow_null=True)
+    perfil = serializers.DictField(required=False, allow_null=True, write_only=True)  # Accept any dict for input
     groups = serializers.SerializerMethodField(read_only=True) # Make groups read_only
 
     class Meta:
@@ -90,7 +90,7 @@ class UserSerializer(serializers.ModelSerializer):
         """Override to use read-only serializer for output."""
         representation = super().to_representation(instance)
         # Use PerfilUsuarioSerializer for output to get all custom fields
-        if instance.perfil:
+        if hasattr(instance, 'perfil'):
             representation['perfil'] = PerfilUsuarioSerializer(instance.perfil).data
         return representation
 
