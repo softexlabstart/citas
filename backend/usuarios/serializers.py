@@ -100,7 +100,11 @@ class UserSerializer(serializers.ModelSerializer):
         raise NotImplementedError("Use a dedicated registration serializer instead.")
 
     def update(self, instance, validated_data):
+        import logging
+        logger = logging.getLogger(__name__)
+
         perfil_data = validated_data.pop('perfil', {})
+        logger.warning(f"[USER UPDATE] Received perfil_data: {perfil_data}")
 
         # Update User fields
         instance.username = validated_data.get('username', instance.username)
@@ -118,9 +122,14 @@ class UserSerializer(serializers.ModelSerializer):
         except PerfilUsuario.DoesNotExist:
             perfil = PerfilUsuario.objects.create(user=instance)
 
+        logger.warning(f"[USER UPDATE] Perfil before update - data_processing_opt_out: {perfil.data_processing_opt_out}")
+
         for attr, value in perfil_data.items():
+            logger.warning(f"[USER UPDATE] Setting {attr} = {value}")
             setattr(perfil, attr, value)
+
         perfil.save()
+        logger.warning(f"[USER UPDATE] Perfil after save - data_processing_opt_out: {perfil.data_processing_opt_out}")
 
         return instance
 
