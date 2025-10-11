@@ -184,8 +184,16 @@ class ServicioViewSet(viewsets.ModelViewSet):
             # Obtener sedes a las que tiene acceso desde su perfil
             sedes_acceso = []
             if hasattr(user, 'perfil') and user.perfil:
-                if user.perfil.sedes.exists():
-                    sedes_acceso = list(user.perfil.sedes.values_list('id', flat=True))
+                # Consulta directa a la tabla intermedia para evitar OrganizacionManager
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT sede_id FROM usuarios_perfilusuario_sedes
+                        WHERE perfilusuario_id = %s
+                    """, [user.perfil.id])
+                    sedes_acceso = [row[0] for row in cursor.fetchall()]
+
+                if sedes_acceso:
                     logger.warning(f"[SERVICIOS DEBUG COLAB] Colaborador {user.username} tiene sedes múltiples: {sedes_acceso}")
                 elif user.perfil.sede:
                     sedes_acceso = [user.perfil.sede.id]
@@ -218,11 +226,18 @@ class ServicioViewSet(viewsets.ModelViewSet):
             sedes_acceso = []
 
             if hasattr(user, 'perfil') and user.perfil:
-                # Agregar sedes múltiples si existen
-                if user.perfil.sedes.exists():
-                    sedes_acceso.extend(list(user.perfil.sedes.values_list('id', flat=True)))
+                # Consulta directa a la tabla intermedia para evitar OrganizacionManager
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT sede_id FROM usuarios_perfilusuario_sedes
+                        WHERE perfilusuario_id = %s
+                    """, [user.perfil.id])
+                    sedes_acceso = [row[0] for row in cursor.fetchall()]
+
+                if sedes_acceso:
                     logger.warning(f"[SERVICIOS DEBUG] Usuario {user.username} tiene sedes múltiples: {sedes_acceso}")
-                # Agregar sede principal si existe
+                # Agregar sede principal si no tiene sedes múltiples
                 elif user.perfil.sede:
                     sedes_acceso.append(user.perfil.sede.id)
                     logger.warning(f"[SERVICIOS DEBUG] Usuario {user.username} tiene sede principal: {user.perfil.sede.id}")
