@@ -4,11 +4,13 @@ import { Service } from '../interfaces/Service';
 import { Recurso } from '../interfaces/Recurso';
 import { getSedes, getServicios, getRecursos } from '../api';
 import { useApi } from './useApi';
+import { useAuth } from './useAuth';
 
 export const useAppointmentForm = (organizacionSlug?: string) => {
     // State for selected values
     const [selectedSede, setSelectedSede] = useState('');
     const [selectedRecurso, setSelectedRecurso] = useState('');
+    const { user } = useAuth();
 
     // API hooks for data fetching
     const { data: sedes, loading: loadingSedes, error: errorSedes, request: fetchSedes } = useApi<Sede[], [string?]>(getSedes);
@@ -20,6 +22,15 @@ export const useAppointmentForm = (organizacionSlug?: string) => {
         fetchSedes(organizacionSlug);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [organizacionSlug]);
+
+    // Load initial services if user has multiple sedes (without sede selection)
+    useEffect(() => {
+        if (user?.perfil?.sedes && user.perfil.sedes.length > 1 && !selectedSede) {
+            // User has multiple sedes and hasn't selected one yet - load all services
+            fetchServicios('');
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user]);
 
     // Fetch servicios and recursos when a sede is selected
     useEffect(() => {
@@ -33,10 +44,17 @@ export const useAppointmentForm = (organizacionSlug?: string) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedSede]);
 
+    // Check if user has multiple sedes
+    const hasMultipleSedes = user?.perfil?.sedes && user.perfil.sedes.length > 1;
+
     return {
         sedes: sedes || [],
-        // Memoize to prevent re-rendering if the sede is not selected
-        servicios: useMemo(() => (selectedSede ? servicios || [] : []), [selectedSede, servicios]),
+        // Show servicios if sede is selected OR if user has multiple sedes (showing all)
+        servicios: useMemo(() => {
+            if (selectedSede) return servicios || [];
+            if (hasMultipleSedes) return servicios || [];
+            return [];
+        }, [selectedSede, servicios, hasMultipleSedes]),
         recursos: useMemo(() => (selectedSede ? recursos || [] : []), [selectedSede, recursos]),
         selectedSede,
         selectedRecurso,
