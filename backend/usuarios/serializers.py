@@ -76,7 +76,7 @@ class PerfilUsuarioRegistrationSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False) # Make password optional for updates
-    perfil = PerfilUsuarioSerializer(read_only=True, allow_null=True)
+    perfil = PerfilUsuarioSerializer(required=False, allow_null=True)
     groups = serializers.SerializerMethodField(read_only=True) # Make groups read_only
 
     class Meta:
@@ -85,6 +85,14 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_groups(self, obj):
         return [group.name for group in obj.groups.all()]
+
+    def to_representation(self, instance):
+        """Override to use read-only serializer for output."""
+        representation = super().to_representation(instance)
+        # Use PerfilUsuarioSerializer for output to get all custom fields
+        if instance.perfil:
+            representation['perfil'] = PerfilUsuarioSerializer(instance.perfil).data
+        return representation
 
     def create(self, validated_data):
         # This serializer should not be used for creation directly anymore.
