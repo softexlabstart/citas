@@ -62,21 +62,53 @@ def main():
     for sede in sedes_org:
         print(f"  - {sede.id}: {sede.nombre}")
 
-    # Preguntar si agregar sedes
-    if len(rows) == 0:
-        print("\n¿Deseas agregar sedes al usuario? (y/n)")
+    # Verificar qué sedes faltan
+    sedes_ids_actuales = {row[0] for row in rows}
+    sedes_faltantes = [sede for sede in sedes_org if sede.id not in sedes_ids_actuales]
+
+    if sedes_faltantes:
+        print(f"\n=== Sedes faltantes ({len(sedes_faltantes)}) ===")
+        for sede in sedes_faltantes:
+            print(f"  - {sede.id}: {sede.nombre}")
+
+        print("\n¿Deseas agregar las sedes faltantes al usuario? (y/n)")
         respuesta = input().strip().lower()
         if respuesta == 'y':
-            # Agregar todas las sedes de la organización
-            for sede in sedes_org:
-                perfil.sedes.add(sede)
-                print(f"✓ Agregada: {sede.nombre}")
+            # Agregar sedes faltantes usando through table directamente si es necesario
+            from django.db import connection
+            for sede in sedes_faltantes:
+                # Intentar agregar usando el método add()
+                try:
+                    perfil.sedes.add(sede)
+                    print(f"✓ Agregada: {sede.nombre}")
+                except Exception as e:
+                    print(f"✗ Error al agregar {sede.nombre}: {e}")
+                    # Intentar inserción directa si falla
+                    try:
+                        with connection.cursor() as cursor:
+                            cursor.execute("""
+                                INSERT INTO usuarios_perfilusuario_sedes (perfilusuario_id, sede_id)
+                                VALUES (%s, %s)
+                                ON CONFLICT DO NOTHING
+                            """, [perfil.id, sede.id])
+                        print(f"✓ Agregada (inserción directa): {sede.nombre}")
+                    except Exception as e2:
+                        print(f"✗ Error en inserción directa: {e2}")
 
-            print("\n=== Verificación después de agregar ===")
-            sedes_nuevas = perfil.sedes.all()
-            print(f"Count: {sedes_nuevas.count()}")
-            for sede in sedes_nuevas:
-                print(f"  - {sede.id}: {sede.nombre}")
+            print("\n=== Verificación después de agregar (consulta directa) ===")
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT s.id, s.nombre
+                    FROM organizacion_sede s
+                    INNER JOIN usuarios_perfilusuario_sedes ups ON s.id = ups.sede_id
+                    WHERE ups.perfilusuario_id = %s
+                """, [perfil.id])
+                rows_nuevas = cursor.fetchall()
+                print(f"Count: {len(rows_nuevas)}")
+                for row in rows_nuevas:
+                    print(f"  - {row[0]}: {row[1]}")
+    else:
+        print("\n✓ Todas las sedes de la organización ya están asignadas")
 
 if __name__ == '__main__':
     main()
