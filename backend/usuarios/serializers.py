@@ -28,12 +28,20 @@ class PerfilUsuarioSerializer(serializers.ModelSerializer):
         fields = ('timezone', 'sede', 'sedes', 'organizacion', 'sedes_administradas', 'is_sede_admin', 'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento', 'has_consented_data_processing', 'data_processing_opt_out')
 
     def get_sedes(self, obj):
-        """Get all sedes using base manager to bypass organization filtering."""
+        """Get all sedes using direct query to bypass organization filtering."""
         if not obj:
             return []
-        # Use all() without manager to get the actual M2M relationship
-        sedes = obj.sedes.all()
-        return SedeSerializer(sedes, many=True).data
+        # Query the through table directly to bypass OrganizacionManager
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT s.id, s.nombre
+                FROM organizacion_sede s
+                INNER JOIN usuarios_perfilusuario_sedes ups ON s.id = ups.sede_id
+                WHERE ups.perfilusuario_id = %s
+            """, [obj.id])
+            rows = cursor.fetchall()
+            return [{'id': row[0], 'nombre': row[1]} for row in rows]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
