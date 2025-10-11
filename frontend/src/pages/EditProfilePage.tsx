@@ -10,7 +10,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 
 export const EditProfilePage: React.FC = () => {
     const { t } = useTranslation();
-    const { user, logout } = useAuth();
+    const { user, logout, updateUser } = useAuth();
     const navigate = useNavigate();
     const [clientData, setClientData] = useState<Client | null>(null);
     const [loading, setLoading] = useState(true);
@@ -80,6 +80,15 @@ export const EditProfilePage: React.FC = () => {
         setOpposeDataProcessing(newValue);
         try {
             await updateDataProcessingOptOut(newValue);
+            // Update the user context with the new preference
+            if (user?.perfil) {
+                updateUser({
+                    perfil: {
+                        ...user.perfil,
+                        data_processing_opt_out: newValue
+                    }
+                });
+            }
             toast.success(t('data_processing_preference_updated'));
         } catch (err: any) {
             const errorMessage = err.response?.data?.detail || err.message || t('error_updating_data_processing_preference');

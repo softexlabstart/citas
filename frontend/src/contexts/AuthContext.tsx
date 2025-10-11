@@ -10,6 +10,7 @@ interface AuthContextType {
     login: (username: string, password: string) => Promise<void>;
     loginWithMagicLink: (token: string) => Promise<void>;
     logout: (message?: string) => void;
+    updateUser: (updatedUser: Partial<User & { groups: string[] }>) => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -66,8 +67,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(response.user);
     };
 
+    const updateUser = useCallback((updatedUser: Partial<User & { groups: string[] }>) => {
+        if (user) {
+            const newUser = { ...user, ...updatedUser };
+            setUser(newUser);
+            localStorage.setItem('user', JSON.stringify(newUser));
+        }
+    }, [user]);
+
     return (
-        <AuthContext.Provider value={{ user, login, loginWithMagicLink, logout }}>
+        <AuthContext.Provider value={{ user, login, loginWithMagicLink, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );
