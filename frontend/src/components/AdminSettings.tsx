@@ -10,6 +10,7 @@ import { Recurso } from '../interfaces/Recurso';
 import { Sede } from '../interfaces/Sede';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { formatCOP } from '../utils/currency';
 
 // Define extended interfaces locally to avoid modifying shared interface files.
 // This acknowledges that for this admin component, we expect more detailed data from the API.
@@ -243,7 +244,7 @@ const AdminSettings: React.FC = () => {
                             <thead><tr><th>{t('name')}</th><th>{t('description')}</th><th>{t('duration')}</th><th>{t('price')}</th><th>{t('sede_label')}</th><th>{t('actions')}</th></tr></thead>
                             <tbody>
                                 {loadingServicios ? (<tr><td colSpan={6} className="text-center"><Spinner animation="border" /></td></tr>) : (
-                                    servicios?.map(s => (<tr key={s.id}><td>{s.nombre}</td><td>{s.descripcion}</td><td>{s.duracion_estimada} min</td><td>${(Number(s.precio) || 0).toFixed(2)}</td><td>{s.sede.nombre}</td><td><Button variant="warning" size="sm" onClick={() => handleOpenModal('service', s)}>{t('edit')}</Button>{' '}<Button variant="danger" size="sm" onClick={() => handleDelete('service', s.id)}>{t('delete')}</Button></td></tr>))
+                                    servicios?.map(s => (<tr key={s.id}><td>{s.nombre}</td><td>{s.descripcion}</td><td>{s.duracion_estimada} min</td><td>{formatCOP(Number(s.precio))}</td><td>{s.sede.nombre}</td><td><Button variant="warning" size="sm" onClick={() => handleOpenModal('service', s)}>{t('edit')}</Button>{' '}<Button variant="danger" size="sm" onClick={() => handleDelete('service', s.id)}>{t('delete')}</Button></td></tr>))
                                 )}
                             </tbody>
                         </Table>

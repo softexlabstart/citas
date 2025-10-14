@@ -6,6 +6,7 @@ import { useApi } from '../hooks/useApi';
 import { getSedeSummaryReport } from '../api';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+import { formatCOP } from '../utils/currency';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -117,7 +118,7 @@ const SedeReport: React.FC = () => {
                             </Col>
                             <Col>
                                 <Alert variant="success" className="text-center">
-                                    <h5>{t('total_revenue')}: <strong>${(reportData.ingresos_totales || 0).toFixed(2)}</strong></h5>
+                                    <h5>{t('total_revenue')}: <strong>{formatCOP(reportData.ingresos_totales)}</strong></h5>
                                 </Alert>
                             </Col>
                         </Row>
@@ -134,7 +135,7 @@ const SedeReport: React.FC = () => {
                                         <td>{item.sede_nombre}</td>
                                         <td>{item.total_citas}</td>
                                         <td>{item.estados.find(e => e.estado === 'Asistio')?.count || 0}</td>
-                                        <td>${(item.ingresos || 0).toFixed(2)}</td>
+                                        <td>{formatCOP(item.ingresos)}</td>
                                     </tr>
                                 ))}
                             </tbody>
