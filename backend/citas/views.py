@@ -572,8 +572,17 @@ class AppointmentReportView(APIView):
         else:  # Non-staff
             try:
                 perfil = user.perfil
-                if perfil.sedes_administradas.exists():
-                    base_queryset = Cita.all_objects.filter(sede__in=perfil.sedes_administradas.all())
+                # Consulta SQL directa para obtener sedes administradas
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
+                        WHERE perfilusuario_id = %s
+                    """, [perfil.id])
+                    sedes_admin_ids = [row[0] for row in cursor.fetchall()]
+
+                if sedes_admin_ids:
+                    base_queryset = Cita.all_objects.filter(sede_id__in=sedes_admin_ids)
                 else:
                     base_queryset = Cita.all_objects.filter(user=user)
             except (AttributeError, PerfilUsuario.DoesNotExist):
@@ -639,8 +648,17 @@ class SedeReportView(APIView):
         else:
             try:
                 perfil = user.perfil
-                if perfil.sedes_administradas.exists():
-                    administered_sedes = perfil.sedes_administradas.all()
+                # Consulta SQL directa para obtener sedes administradas
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
+                        WHERE perfilusuario_id = %s
+                    """, [perfil.id])
+                    sedes_admin_ids = [row[0] for row in cursor.fetchall()]
+
+                if sedes_admin_ids:
+                    administered_sedes = Sede.all_objects.filter(id__in=sedes_admin_ids)
                 elif user.is_staff and perfil.organizacion:
                     administered_sedes = Sede.all_objects.filter(organizacion=perfil.organizacion)
             except (AttributeError, PerfilUsuario.DoesNotExist):
