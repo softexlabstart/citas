@@ -275,10 +275,6 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
     def get_queryset(self):
         user = self.request.user
 
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info(f"[ClientViewSet] Usuario: {user.username}, is_superuser: {user.is_superuser}")
-
         # Base queryset: usuarios que NO son staff, ni admins de sede, ni colaboradores
         try:
             sede_admin_group = Group.objects.get(name='SedeAdmin')
@@ -296,11 +292,8 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
                 .exclude(email__exact='') \
                 .select_related('perfil')
 
-        logger.info(f"[ClientViewSet] Base queryset count: {base_queryset.count()}")
-
         # SUPERUSUARIO: puede ver todos los clientes
         if user.is_superuser:
-            logger.info(f"[ClientViewSet] Usuario es SUPERUSER, devolviendo {base_queryset.count()} clientes")
             return base_queryset
 
         # ADMINISTRADOR DE SEDE: solo clientes de su organización
@@ -316,13 +309,9 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
 
             if sedes_admin_count > 0:
                 org = user.perfil.organizacion
-                logger.info(f"[ClientViewSet] Usuario es ADMIN DE SEDE, organizacion: {org}")
                 if org:
-                    filtered = base_queryset.filter(perfil__organizacion=org)
-                    logger.info(f"[ClientViewSet] Clientes filtrados por org: {filtered.count()}")
-                    return filtered
+                    return base_queryset.filter(perfil__organizacion=org)
                 else:
-                    logger.warning(f"[ClientViewSet] Admin de sede SIN organizacion asignada!")
                     # Si el admin no tiene organización asignada, no puede ver clientes
                     return User.objects.none()
 
@@ -352,7 +341,8 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
         client = self.get_object()
-        citas = Cita.objects.filter(
+        # Usar all_objects para evitar filtrado por OrganizacionManager
+        citas = Cita.all_objects.filter(
             Q(user=client) | Q(nombre=client.username)
         ).select_related(
             'user__perfil',
