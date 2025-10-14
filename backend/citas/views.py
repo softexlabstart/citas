@@ -568,16 +568,7 @@ class AppointmentReportView(APIView):
         user = request.user
         if user.is_superuser:
             base_queryset = Cita.all_objects.all()
-        elif user.is_staff:
-            try:
-                organizacion = user.perfil.organizacion
-                if organizacion:
-                    base_queryset = Cita.all_objects.filter(sede__organizacion=organizacion)
-                else:
-                    base_queryset = Cita.objects.none()
-            except (AttributeError, PerfilUsuario.DoesNotExist):
-                base_queryset = Cita.objects.none()
-        else:  # Non-staff
+        else:
             try:
                 perfil = user.perfil
                 # Consulta SQL directa para obtener sedes administradas
@@ -590,8 +581,13 @@ class AppointmentReportView(APIView):
                     sedes_admin_ids = [row[0] for row in cursor.fetchall()]
 
                 if sedes_admin_ids:
+                    # Usuario administra sedes específicas
                     base_queryset = Cita.all_objects.filter(sede_id__in=sedes_admin_ids)
+                elif user.is_staff and perfil.organizacion:
+                    # Usuario staff sin sedes administradas específicas - ver toda la organización
+                    base_queryset = Cita.all_objects.filter(sede__organizacion=perfil.organizacion)
                 else:
+                    # Usuario normal - ver solo sus propias citas
                     base_queryset = Cita.all_objects.filter(user=user)
             except (AttributeError, PerfilUsuario.DoesNotExist):
                 base_queryset = Cita.all_objects.filter(user=user)
