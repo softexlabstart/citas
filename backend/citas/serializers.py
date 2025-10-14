@@ -38,7 +38,7 @@ class BloqueoSerializer(serializers.ModelSerializer):
 
     # For write operations, accept IDs
     colaborador_id = serializers.PrimaryKeyRelatedField(
-        queryset=Colaborador.objects.all(), source='colaborador', write_only=True
+        queryset=Colaborador.all_objects.all(), source='colaborador', write_only=True
     )
 
     class Meta:
