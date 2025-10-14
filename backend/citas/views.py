@@ -165,13 +165,21 @@ class ServicioViewSet(viewsets.ModelViewSet):
             return queryset
 
         # ADMINISTRADOR DE SEDE: solo servicios de sus sedes
-        if user.is_authenticated and hasattr(user, 'perfil') and user.perfil.sedes_administradas.exists():
-            org = user.perfil.organizacion
-            queryset = queryset.filter(sede__organizacion=org)
-            if sede_id:
-                # Validar que la sede pertenece a su organización
-                queryset = queryset.filter(sede_id=sede_id)
-            return queryset
+        if user.is_authenticated and hasattr(user, 'perfil') and user.perfil:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
+                    WHERE perfilusuario_id = %s
+                """, [user.perfil.id])
+                sedes_admin_ids = [row[0] for row in cursor.fetchall()]
+
+            if sedes_admin_ids:
+                queryset = queryset.filter(sede_id__in=sedes_admin_ids)
+                if sede_id:
+                    # Validar que la sede pertenece a las sedes administradas
+                    queryset = queryset.filter(sede_id=sede_id)
+                return queryset
 
         # COLABORADOR: servicios de sus sedes asignadas o su organización
         if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
@@ -936,17 +944,25 @@ class RecursoViewSet(viewsets.ModelViewSet):
             )
 
         # ADMINISTRADOR DE SEDE: solo recursos de sus sedes
-        if user.is_authenticated and hasattr(user, 'perfil') and user.perfil.sedes_administradas.exists():
-            org = user.perfil.organizacion
-            queryset = queryset.filter(sede__organizacion=org)
-            if sede_id:
-                # Validar que la sede pertenece a su organización
-                queryset = queryset.filter(sede_id=sede_id)
-            # Excluir recursos con bloqueo activo
-            return queryset.exclude(
-                bloqueos__fecha_inicio__lte=now,
-                bloqueos__fecha_fin__gte=now
-            )
+        if user.is_authenticated and hasattr(user, 'perfil') and user.perfil:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
+                    WHERE perfilusuario_id = %s
+                """, [user.perfil.id])
+                sedes_admin_ids = [row[0] for row in cursor.fetchall()]
+
+            if sedes_admin_ids:
+                queryset = queryset.filter(sede_id__in=sedes_admin_ids)
+                if sede_id:
+                    # Validar que la sede pertenece a las sedes administradas
+                    queryset = queryset.filter(sede_id=sede_id)
+                # Excluir recursos con bloqueo activo
+                return queryset.exclude(
+                    bloqueos__fecha_inicio__lte=now,
+                    bloqueos__fecha_fin__gte=now
+                )
 
         # COLABORADOR: puede ver recursos de su organización
         if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
