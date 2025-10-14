@@ -49,7 +49,7 @@ export const EditProfilePage: React.FC = () => {
                         setBarrio(response.data.barrio || '');
                         setGenero(response.data.genero || '');
                         setFechaNacimiento(response.data.fecha_nacimiento || '');
-                        setOpposeDataProcessing(response.data.data_processing_opt_out || false);
+                        setOpposeDataProcessing(response.data.perfil?.data_processing_opt_out ?? false);
                     } else {
                         setError(t('error_fetching_profile'));
                         toast.error(t('error_fetching_profile'));
