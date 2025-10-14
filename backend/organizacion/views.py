@@ -58,7 +58,22 @@ class SedeViewSet(viewsets.ModelViewSet):
             if user.is_superuser:
                 return Sede.all_objects.all()
             try:
-                organizacion = user.perfil.organizacion
+                perfil = user.perfil
+                # Verificar si es administrador de sedes específicas
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
+                        WHERE perfilusuario_id = %s
+                    """, [perfil.id])
+                    sedes_admin_ids = [row[0] for row in cursor.fetchall()]
+
+                if sedes_admin_ids:
+                    # Usuario administra sedes específicas - mostrar solo esas
+                    return Sede.all_objects.filter(id__in=sedes_admin_ids)
+
+                # Si no tiene sedes administradas pero tiene organización, mostrar todas de la organización
+                organizacion = perfil.organizacion
                 if organizacion:
                     return Sede.all_objects.filter(organizacion=organizacion)
                 return Sede.objects.none()

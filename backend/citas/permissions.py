@@ -94,7 +94,43 @@ class IsAdminOrSedeAdminOrReadOnly(BasePermission):
             return True
 
         try:
-            return request.user.perfil.sedes_administradas.exists()
+            # Usar consulta SQL directa para verificar sedes administradas
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT COUNT(*) FROM usuarios_perfilusuario_sedes_administradas
+                    WHERE perfilusuario_id = %s
+                """, [request.user.perfil.id])
+                count = cursor.fetchone()[0]
+                return count > 0
+        except (AttributeError, PerfilUsuario.DoesNotExist):
+            return False
+
+    def has_object_permission(self, request, view, obj):
+        # Lectura permitida a todos
+        if request.method in SAFE_METHODS:
+            return True
+
+        # Superusuarios tienen acceso total
+        if request.user.is_superuser:
+            return True
+
+        # Verificar que el usuario administra la sede del objeto
+        try:
+            from django.db import connection
+            # Obtener sede_id del objeto (puede ser Servicio, Recurso, etc.)
+            sede_id = obj.sede_id if hasattr(obj, 'sede_id') else obj.sede.id if hasattr(obj, 'sede') else None
+
+            if not sede_id:
+                return False
+
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT COUNT(*) FROM usuarios_perfilusuario_sedes_administradas
+                    WHERE perfilusuario_id = %s AND sede_id = %s
+                """, [request.user.perfil.id, sede_id])
+                count = cursor.fetchone()[0]
+                return count > 0
         except (AttributeError, PerfilUsuario.DoesNotExist):
             return False
 
