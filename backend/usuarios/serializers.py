@@ -145,6 +145,14 @@ class ClientSerializer(serializers.ModelSerializer):
             'full_name', 'age'
         )
 
+    def validate_fecha_nacimiento(self, value):
+        """Validar que la fecha de nacimiento no sea futura."""
+        if value:
+            from datetime import date
+            if value > date.today():
+                raise serializers.ValidationError("La fecha de nacimiento no puede ser una fecha futura.")
+        return value
+
     def get_full_name(self, obj):
         if obj.first_name and obj.last_name:
             return f"{obj.first_name} {obj.last_name}".strip()
