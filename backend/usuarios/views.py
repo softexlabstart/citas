@@ -304,17 +304,27 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
             return base_queryset
 
         # ADMINISTRADOR DE SEDE: solo clientes de su organización
-        if hasattr(user, 'perfil') and user.perfil.sedes_administradas.exists():
-            org = user.perfil.organizacion
-            logger.info(f"[ClientViewSet] Usuario es ADMIN DE SEDE, organizacion: {org}")
-            if org:
-                filtered = base_queryset.filter(perfil__organizacion=org)
-                logger.info(f"[ClientViewSet] Clientes filtrados por org: {filtered.count()}")
-                return filtered
-            else:
-                logger.warning(f"[ClientViewSet] Admin de sede SIN organizacion asignada!")
-                # Si el admin no tiene organización asignada, no puede ver clientes
-                return User.objects.none()
+        if hasattr(user, 'perfil') and user.perfil:
+            # Verificar si tiene sedes administradas usando consulta SQL directa
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT COUNT(*) FROM usuarios_perfilusuario_sedes_administradas
+                    WHERE perfilusuario_id = %s
+                """, [user.perfil.id])
+                sedes_admin_count = cursor.fetchone()[0]
+
+            if sedes_admin_count > 0:
+                org = user.perfil.organizacion
+                logger.info(f"[ClientViewSet] Usuario es ADMIN DE SEDE, organizacion: {org}")
+                if org:
+                    filtered = base_queryset.filter(perfil__organizacion=org)
+                    logger.info(f"[ClientViewSet] Clientes filtrados por org: {filtered.count()}")
+                    return filtered
+                else:
+                    logger.warning(f"[ClientViewSet] Admin de sede SIN organizacion asignada!")
+                    # Si el admin no tiene organización asignada, no puede ver clientes
+                    return User.objects.none()
 
         # COLABORADOR: solo clientes de su sede/organización
         from citas.models import Colaborador
