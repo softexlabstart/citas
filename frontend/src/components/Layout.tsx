@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import moment from 'moment';
 import { HouseDoor, Briefcase, CalendarCheck, CalendarWeek, BarChart, Gear, QuestionCircle, Search, People, Megaphone, Building, PlusCircle } from 'react-bootstrap-icons';
+import Footer from './Footer';
 import '../styles/custom.css';
 
 interface LayoutProps {
@@ -118,11 +119,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </Navbar>
       )}
       <Container className="flex-grow-1 mb-4">{children}</Container>
-      <footer className="footer mt-auto py-3 bg-dark text-white border-top">
-        <Container className="text-center">
-          <span>© {new Date().getFullYear()} Softex-labs. {t('all_rights_reserved')}.</span>
-        </Container>
-      </footer>
+      <Footer />
     </div>
   );
 };

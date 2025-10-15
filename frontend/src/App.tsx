@@ -12,6 +12,8 @@ import MagicLinkAuthPage from './pages/MagicLinkAuthPage';
 import PublicBookingPage from './pages/PublicBookingPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute'; // Import AdminRoute
 import { AuthProvider } from './contexts/AuthContext';
@@ -63,6 +65,8 @@ const App: React.FC = () => {
               <Route path="/magic-link-auth" element={<MagicLinkAuthPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
 
               {/* Rutas Privadas */}
               <Route element={<PrivateRoute />}>

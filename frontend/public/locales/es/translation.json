@@ -284,7 +284,7 @@
   "error_deleting_account": "Error al eliminar la cuenta.",
   "data_processing_preference_updated": "Preferencia de procesamiento de datos actualizada.",
   "profile_updated_successfully": "Perfil actualizado exitosamente.",
-  "consent_privacy_policy": "de acuerdo con la <a href=\"https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=49981\" target=\"_blank\">Política de Privacidad</a>.",
+  "consent_privacy_policy": "Acepto los <a href=\"/terms\" target=\"_blank\">Términos y Condiciones</a> y la <a href=\"/privacy-policy\" target=\"_blank\">Política de Privacidad</a>.",
   "already_have_account login": "¿Ya tienes una cuenta? Inicia sesión",
   "request_opposition_sent": "Solicitud de opisión enviada",
   "active_blocks": "Bloqueos Activos",
