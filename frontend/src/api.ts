@@ -333,6 +333,31 @@ export const confirmPasswordReset = async (token: string, new_password: string) 
     return response.data;
 };
 
+// Funciones para Guía de Usuario
+export interface GuideSection {
+    id: number;
+    title: string;
+    slug: string;
+    content: string;
+    category: string;
+    category_display: string;
+    order: number;
+    icon: string;
+    language: string;
+    language_display: string;
+    video_url?: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export const getGuideSections = (language?: string, category?: string) => {
+    const params = new URLSearchParams();
+    if (language) params.append('language', language);
+    if (category) params.append('category', category);
+    return api.get<GuideSection[]>(`/api/guide/sections/?${params.toString()}`);
+};
+
 // Funciones para Reservas Públicas (Invitados)
 export interface PublicBookingData {
     nombre: string;

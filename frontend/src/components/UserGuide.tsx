@@ -1,9 +1,88 @@
-import React from 'react';
-import { Container, Row, Col, Card, Accordion } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Accordion, Spinner, Alert, Badge } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
+import { getGuideSections, GuideSection } from '../api';
+import * as Icons from 'react-bootstrap-icons';
 
 const UserGuide: React.FC = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const [sections, setSections] = useState<GuideSection[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [groupedSections, setGroupedSections] = useState<Record<string, GuideSection[]>>({});
+
+    useEffect(() => {
+        const fetchSections = async () => {
+            try {
+                setLoading(true);
+                const response = await getGuideSections(i18n.language);
+                setSections(response.data);
+
+                // Agrupar por categoría
+                const grouped = response.data.reduce((acc, section) => {
+                    if (!acc[section.category]) {
+                        acc[section.category] = [];
+                    }
+                    acc[section.category].push(section);
+                    return acc;
+                }, {} as Record<string, GuideSection[]>);
+
+                setGroupedSections(grouped);
+                setError(null);
+            } catch (err) {
+                console.error('Error fetching guide sections:', err);
+                setError('Error al cargar la guía de usuario');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSections();
+    }, [i18n.language]);
+
+    const getIcon = (iconName: string) => {
+        const IconComponent = (Icons as any)[iconName] || Icons.QuestionCircle;
+        return <IconComponent className="me-2" />;
+    };
+
+    const getCategoryBadgeVariant = (category: string) => {
+        switch (category) {
+            case 'general': return 'primary';
+            case 'usuarios': return 'success';
+            case 'administradores': return 'warning';
+            case 'colaboradores': return 'info';
+            default: return 'secondary';
+        }
+    };
+
+    if (loading) {
+        return (
+            <Container className="mt-5 text-center">
+                <Spinner animation="border" role="status">
+                    <span className="visually-hidden">Cargando...</span>
+                </Spinner>
+                <p className="mt-3">Cargando guía de usuario...</p>
+            </Container>
+        );
+    }
+
+    if (error) {
+        return (
+            <Container className="mt-5">
+                <Alert variant="danger">{error}</Alert>
+            </Container>
+        );
+    }
+
+    if (sections.length === 0) {
+        return (
+            <Container className="mt-5">
+                <Alert variant="info">
+                    No hay secciones de guía disponibles actualmente.
+                </Alert>
+            </Container>
+        );
+    }
 
     return (
         <Container className="mt-5">
@@ -18,62 +97,58 @@ const UserGuide: React.FC = () => {
                                 {t('user_guide_intro')}
                             </p>
 
-                            <Accordion defaultActiveKey="0" alwaysOpen>
-                                <Accordion.Item eventKey="0">
-                                    <Accordion.Header>{t('guide_section_1_title')}</Accordion.Header>
-                                    <Accordion.Body>
-                                        <p>{t('guide_section_1_p1')}</p>
-                                        <ol>
-                                            <li>{t('guide_section_1_step1')}</li>
-                                            <li>{t('guide_section_1_step2')}</li>
-                                            <li>{t('guide_section_1_step3')}</li>
-                                        </ol>
-                                        <p>{t('guide_section_1_p2')}</p>
-                                        {/* Puedes añadir una imagen de ejemplo aquí */}
-                                        {/* <img src="/path/to/services-screenshot.png" alt="Gestionar Servicios" className="img-fluid rounded mt-2" /> */}
-                                    </Accordion.Body>
-                                </Accordion.Item>
+                            {Object.keys(groupedSections).map((category, catIndex) => (
+                                <div key={category} className="mb-4">
+                                    <h4 className="mb-3">
+                                        <Badge bg={getCategoryBadgeVariant(category)}>
+                                            {groupedSections[category][0].category_display}
+                                        </Badge>
+                                    </h4>
 
-                                <Accordion.Item eventKey="1">
-                                    <Accordion.Header>{t('guide_section_2_title')}</Accordion.Header>
-                                    <Accordion.Body>
-                                        <p>{t('guide_section_2_p1')}</p>
-                                        <p>{t('guide_section_2_p2')}</p>
-                                        <ul>
-                                            <li><strong>{t('pending')}:</strong> {t('guide_status_pending')}</li>
-                                            <li><strong>{t('confirmed')}:</strong> {t('guide_status_confirmed')}</li>
-                                            <li><strong>{t('cancelled')}:</strong> {t('guide_status_cancelled')}</li>
-                                        </ul>
-                                        <p>{t('guide_section_2_p3')}</p>
-                                    </Accordion.Body>
-                                </Accordion.Item>
-
-                                <Accordion.Item eventKey="2">
-                                    <Accordion.Header>{t('guide_section_3_title')}</Accordion.Header>
-                                    <Accordion.Body>
-                                        <p>{t('guide_section_3_p1')}</p>
-                                        <p>{t('guide_section_3_p2')}</p>
-                                        <p>{t('guide_section_3_p3')}</p>
-                                    </Accordion.Body>
-                                </Accordion.Item>
-
-                                <Accordion.Item eventKey="3">
-                                    <Accordion.Header>{t('guide_section_4_title')}</Accordion.Header>
-                                    <Accordion.Body>
-                                        <p>{t('guide_section_4_p1')}</p>
-                                        <ol>
-                                            <li>{t('guide_section_4_step1')}</li>
-                                            <li>{t('guide_section_4_step2')}</li>
-                                            <li>{t('guide_section_4_step3')}</li>
-                                        </ol>
-                                        <p>{t('guide_section_4_p2')}</p>
-                                    </Accordion.Body>
-                                </Accordion.Item>
-                            </Accordion>
-
+                                    <Accordion defaultActiveKey={catIndex === 0 ? "0" : undefined}>
+                                        {groupedSections[category].map((section, index) => (
+                                            <Accordion.Item eventKey={String(index)} key={section.id}>
+                                                <Accordion.Header>
+                                                    {getIcon(section.icon)}
+                                                    {section.title}
+                                                </Accordion.Header>
+                                                <Accordion.Body>
+                                                    <div
+                                                        dangerouslySetInnerHTML={{ __html: section.content }}
+                                                        style={{ lineHeight: '1.6' }}
+                                                    />
+                                                    {section.video_url && (
+                                                        <div className="mt-3">
+                                                            <Alert variant="info">
+                                                                <Icons.PlayCircle className="me-2" />
+                                                                <a
+                                                                    href={section.video_url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                >
+                                                                    Ver video tutorial
+                                                                </a>
+                                                            </Alert>
+                                                        </div>
+                                                    )}
+                                                </Accordion.Body>
+                                            </Accordion.Item>
+                                        ))}
+                                    </Accordion>
+                                </div>
+                            ))}
                         </Card.Body>
                         <Card.Footer className="text-muted text-center">
                             {t('guide_footer')}
+                            <div className="mt-2">
+                                <small>
+                                    <Icons.Tools className="me-1" />
+                                    ¿Eres administrador?
+                                    <a href="/admin/guide/guidesection/" target="_blank" rel="noopener noreferrer" className="ms-2">
+                                        Editar guía desde el panel de administración
+                                    </a>
+                                </small>
+                            </div>
                         </Card.Footer>
                     </Card>
                 </Col>

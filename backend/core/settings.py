@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'organizacion',
     'marketing',
+    'guide',
     'axes',
     'csp',
 ]

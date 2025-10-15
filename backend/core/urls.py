@@ -14,6 +14,7 @@ urlpatterns = [
     path('api/citas/', include('citas.urls', namespace='citas')),
     path('api/organizacion/', include('organizacion.urls', namespace='organizacion')),
     path('api/marketing/', include('marketing.urls', namespace='marketing')),
+    path('api/guide/', include('guide.urls')),
     path('api/', include('usuarios.urls', namespace='usuarios')),
 ]
 
