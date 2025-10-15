@@ -315,6 +315,17 @@ export const authenticateWithMagicLink = async (token: string) => {
     return response.data;
 };
 
+// Funciones para Password Reset (Recuperación de Contraseña)
+export const requestPasswordReset = async (email: string) => {
+    const response = await api.post('/api/usuarios/auth/request-password-reset/', { email });
+    return response.data;
+};
+
+export const confirmPasswordReset = async (token: string, new_password: string) => {
+    const response = await api.post('/api/usuarios/auth/confirm-password-reset/', { token, new_password });
+    return response.data;
+};
+
 // Funciones para Reservas Públicas (Invitados)
 export interface PublicBookingData {
     nombre: string;

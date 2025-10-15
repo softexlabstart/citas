@@ -77,8 +77,8 @@ const LoginPage: React.FC = () => {
                             </Form>
 
                             <div className="text-center my-3">
-                                <Link to="/mis-citas" className="text-decoration-none">
-                                    <small>¿Olvidaste tu contraseña? Accede con un enlace mágico</small>
+                                <Link to="/forgot-password" className="text-decoration-none">
+                                    <small>¿Olvidaste tu contraseña?</small>
                                 </Link>
                             </div>
 

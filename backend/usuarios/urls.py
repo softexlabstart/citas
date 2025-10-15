@@ -2,6 +2,7 @@ app_name = 'usuarios'
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import LoginView, RegisterView, RegisterByOrganizacionView, TimezoneView, UserDetailView, ClientViewSet, ClientEmailListView, PersonalDataView, DeleteAccountView, MultiTenantRegistrationView, OrganizationManagementView, InvitationView, OrganizationMembersView, RequestHistoryLinkView, AccessHistoryWithTokenView
+from .views_password_reset import RequestPasswordResetView, ConfirmPasswordResetView
 
 router = DefaultRouter()
 router.register(r'clients', ClientViewSet, basename='client')
@@ -24,4 +25,7 @@ urlpatterns = [
     # URLs para Magic Link
     path('auth/request-history-link/', RequestHistoryLinkView.as_view(), name='request_history_link'),
     path('auth/access-history-with-token/', AccessHistoryWithTokenView.as_view(), name='access_history_with_token'),
+    # URLs para Password Reset
+    path('auth/request-password-reset/', RequestPasswordResetView.as_view(), name='request_password_reset'),
+    path('auth/confirm-password-reset/', ConfirmPasswordResetView.as_view(), name='confirm_password_reset'),
 ]

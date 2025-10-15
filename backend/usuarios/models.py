@@ -89,3 +89,36 @@ class MagicLinkToken(models.Model):
 
     def __str__(self):
         return f"Magic Link for {self.user.email} - Expires: {self.expires_at}"
+
+
+class PasswordResetToken(models.Model):
+    """
+    Modelo para tokens de recuperación de contraseña.
+    Los tokens expiran automáticamente después de 30 minutos.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_tokens')
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(editable=False)
+    used = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = 'Password Reset Token'
+        verbose_name_plural = 'Password Reset Tokens'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['token', 'expires_at', 'used']),
+        ]
+
+    def save(self, *args, **kwargs):
+        """Establece la fecha de expiración a 30 minutos desde la creación."""
+        if not self.pk:  # Solo al crear
+            self.expires_at = timezone.now() + timedelta(minutes=30)
+        super().save(*args, **kwargs)
+
+    def is_valid(self):
+        """Verifica si el token no ha expirado y no ha sido usado."""
+        return not self.used and timezone.now() <= self.expires_at
+
+    def __str__(self):
+        return f"Password Reset for {self.user.email} - Expires: {self.expires_at}"
