@@ -49,7 +49,7 @@ const HomePage: React.FC = () => {
 
   // Auto-show wizard for new users
   useEffect(() => {
-    if (progress && shouldShowOnboarding()) {
+    if (progress && shouldShowOnboarding) {
       setShowWizard(true);
     }
   }, [progress]);
