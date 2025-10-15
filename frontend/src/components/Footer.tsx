@@ -14,8 +14,8 @@ const Footer: React.FC = () => {
                 <Row className="g-4">
                     {/* Columna 1: Sobre Nosotros */}
                     <Col md={4}>
-                        <h5 className="mb-3">Sistema de Citas</h5>
-                        <p className="text-muted small">
+                        <h5 className="mb-3 text-white">Sistema de Citas</h5>
+                        <p className="text-light small opacity-75">
                             Plataforma profesional para la gestión de citas, servicios y clientes.
                             Simplifica la administración de tu negocio con tecnología moderna y confiable.
                         </p>
@@ -23,28 +23,30 @@ const Footer: React.FC = () => {
 
                     {/* Columna 2: Enlaces Útiles */}
                     <Col md={4}>
-                        <h5 className="mb-3">Enlaces Útiles</h5>
+                        <h5 className="mb-3 text-white">Enlaces Útiles</h5>
                         <ul className="list-unstyled">
                             <li className="mb-2">
-                                <Link to="/terms" className="text-muted text-decoration-none">
+                                <Link to="/terms" className="text-light text-decoration-none opacity-75" style={{ transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} onMouseLeave={(e) => e.currentTarget.style.opacity = '0.75'}>
                                     Términos y Condiciones
                                 </Link>
                             </li>
                             <li className="mb-2">
-                                <Link to="/privacy-policy" className="text-muted text-decoration-none">
+                                <Link to="/privacy-policy" className="text-light text-decoration-none opacity-75" style={{ transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} onMouseLeave={(e) => e.currentTarget.style.opacity = '0.75'}>
                                     Política de Privacidad
                                 </Link>
                             </li>
                             <li className="mb-2">
-                                <Link to="/guide" className="text-muted text-decoration-none">
+                                <Link to="/guide" className="text-light text-decoration-none opacity-75" style={{ transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} onMouseLeave={(e) => e.currentTarget.style.opacity = '0.75'}>
                                     Guía de Usuario
                                 </Link>
                             </li>
                             <li className="mb-2">
                                 <button
                                     onClick={() => setShowLegalModal(true)}
-                                    className="btn btn-link text-muted text-decoration-none p-0"
-                                    style={{ textAlign: 'left' }}
+                                    className="btn btn-link text-light text-decoration-none p-0 opacity-75"
+                                    style={{ textAlign: 'left', transition: 'opacity 0.2s' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.75'}
                                 >
                                     Ley 1581 de 2012
                                 </button>
@@ -54,21 +56,21 @@ const Footer: React.FC = () => {
 
                     {/* Columna 3: Contacto */}
                     <Col md={4}>
-                        <h5 className="mb-3">Contacto</h5>
-                        <ul className="list-unstyled text-muted small">
-                            <li className="mb-2">
+                        <h5 className="mb-3 text-white">Contacto</h5>
+                        <ul className="list-unstyled small">
+                            <li className="mb-2 text-light opacity-75">
                                 <EnvelopeFill className="me-2" />
-                                <a href="mailto:info@softexlab.com" className="text-muted text-decoration-none">
+                                <a href="mailto:info@softexlab.com" className="text-light text-decoration-none" style={{ transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} onMouseLeave={(e) => e.currentTarget.style.opacity = '0.75'}>
                                     info@softexlab.com
                                 </a>
                             </li>
-                            <li className="mb-2">
+                            <li className="mb-2 text-light opacity-75">
                                 <TelephoneFill className="me-2" />
-                                <a href="tel:+573193636323" className="text-muted text-decoration-none">
+                                <a href="tel:+573193636323" className="text-light text-decoration-none" style={{ transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} onMouseLeave={(e) => e.currentTarget.style.opacity = '0.75'}>
                                     +57 319 363 6323
                                 </a>
                             </li>
-                            <li className="mb-2">
+                            <li className="mb-2 text-light opacity-75">
                                 <GeoAltFill className="me-2" />
                                 Colombia
                             </li>
@@ -81,10 +83,10 @@ const Footer: React.FC = () => {
                 {/* Copyright */}
                 <Row>
                     <Col className="text-center">
-                        <p className="text-muted small mb-0">
+                        <p className="text-light small mb-0 opacity-75">
                             &copy; {currentYear} Sistema de Citas. Todos los derechos reservados.
                         </p>
-                        <p className="text-muted small mb-0 mt-1">
+                        <p className="text-light small mb-0 mt-1 opacity-75">
                             Desarrollado por softexlab
                         </p>
                     </Col>

@@ -23,9 +23,8 @@ const PrivacyPolicyPage: React.FC = () => {
                     <section className="mb-4">
                         <h2 className="h4 mb-3">2. Responsable del Tratamiento de Datos</h2>
                         <p>
-                            <strong>Razón Social:</strong> [Nombre de la Empresa]<br />
-                            <strong>Domicilio:</strong> [Dirección]<br />
-                            <strong>Email:</strong> privacidad@sistema-citas.com<br />
+                            <strong>Razón Social:</strong> [Softexlab]<br />
+                            <strong>Email:</strong> info@softexlab.com<br />
                             <strong>Teléfono:</strong> +57 3193636323
                         </p>
                     </section>
@@ -47,9 +46,7 @@ const PrivacyPolicyPage: React.FC = () => {
                         <h5 className="mt-3">3.2 Datos de la Cuenta</h5>
                         <ul>
                             <li>Nombre de usuario</li>
-                            <li>Contraseña (encriptada)</li>
-                            <li>Organización y sede</li>
-                            <li>Rol de usuario</li>
+                            <li>Contraseña (encriptada)</li>                            <li>Rol de usuario</li>
                         </ul>
 
                         <h5 className="mt-3">3.3 Datos de Uso</h5>
@@ -60,13 +57,6 @@ const PrivacyPolicyPage: React.FC = () => {
                             <li>Logs de acceso y actividad</li>
                         </ul>
 
-                        <h5 className="mt-3">3.4 Datos Técnicos</h5>
-                        <ul>
-                            <li>Dirección IP</li>
-                            <li>Tipo de navegador</li>
-                            <li>Sistema operativo</li>
-                            <li>Cookies y tecnologías similares</li>
-                        </ul>
                     </section>
 
                     <section className="mb-4">
@@ -101,9 +91,8 @@ const PrivacyPolicyPage: React.FC = () => {
                         <h2 className="h4 mb-3">6. Compartir Datos con Terceros</h2>
                         <p>Podemos compartir sus datos con:</p>
                         <ul>
-                            <li><strong>Proveedores de servicios:</strong> Hosting, email, procesamiento de pagos</li>
+                            <li><strong>Proveedores de servicios:</strong> Hosting</li>
                             <li><strong>Autoridades:</strong> Cuando sea requerido por ley</li>
-                            <li><strong>Su organización:</strong> Si está registrado bajo una organización</li>
                         </ul>
                         <p>
                             <strong>No vendemos ni alquilamos sus datos personales a terceros.</strong>
@@ -119,7 +108,6 @@ const PrivacyPolicyPage: React.FC = () => {
                             <li>Acceso restringido a datos personales</li>
                             <li>Backups regulares</li>
                             <li>Monitoreo de seguridad continuo</li>
-                            <li>Auditorías de seguridad periódicas</li>
                         </ul>
                     </section>
 
@@ -130,9 +118,7 @@ const PrivacyPolicyPage: React.FC = () => {
                             proporcionar el servicio. Después de la cancelación de su cuenta, retendremos sus datos durante:
                         </p>
                         <ul>
-                            <li><strong>Datos de citas y transacciones:</strong> 5 años (requisito fiscal)</li>
                             <li><strong>Datos de cuenta:</strong> 90 días después de la cancelación</li>
-                            <li><strong>Logs de seguridad:</strong> 1 año</li>
                         </ul>
                     </section>
 

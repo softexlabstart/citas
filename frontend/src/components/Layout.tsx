@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Container, Navbar, Nav, Button, Offcanvas, NavDropdown } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import moment from 'moment';
@@ -14,6 +14,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
+  const location = useLocation();
   console.log('User object in Layout:', user); // Add this line
   const [show, setShow] = useState(false);
   const { t, i18n } = useTranslation();
@@ -119,7 +120,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </Navbar>
       )}
       <Container className="flex-grow-1 mb-4">{children}</Container>
-      <Footer />
+      {location.pathname === '/login' && <Footer />}
     </div>
   );
 };
