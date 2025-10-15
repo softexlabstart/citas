@@ -45,6 +45,17 @@ class BloqueoSerializer(serializers.ModelSerializer):
         model = Bloqueo
         fields = ['id', 'colaborador', 'motivo', 'fecha_inicio', 'fecha_fin', 'colaborador_id']
 
+    def to_representation(self, instance):
+        """Override to ensure colaborador is fetched with all_objects"""
+        representation = super().to_representation(instance)
+        if instance.colaborador_id:
+            try:
+                colaborador = Colaborador.all_objects.select_related('sede').get(id=instance.colaborador_id)
+                representation['colaborador'] = ColaboradorSerializer(colaborador).data
+            except Colaborador.DoesNotExist:
+                representation['colaborador'] = None
+        return representation
+
 class CitaSerializer(serializers.ModelSerializer):
     servicios = ServicioSerializer(many=True, read_only=True)
     servicios_ids = serializers.PrimaryKeyRelatedField(queryset=Servicio.all_objects.all(), source='servicios', many=True, write_only=True)
