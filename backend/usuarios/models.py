@@ -122,3 +122,91 @@ class PasswordResetToken(models.Model):
 
     def __str__(self):
         return f"Password Reset for {self.user.email} - Expires: {self.expires_at}"
+
+
+class OnboardingProgress(models.Model):
+    """
+    Modelo para rastrear el progreso del onboarding de nuevos usuarios.
+    Ayuda a guiar a los usuarios en la configuración inicial del sistema.
+    """
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='onboarding_progress',
+        verbose_name='Usuario'
+    )
+
+    # Pasos completados
+    has_created_service = models.BooleanField(
+        default=False,
+        verbose_name='Ha creado al menos un servicio'
+    )
+    has_added_collaborator = models.BooleanField(
+        default=False,
+        verbose_name='Ha agregado al menos un colaborador'
+    )
+    has_viewed_public_link = models.BooleanField(
+        default=False,
+        verbose_name='Ha visto su enlace público'
+    )
+    has_completed_profile = models.BooleanField(
+        default=False,
+        verbose_name='Ha completado su perfil'
+    )
+
+    # Estado general
+    is_completed = models.BooleanField(
+        default=False,
+        verbose_name='Onboarding completado',
+        help_text='Marcado como completo cuando el usuario termina todos los pasos esenciales'
+    )
+    is_dismissed = models.BooleanField(
+        default=False,
+        verbose_name='Usuario cerró el onboarding',
+        help_text='El usuario decidió saltar el onboarding'
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Creado')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Actualizado')
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name='Completado el')
+
+    class Meta:
+        verbose_name = 'Progreso de Onboarding'
+        verbose_name_plural = 'Progresos de Onboarding'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Onboarding de {self.user.username} - {'Completado' if self.is_completed else 'En progreso'}"
+
+    def mark_as_completed(self):
+        """Marca el onboarding como completado"""
+        self.is_completed = True
+        self.completed_at = timezone.now()
+        self.save()
+
+    @property
+    def completion_percentage(self):
+        """Calcula el porcentaje de completitud del onboarding"""
+        total_steps = 4  # Número de pasos en el onboarding
+        completed = sum([
+            self.has_created_service,
+            self.has_added_collaborator,
+            self.has_viewed_public_link,
+            self.has_completed_profile,
+        ])
+        return int((completed / total_steps) * 100)
+
+    @property
+    def pending_steps(self):
+        """Retorna lista de pasos pendientes"""
+        steps = []
+        if not self.has_created_service:
+            steps.append('create_service')
+        if not self.has_added_collaborator:
+            steps.append('add_collaborator')
+        if not self.has_viewed_public_link:
+            steps.append('view_public_link')
+        if not self.has_completed_profile:
+            steps.append('complete_profile')
+        return steps

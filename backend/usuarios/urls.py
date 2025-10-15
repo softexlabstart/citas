@@ -3,9 +3,11 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import LoginView, RegisterView, RegisterByOrganizacionView, TimezoneView, UserDetailView, ClientViewSet, ClientEmailListView, PersonalDataView, DeleteAccountView, MultiTenantRegistrationView, OrganizationManagementView, InvitationView, OrganizationMembersView, RequestHistoryLinkView, AccessHistoryWithTokenView
 from .views_password_reset import RequestPasswordResetView, ConfirmPasswordResetView
+from .views_onboarding import OnboardingProgressViewSet
 
 router = DefaultRouter()
 router.register(r'clients', ClientViewSet, basename='client')
+router.register(r'onboarding/progress', OnboardingProgressViewSet, basename='onboarding-progress')
 
 urlpatterns = [
     path('', include(router.urls)),

@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
+import { Container, Row, Col, Button } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import UserDashboard from '../components/UserDashboard';
 import AdminDashboard from '../components/AdminDashboard';
 import RecursoDashboard from '../components/RecursoDashboard';
+import OnboardingWizard from '../components/OnboardingWizard';
 import { getDashboardSummary, UserDashboardSummary, AdminDashboardSummary } from '../api';
 import { useTranslation } from 'react-i18next';
+import { useOnboarding } from '../hooks/useOnboarding';
+import OnboardingChecklist from '../components/OnboardingChecklist';
 
 const HomePage: React.FC = () => {
   const { user } = useAuth();
@@ -13,6 +17,8 @@ const HomePage: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<UserDashboardSummary | AdminDashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
+  const { progress, shouldShowOnboarding } = useOnboarding();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -41,6 +47,13 @@ const HomePage: React.FC = () => {
     }
   }, [user, t]);
 
+  // Auto-show wizard for new users
+  useEffect(() => {
+    if (progress && shouldShowOnboarding()) {
+      setShowWizard(true);
+    }
+  }, [progress]);
+
   if (!user) {
     return <Navigate to="/login" />;
   }
@@ -62,13 +75,31 @@ const HomePage: React.FC = () => {
 
   if (isAdmin) {
     if (dashboardData) {
-      return <AdminDashboard data={dashboardData as AdminDashboardSummary} />;
+      return (
+        <Container>
+          <Row>
+            <Col lg={12}>
+              <OnboardingChecklist />
+            </Col>
+          </Row>
+          <AdminDashboard data={dashboardData as AdminDashboardSummary} />
+        </Container>
+      );
     }
     return null; // Data is loading or there was an error, handled above
   }
 
   if (dashboardData) {
-    return <UserDashboard data={dashboardData as UserDashboardSummary} />;
+    return (
+      <Container>
+        <Row>
+          <Col lg={12}>
+            <OnboardingChecklist />
+          </Col>
+        </Row>
+        <UserDashboard data={dashboardData as UserDashboardSummary} />
+      </Container>
+    );
   }
 
   return null; // Or some other fallback UI

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib import messages
-from .models import PerfilUsuario
+from .models import PerfilUsuario, OnboardingProgress
 from organizacion.models import Sede, Organizacion
 import hashlib
 
@@ -154,3 +154,35 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
             return obj.sede.nombre
         return "Sin sede asignada"
     get_sede_nombre.short_description = 'Sede'
+
+
+@admin.register(OnboardingProgress)
+class OnboardingProgressAdmin(admin.ModelAdmin):
+    list_display = ('user', 'completion_percentage', 'is_completed', 'is_dismissed', 'updated_at')
+    list_filter = ('is_completed', 'is_dismissed', 'created_at')
+    search_fields = ('user__username', 'user__email')
+    readonly_fields = ('completion_percentage', 'pending_steps', 'created_at', 'updated_at', 'completed_at')
+    
+    fieldsets = (
+        ('Usuario', {
+            'fields': ('user',)
+        }),
+        ('Progreso', {
+            'fields': (
+                'has_created_service',
+                'has_added_collaborator', 
+                'has_viewed_public_link',
+                'has_completed_profile',
+                'completion_percentage',
+                'pending_steps'
+            )
+        }),
+        ('Estado', {
+            'fields': ('is_completed', 'is_dismissed')
+        }),
+        ('Fechas', {
+            'fields': ('created_at', 'updated_at', 'completed_at'),
+            'classes': ('collapse',)
+        }),
+    )
+

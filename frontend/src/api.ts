@@ -358,6 +358,31 @@ export const getGuideSections = (language?: string, category?: string) => {
     return api.get<GuideSection[]>(`/api/guide/sections/?${params.toString()}`);
 };
 
+// Funciones para Onboarding
+export interface OnboardingProgress {
+    id: number;
+    user: number;
+    user_email: string;
+    user_name: string;
+    has_created_service: boolean;
+    has_added_collaborator: boolean;
+    has_viewed_public_link: boolean;
+    has_completed_profile: boolean;
+    is_completed: boolean;
+    is_dismissed: boolean;
+    completion_percentage: number;
+    pending_steps: string[];
+    created_at: string;
+    updated_at: string;
+    completed_at?: string;
+}
+
+export const getOnboardingProgress = () => api.get<OnboardingProgress>('/api/onboarding/progress/');
+export const markOnboardingStep = (step: string) => api.post('/api/onboarding/progress/mark_step/', { step });
+export const dismissOnboarding = () => api.post('/api/onboarding/progress/dismiss/');
+export const completeOnboarding = () => api.post('/api/onboarding/progress/complete/');
+export const resetOnboarding = () => api.post('/api/onboarding/progress/reset/');
+
 // Funciones para Reservas Públicas (Invitados)
 export interface PublicBookingData {
     nombre: string;

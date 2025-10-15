@@ -378,3 +378,35 @@ class InvitationSerializer(serializers.Serializer):
             except Sede.DoesNotExist:
                 raise serializers.ValidationError("La sede especificada no existe.")
         return value
+
+
+class OnboardingProgressSerializer(serializers.ModelSerializer):
+    """
+    Serializer para el progreso del onboarding del usuario.
+    """
+    completion_percentage = serializers.ReadOnlyField()
+    pending_steps = serializers.ReadOnlyField()
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    user_name = serializers.CharField(source='user.username', read_only=True)
+
+    class Meta:
+        from .models import OnboardingProgress
+        model = OnboardingProgress
+        fields = [
+            'id',
+            'user',
+            'user_email',
+            'user_name',
+            'has_created_service',
+            'has_added_collaborator',
+            'has_viewed_public_link',
+            'has_completed_profile',
+            'is_completed',
+            'is_dismissed',
+            'completion_percentage',
+            'pending_steps',
+            'created_at',
+            'updated_at',
+            'completed_at',
+        ]
+        read_only_fields = ['user', 'created_at', 'updated_at', 'completed_at']
