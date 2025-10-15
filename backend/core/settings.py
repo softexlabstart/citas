@@ -252,3 +252,30 @@ EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
 EMAIL_HOST_USER = config('TO_EMAIL', default='')
 EMAIL_HOST_PASSWORD = config('SMTP_PASS', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='')
+
+# ============================================================================
+# SECURITY HEADERS - Solo activos en producción (DEBUG=False)
+# ============================================================================
+if not DEBUG:
+    # HTTPS/SSL Configuration
+    SECURE_SSL_REDIRECT = True  # Redirige todo el tráfico HTTP a HTTPS
+    SESSION_COOKIE_SECURE = True  # Cookies de sesión solo por HTTPS
+    CSRF_COOKIE_SECURE = True  # Cookies CSRF solo por HTTPS
+
+    # Security Headers
+    SECURE_BROWSER_XSS_FILTER = True  # Activa el filtro XSS del navegador
+    SECURE_CONTENT_TYPE_NOSNIFF = True  # Previene MIME type sniffing
+    X_FRAME_OPTIONS = 'DENY'  # Previene clickjacking (no permite iframes)
+
+    # HTTP Strict Transport Security (HSTS)
+    SECURE_HSTS_SECONDS = 31536000  # 1 año - Fuerza HTTPS por este tiempo
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True  # Aplica HSTS a subdominios
+    SECURE_HSTS_PRELOAD = True  # Permite incluir en listas de precarga HSTS
+
+    # Proxy Configuration (para servidores detrás de nginx/apache)
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+else:
+    # En desarrollo, permitir HTTP
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
