@@ -255,32 +255,55 @@ class ServicioViewSet(viewsets.ModelViewSet):
             return queryset.filter(sede_id=sede_id)
         return Servicio.all_objects.none()
 
-class BloqueoViewSet(SedeFilteredMixin, viewsets.ModelViewSet):
+class BloqueoViewSet(viewsets.ModelViewSet):
     """API endpoint for managing resource blocks."""
-    queryset = Bloqueo.objects.select_related('colaborador__sede').all()
     serializer_class = BloqueoSerializer
     permission_classes = [IsAuthenticated, IsAdminOrSedeAdminOrReadOnly] # Only admins can block time
 
     def get_queryset(self):
-        # Start with the parent's queryset (which applies sede filtering)
-        queryset = super().get_queryset()
+        user = self.request.user
+        sede_id = self.request.query_params.get('sede_id')
+        queryset = Bloqueo.all_objects.select_related('colaborador__sede').all()
 
-        start_date_str = self.request.query_params.get('start_date')
-        end_date_str = self.request.query_params.get('end_date')
+        # SUPERUSUARIO: puede ver todos los bloqueos
+        if user.is_superuser:
+            if sede_id:
+                return queryset.filter(colaborador__sede_id=sede_id)
+            return queryset
 
-        if start_date_str and end_date_str:
-            try:
-                start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
-                end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
-                # Filter blocks that overlap with the given range
-                queryset = queryset.filter(
-                    fecha_inicio__lt=end_date,
-                    fecha_fin__gt=start_date
-                )
-            except (ValueError, TypeError):
-                pass # Silently ignore invalid date formats
-        
-        return queryset
+        # ADMINISTRADOR DE SEDE: solo bloqueos de sus sedes
+        if user.is_authenticated and hasattr(user, 'perfil') and user.perfil:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
+                    WHERE perfilusuario_id = %s
+                """, [user.perfil.id])
+                sedes_admin_ids = [row[0] for row in cursor.fetchall()]
+
+            if sedes_admin_ids:
+                queryset = queryset.filter(colaborador__sede_id__in=sedes_admin_ids)
+                if sede_id:
+                    queryset = queryset.filter(colaborador__sede_id=sede_id)
+
+                # Filtrar por rango de fechas si se proporciona
+                start_date_str = self.request.query_params.get('start_date')
+                end_date_str = self.request.query_params.get('end_date')
+                if start_date_str and end_date_str:
+                    try:
+                        start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
+                        end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
+                        queryset = queryset.filter(
+                            fecha_inicio__lt=end_date,
+                            fecha_fin__gt=start_date
+                        )
+                    except (ValueError, TypeError):
+                        pass
+
+                return queryset
+
+        # Si no es superusuario ni admin de sede, no ver bloqueos
+        return Bloqueo.all_objects.none()
 
 
 class CitaViewSet(viewsets.ModelViewSet):
