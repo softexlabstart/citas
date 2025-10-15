@@ -257,6 +257,7 @@ class ServicioViewSet(viewsets.ModelViewSet):
 
 class BloqueoViewSet(viewsets.ModelViewSet):
     """API endpoint for managing resource blocks."""
+    queryset = Bloqueo.all_objects.select_related('colaborador__sede').all()
     serializer_class = BloqueoSerializer
     permission_classes = [IsAuthenticated, IsAdminOrSedeAdminOrReadOnly] # Only admins can block time
 
