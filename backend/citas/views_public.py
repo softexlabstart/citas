@@ -58,38 +58,48 @@ class PublicCitaViewSet(viewsets.ModelViewSet):
 
                 # Buscar usuario con este email que ya tenga perfil en esta organización
                 user = None
+                user_created = False
                 existing_users = User.objects.filter(email=email)
 
+                # Primero, buscar si existe un usuario con perfil en esta organización
                 for existing_user in existing_users:
-                    if hasattr(existing_user, 'perfil') and existing_user.perfil.organizacion == organizacion:
+                    if hasattr(existing_user, 'perfil') and existing_user.perfil and existing_user.perfil.organizacion == organizacion:
                         user = existing_user
-                        created = False
+                        logger.info(f"Usuario existente encontrado: {user.username} ({user.email}) en organización {organizacion.nombre}")
                         break
 
-                # Si no existe, crear nuevo usuario
+                # Si no existe usuario en esta organización, crear uno nuevo
                 if not user:
                     # Generar username único
                     import hashlib
                     if existing_users.exists():
-                        # Ya existe usuario con este email en otra org
+                        # Ya existe usuario con este email en otra org - usar username con hash
                         hash_suffix = hashlib.md5(organizacion.nombre.encode()).hexdigest()[:8]
                         username = f"{email.split('@')[0]}_{hash_suffix}"
                     else:
-                        # Primera vez con este email
+                        # Primera vez con este email - usar email como username
                         username = email
 
-                    user, created = User.objects.get_or_create(
+                    user, user_created = User.objects.get_or_create(
                         username=username,
                         defaults={
                             'email': email,
                             'first_name': cita.nombre.split()[0] if cita.nombre else 'Invitado'
                         }
                     )
-                else:
-                    created = False
 
-                if created:
-                    # Usuario nuevo: crear perfil con sede asignada
+                    if not user_created:
+                        # El username ya existía (caso raro) - buscar si tiene perfil en esta org
+                        if hasattr(user, 'perfil') and user.perfil and user.perfil.organizacion == organizacion:
+                            logger.info(f"Usuario con username {username} ya existe en esta organización")
+                        else:
+                            logger.warning(f"Usuario con username {username} existe pero sin perfil en esta organización")
+                    else:
+                        logger.info(f"Nuevo usuario creado: {username} ({email})")
+
+                # Manejo del perfil del usuario
+                if user_created or not hasattr(user, 'perfil') or user.perfil is None:
+                    # Usuario nuevo O usuario sin perfil: crear perfil con sede asignada
                     perfil = PerfilUsuario.objects.create(
                         usuario=user,
                         organizacion=organizacion,
@@ -101,54 +111,29 @@ class PublicCitaViewSet(viewsets.ModelViewSet):
                     perfil.sedes.add(cita.sede)
                     logger.info(f"Perfil creado para usuario {user.email} con organización {organizacion.nombre} y sede {cita.sede.nombre}")
                 else:
-                    # Usuario existente con ese email
-                    if hasattr(user, 'perfil') and user.perfil is not None:
-                        if user.perfil.organizacion != organizacion:
-                            # Usuario existe en OTRA organización - crear nuevo usuario con username único
-                            import hashlib
-                            hash_suffix = hashlib.md5(organizacion.nombre.encode()).hexdigest()[:8]
-                            new_username = f"{email.split('@')[0]}_{hash_suffix}"
+                    # Usuario YA existe con perfil en esta organización
+                    # Agregar sede si no la tiene
+                    if cita.sede not in user.perfil.sedes.all():
+                        user.perfil.sedes.add(cita.sede)
+                        logger.info(f"Sede {cita.sede.nombre} agregada al perfil de {user.email}")
 
-                            user, user_created = User.objects.get_or_create(
-                                username=new_username,
-                                defaults={
-                                    'email': email,
-                                    'first_name': cita.nombre.split()[0] if cita.nombre else 'Invitado'
-                                }
-                            )
+                    # Actualizar sede principal si no tiene una asignada
+                    if not user.perfil.sede:
+                        user.perfil.sede = cita.sede
+                        user.perfil.save()
+                        logger.info(f"Sede principal {cita.sede.nombre} asignada a {user.email}")
 
-                            if user_created:
-                                perfil = PerfilUsuario.objects.create(
-                                    usuario=user,
-                                    organizacion=organizacion,
-                                    sede=cita.sede,
-                                    nombre=cita.nombre or 'Invitado',
-                                    telefono=cita.telefono_cliente or ''
-                                )
-                                # Agregar la sede a la relación M2M sedes
-                                perfil.sedes.add(cita.sede)
-                                logger.info(f"Nuevo usuario '{new_username}' creado para {email} en {organizacion.nombre} y sede {cita.sede.nombre}")
-                        else:
-                            # Usuario existe en la MISMA organización - agregar sede si no la tiene
-                            if cita.sede not in user.perfil.sedes.all():
-                                user.perfil.sedes.add(cita.sede)
-                                logger.info(f"Sede {cita.sede.nombre} agregada al perfil de {user.email}")
-                            # Actualizar sede principal si no tiene una asignada
-                            if not user.perfil.sede:
-                                user.perfil.sede = cita.sede
-                                user.perfil.save()
-                    else:
-                        # Usuario sin perfil: crear perfil
-                        perfil = PerfilUsuario.objects.create(
-                            usuario=user,
-                            organizacion=organizacion,
-                            sede=cita.sede,
-                            nombre=cita.nombre or user.first_name or 'Invitado',
-                            telefono=cita.telefono_cliente or ''
-                        )
-                        # Agregar la sede a la relación M2M sedes
-                        perfil.sedes.add(cita.sede)
-                        logger.info(f"Perfil creado para {user.email} en {organizacion.nombre} y sede {cita.sede.nombre}")
+                    # Actualizar información si ha cambiado
+                    updated = False
+                    if cita.nombre and user.perfil.nombre != cita.nombre:
+                        user.perfil.nombre = cita.nombre
+                        updated = True
+                    if cita.telefono_cliente and user.perfil.telefono != cita.telefono_cliente:
+                        user.perfil.telefono = cita.telefono_cliente
+                        updated = True
+                    if updated:
+                        user.perfil.save()
+                        logger.info(f"Información del perfil actualizada para {user.email}")
 
                 # Asociar el usuario a la cita si no está ya asociado
                 if not cita.user:
