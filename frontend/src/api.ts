@@ -266,7 +266,14 @@ export const getRecursoAppointments = () => api.get<Appointment[]>('/api/citas/r
 export const marcarAsistencia = (id: number, asistio: boolean, comentario?: string) => api.post(`/api/citas/recurso-citas/${id}/marcar_asistencia/`, { asistio, comentario });
 
 // Funciones para Clientes
-export const getClients = () => api.get<Client[]>(`/api/clients/?_=${new Date().getTime()}`);
+export const getClients = (consentFilter?: string) => {
+    const params = new URLSearchParams();
+    if (consentFilter) {
+        params.append('consent', consentFilter);
+    }
+    params.append('_', new Date().getTime().toString()); // Cache buster
+    return api.get<Client[]>(`/api/clients/?${params.toString()}`);
+};
 export const getClientById = (id: number) => api.get<Client>(`/api/clients/${id}/`); // Added for fetching single client
 export const createClient = (clientData: Partial<Client>) => api.post<Client>('/api/clients/', clientData);
 export const updateClient = (id: number, clientData: Partial<Client>) => api.patch<Client>(`/api/clients/${id}/`, clientData);

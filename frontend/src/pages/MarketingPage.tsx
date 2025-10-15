@@ -13,13 +13,15 @@ const MarketingPage: React.FC = () => {
     const [clients, setClients] = useState<Client[]>([]);
     const [selectedClientEmails, setSelectedClientEmails] = useState<string[]>([]);
     const [selectAll, setSelectAll] = useState(false);
+    const [consentFilter, setConsentFilter] = useState<string>('all');
     const { loading, error, request: doSendEmail } = useApi(sendMarketingEmail);
     const { request: fetchClientsApi } = useApi(getClients);
 
     useEffect(() => {
         const fetchClients = async () => {
             try {
-                const response = await fetchClientsApi();
+                const filterParam = consentFilter === 'all' ? undefined : consentFilter;
+                const response = await fetchClientsApi(filterParam);
                 // Assuming getClients returns PaginatedResponse<Client>
                 // Adjust if getClients returns Client[] directly
                 type PaginatedResponse<T> = { results: T[] };
@@ -31,13 +33,16 @@ const MarketingPage: React.FC = () => {
                 } else {
                     setClients([]);
                 }
+                // Reset selection when filter changes
+                setSelectedClientEmails([]);
+                setSelectAll(false);
             } catch (err) {
                 console.error('Error fetching clients:', err);
                 toast.error(t('error_fetching_clients'));
             }
         };
         fetchClients();
-    }, [t, fetchClientsApi]);
+    }, [t, fetchClientsApi, consentFilter]);
 
     const handleClientSelect = (email: string) => {
         setSelectedClientEmails((prevSelected) =>
@@ -107,7 +112,21 @@ const MarketingPage: React.FC = () => {
                 </Form.Group>
 
                 <Card className="mb-3">
-                    <Card.Header>{t('select_recipients')}</Card.Header>
+                    <Card.Header>
+                        <div className="d-flex justify-content-between align-items-center">
+                            <span>{t('select_recipients')}</span>
+                            <Form.Select
+                                value={consentFilter}
+                                onChange={(e) => setConsentFilter(e.target.value)}
+                                style={{ width: 'auto', marginLeft: '10px' }}
+                                size="sm"
+                            >
+                                <option value="all">Todos los clientes</option>
+                                <option value="true">Con consentimiento ✓</option>
+                                <option value="false">Sin consentimiento ✗</option>
+                            </Form.Select>
+                        </div>
+                    </Card.Header>
                     <Card.Body style={{ maxHeight: '300px', overflowY: 'auto' }}>
                         <Form.Check
                             type="checkbox"
@@ -117,16 +136,29 @@ const MarketingPage: React.FC = () => {
                             onChange={handleSelectAll}
                             className="mb-2"
                         />
-                        {clients.map((client) => (
-                            <Form.Check
-                                type="checkbox"
-                                id={`client-${client.id}`}
-                                key={client.id}
-                                label={`${client.first_name} ${client.last_name} (${client.email})`}
-                                checked={selectedClientEmails.includes(client.email)}
-                                onChange={() => handleClientSelect(client.email)}
-                            />
-                        ))}
+                        {clients.length === 0 ? (
+                            <p className="text-muted text-center">No hay clientes con este filtro</p>
+                        ) : (
+                            clients.map((client) => (
+                                <Form.Check
+                                    type="checkbox"
+                                    id={`client-${client.id}`}
+                                    key={client.id}
+                                    label={
+                                        <span>
+                                            {client.first_name} {client.last_name} ({client.email})
+                                            {client.has_consented_data_processing ? (
+                                                <span className="text-success ms-2" title="Aceptó políticas">✓</span>
+                                            ) : (
+                                                <span className="text-warning ms-2" title="No aceptó políticas">⚠</span>
+                                            )}
+                                        </span>
+                                    }
+                                    checked={selectedClientEmails.includes(client.email)}
+                                    onChange={() => handleClientSelect(client.email)}
+                                />
+                            ))
+                        )}
                     </Card.Body>
                 </Card>
 

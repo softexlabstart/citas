@@ -136,13 +136,14 @@ class ClientSerializer(serializers.ModelSerializer):
     # Read-only fields
     full_name = serializers.SerializerMethodField(read_only=True)
     age = serializers.IntegerField(source='perfil.age', read_only=True)
+    has_consented_data_processing = serializers.BooleanField(source='perfil.has_consented_data_processing', read_only=True)
 
     class Meta:
         model = User
         fields = (
             'id', 'username', 'first_name', 'last_name', 'email',
             'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento',
-            'full_name', 'age'
+            'full_name', 'age', 'has_consented_data_processing'
         )
 
     def validate_fecha_nacimiento(self, value):

@@ -292,6 +292,16 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
                 .exclude(email__exact='') \
                 .select_related('perfil')
 
+        # Filtrar por consentimiento si se especifica en los parámetros
+        consent_filter = self.request.query_params.get('consent', None)
+        if consent_filter == 'true':
+            # Solo usuarios que aceptaron las políticas
+            base_queryset = base_queryset.filter(perfil__has_consented_data_processing=True)
+        elif consent_filter == 'false':
+            # Solo usuarios que NO aceptaron las políticas
+            base_queryset = base_queryset.filter(perfil__has_consented_data_processing=False)
+        # Si consent_filter es None o 'all', no filtrar por consentimiento
+
         # SUPERUSUARIO: puede ver todos los clientes
         if user.is_superuser:
             return base_queryset
