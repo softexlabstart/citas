@@ -89,14 +89,17 @@ class PublicCitaViewSet(viewsets.ModelViewSet):
                     created = False
 
                 if created:
-                    # Usuario nuevo: crear perfil
-                    PerfilUsuario.objects.create(
+                    # Usuario nuevo: crear perfil con sede asignada
+                    perfil = PerfilUsuario.objects.create(
                         usuario=user,
                         organizacion=organizacion,
+                        sede=cita.sede,
                         nombre=cita.nombre or 'Invitado',
                         telefono=cita.telefono_cliente or ''
                     )
-                    logger.info(f"Perfil creado para usuario {user.email} con organización {organizacion.nombre}")
+                    # Agregar la sede a la relación M2M sedes
+                    perfil.sedes.add(cita.sede)
+                    logger.info(f"Perfil creado para usuario {user.email} con organización {organizacion.nombre} y sede {cita.sede.nombre}")
                 else:
                     # Usuario existente con ese email
                     if hasattr(user, 'perfil') and user.perfil is not None:
@@ -115,23 +118,37 @@ class PublicCitaViewSet(viewsets.ModelViewSet):
                             )
 
                             if user_created:
-                                PerfilUsuario.objects.create(
+                                perfil = PerfilUsuario.objects.create(
                                     usuario=user,
                                     organizacion=organizacion,
+                                    sede=cita.sede,
                                     nombre=cita.nombre or 'Invitado',
                                     telefono=cita.telefono_cliente or ''
                                 )
-                                logger.info(f"Nuevo usuario '{new_username}' creado para {email} en {organizacion.nombre}")
-                        # Si es la misma organización, usar el usuario existente
+                                # Agregar la sede a la relación M2M sedes
+                                perfil.sedes.add(cita.sede)
+                                logger.info(f"Nuevo usuario '{new_username}' creado para {email} en {organizacion.nombre} y sede {cita.sede.nombre}")
+                        else:
+                            # Usuario existe en la MISMA organización - agregar sede si no la tiene
+                            if cita.sede not in user.perfil.sedes.all():
+                                user.perfil.sedes.add(cita.sede)
+                                logger.info(f"Sede {cita.sede.nombre} agregada al perfil de {user.email}")
+                            # Actualizar sede principal si no tiene una asignada
+                            if not user.perfil.sede:
+                                user.perfil.sede = cita.sede
+                                user.perfil.save()
                     else:
                         # Usuario sin perfil: crear perfil
-                        PerfilUsuario.objects.create(
+                        perfil = PerfilUsuario.objects.create(
                             usuario=user,
                             organizacion=organizacion,
+                            sede=cita.sede,
                             nombre=cita.nombre or user.first_name or 'Invitado',
                             telefono=cita.telefono_cliente or ''
                         )
-                        logger.info(f"Perfil creado para {user.email} en {organizacion.nombre}")
+                        # Agregar la sede a la relación M2M sedes
+                        perfil.sedes.add(cita.sede)
+                        logger.info(f"Perfil creado para {user.email} en {organizacion.nombre} y sede {cita.sede.nombre}")
 
                 # Asociar el usuario a la cita si no está ya asociado
                 if not cita.user:
