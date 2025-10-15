@@ -84,13 +84,13 @@ const BlocksManager: React.FC = () => {
             sede_id: Number(formData.sede_id),
         };
 
-        const { success } = await createBloqueo(payload);
+        const { success, error: apiError } = await createBloqueo(payload);
         if (success) {
             toast.success(t('block_created_successfully'));
             fetchBloqueos(undefined);
             setFormData({ colaborador_id: '', sede_id: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
         } else {
-            toast.error(t('unexpected_error'));
+            toast.error(apiError || t('unexpected_error'));
         }
     };
 
@@ -102,12 +102,12 @@ const BlocksManager: React.FC = () => {
     const confirmDelete = async () => {
         if (!deletingBlockId) return;
         setProcessingId(deletingBlockId);
-        const { success } = await removeBloqueo(deletingBlockId);
+        const { success, error: apiError } = await removeBloqueo(deletingBlockId);
         if (success) {
             toast.success(t('block_deleted_successfully'));
             fetchBloqueos(undefined);
         } else {
-            toast.error(t('unexpected_error'));
+            toast.error(apiError || t('unexpected_error'));
         }
         setProcessingId(null);
         setShowDeleteConfirmModal(false);

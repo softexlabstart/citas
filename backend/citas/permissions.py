@@ -118,8 +118,15 @@ class IsAdminOrSedeAdminOrReadOnly(BasePermission):
         # Verificar que el usuario administra la sede del objeto
         try:
             from django.db import connection
-            # Obtener sede_id del objeto (puede ser Servicio, Recurso, etc.)
-            sede_id = obj.sede_id if hasattr(obj, 'sede_id') else obj.sede.id if hasattr(obj, 'sede') else None
+            # Obtener sede_id del objeto (puede ser Servicio, Recurso, Bloqueo, etc.)
+            sede_id = None
+            if hasattr(obj, 'sede_id'):
+                sede_id = obj.sede_id
+            elif hasattr(obj, 'sede'):
+                sede_id = obj.sede.id if hasattr(obj.sede, 'id') else obj.sede
+            elif hasattr(obj, 'colaborador') and obj.colaborador:
+                # Para Bloqueo que tiene colaborador.sede
+                sede_id = obj.colaborador.sede_id if hasattr(obj.colaborador, 'sede_id') else obj.colaborador.sede.id
 
             if not sede_id:
                 return False
