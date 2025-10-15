@@ -317,12 +317,12 @@ export const authenticateWithMagicLink = async (token: string) => {
 
 // Funciones para Password Reset (Recuperación de Contraseña)
 export const requestPasswordReset = async (email: string) => {
-    const response = await api.post('/api/usuarios/auth/request-password-reset/', { email });
+    const response = await api.post('/api/auth/request-password-reset/', { email });
     return response.data;
 };
 
 export const confirmPasswordReset = async (token: string, new_password: string) => {
-    const response = await api.post('/api/usuarios/auth/confirm-password-reset/', { token, new_password });
+    const response = await api.post('/api/auth/confirm-password-reset/', { token, new_password });
     return response.data;
 };
 
