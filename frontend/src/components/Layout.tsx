@@ -15,7 +15,6 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
-  console.log('User object in Layout:', user); // Add this line
   const [show, setShow] = useState(false);
   const { t, i18n } = useTranslation();
 
