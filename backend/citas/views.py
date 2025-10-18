@@ -543,7 +543,7 @@ class DashboardSummaryView(APIView):
             citas_asistidas = base_queryset.filter(
                 estado='Asistio',
                 fecha__gte=start_of_month
-            ).prefetch_related('servicios').only('id')[:500]  # Limit to 500 citas max
+            ).prefetch_related('servicios')[:500]  # Limit to 500 citas max
 
             # Calculate sum in Python (more reliable than aggregating ManyToMany)
             ingresos_mes = 0
