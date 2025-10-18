@@ -24,7 +24,7 @@ const Services = lazy(() => import('./components/Services'));
 const Appointments = lazy(() => import('./components/Appointments'));
 const AppointmentsCalendar = lazy(() => import('./components/AppointmentsCalendar'));
 const Disponibilidad = lazy(() => import('./components/Disponibilidad'));
-const FinancialDashboardPage = lazy(() => import('./pages/admin/FinancialDashboardPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const AdminSettings = lazy(() => import('./components/AdminSettings'));
 const UserGuide = lazy(() => import('./components/UserGuide'));
 const RecursoDashboard = lazy(() => import('./components/RecursoDashboard'));
@@ -82,7 +82,7 @@ const App: React.FC = () => {
 
               {/* Routes for admin users only */}
               <Route element={<AdminRoute />}>
-                <Route path="/reports" element={<FinancialDashboardPage />} />
+                <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/admin-settings" element={<AdminSettings />} />
                 <Route path="/clients" element={<Clients />} />
                 <Route path="/marketing" element={<MarketingPage />} />

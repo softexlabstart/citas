@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Spinner, Alert, Form, Button } from 'react-bootstrap';
+import { Row, Col, Card, Spinner, Alert, Form, Button } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { getFinancialSummary, FinancialSummary, getRecursos } from '../../api';
 import { Recurso } from '../../interfaces/Recurso';
@@ -111,21 +111,21 @@ const FinancialDashboardPage: React.FC = () => {
 
     if (loading) {
         return (
-            <Container className="py-5 text-center">
+            <div className="py-5 text-center">
                 <Spinner animation="border" variant="primary" />
                 <p className="mt-3">{t('loading')}...</p>
-            </Container>
+            </div>
         );
     }
 
     if (error) {
         return (
-            <Container className="py-5">
+            <div className="py-5">
                 <Alert variant="danger">{error}</Alert>
                 <Button variant="primary" onClick={fetchData}>
                     {t('retry') || 'Reintentar'}
                 </Button>
-            </Container>
+            </div>
         );
     }
 
@@ -150,12 +150,12 @@ const FinancialDashboardPage: React.FC = () => {
     };
 
     return (
-        <Container fluid className="financial-dashboard-page py-4">
+        <div className="financial-dashboard-page py-4">
             {/* Header */}
             <div className="d-flex justify-content-between align-items-center mb-4">
-                <h2 className="mb-0 fw-bold">
+                <h3 className="mb-0 fw-bold">
                     📊 {t('financial_dashboard') || 'Dashboard Financiero'}
-                </h2>
+                </h3>
             </div>
 
             {/* Date Filters */}
@@ -469,7 +469,7 @@ const FinancialDashboardPage: React.FC = () => {
                     </Row>
                 </Card.Body>
             </Card>
-        </Container>
+        </div>
     );
 };
 
