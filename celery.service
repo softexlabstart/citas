@@ -8,6 +8,7 @@ Wants=redis6.service redis.service
 Type=forking
 User=ec2-user
 Group=ec2-user
+PIDFile=/var/run/celery/worker.pid
 WorkingDirectory=/home/ec2-user/appcitas/citas/backend
 Environment="PATH=/home/ec2-user/appcitas/venv/bin:/usr/local/bin:/usr/bin:/bin"
 Environment="DJANGO_SETTINGS_MODULE=core.settings"
@@ -19,8 +20,8 @@ ExecStart=/home/ec2-user/appcitas/venv/bin/celery -A core worker \
     --pidfile=/var/run/celery/worker.pid \
     --detach
 
-# Celery Worker stop command
-ExecStop=/bin/kill -s TERM $MAINPID
+# Celery Worker stop command - use PID file
+ExecStop=/bin/sh -c 'if [ -f /var/run/celery/worker.pid ]; then /bin/kill -s TERM $(cat /var/run/celery/worker.pid); fi'
 
 # Restart policy
 Restart=on-failure
