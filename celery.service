@@ -1,0 +1,32 @@
+[Unit]
+Description=Celery Worker for Proyecto Citas
+After=network.target redis.service
+
+[Service]
+Type=forking
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/appcitas/citas/backend
+Environment="PATH=/home/ec2-user/appcitas/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="DJANGO_SETTINGS_MODULE=core.settings"
+
+# Celery Worker command
+ExecStart=/home/ec2-user/appcitas/venv/bin/celery -A core worker \
+    --loglevel=info \
+    --logfile=/var/log/celery/worker.log \
+    --pidfile=/var/run/celery/worker.pid \
+    --detach
+
+# Celery Worker stop command
+ExecStop=/bin/kill -s TERM $MAINPID
+
+# Restart policy
+Restart=on-failure
+RestartSec=10s
+
+# Security and resource limits
+Nice=10
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
