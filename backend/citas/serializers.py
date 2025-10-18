@@ -88,16 +88,33 @@ class CitaSerializer(serializers.ModelSerializer):
         if self.instance and self.instance.estado == 'Cancelada':
             raise serializers.ValidationError("No se puede modificar una cita cancelada.")
 
-        colaboradores = data.get('colaboradores', self.instance.colaboradores.all() if self.instance else [])
+        # Get values from data or fallback to instance values
+        # Convert QuerySets to lists to ensure proper validation
+        colaboradores_qs = data.get('colaboradores', self.instance.colaboradores.all() if self.instance else None)
+        colaboradores = list(colaboradores_qs) if colaboradores_qs is not None else []
+
         fecha = data.get('fecha', self.instance.fecha if self.instance else None)
-        servicios = data.get('servicios', self.instance.servicios.all() if self.instance else [])
+
+        servicios_qs = data.get('servicios', self.instance.servicios.all() if self.instance else None)
+        servicios = list(servicios_qs) if servicios_qs is not None else []
+
         sede = data.get('sede', self.instance.sede if self.instance else None)
         cita_id = self.instance.id if self.instance else None
 
-        if not all([colaboradores, fecha, servicios, sede]):
-            return data
-
-        check_appointment_availability(sede, servicios, colaboradores, fecha, cita_id)
+        # CRITICAL FIX: Always validate availability when we have all required data
+        # Check that all required values are present and not empty
+        if colaboradores and fecha and servicios and sede:
+            check_appointment_availability(sede, servicios, colaboradores, fecha, cita_id)
+        elif not self.instance:
+            # For new appointments, all fields are required
+            if not colaboradores:
+                raise serializers.ValidationError("Debe seleccionar al menos un colaborador.")
+            if not servicios:
+                raise serializers.ValidationError("Debe seleccionar al menos un servicio.")
+            if not sede:
+                raise serializers.ValidationError("Debe seleccionar una sede.")
+            if not fecha:
+                raise serializers.ValidationError("Debe seleccionar una fecha.")
 
         return data
 
@@ -144,14 +161,33 @@ class GuestCitaSerializer(serializers.ModelSerializer):
             })
 
         # Validar disponibilidad
-        colaboradores = data.get('colaboradores', [])
-        fecha = data.get('fecha')
-        servicios = data.get('servicios', [])
-        sede = data.get('sede')
+        # Get values from data or fallback to instance values
+        # Convert QuerySets to lists to ensure proper validation
+        colaboradores_qs = data.get('colaboradores', self.instance.colaboradores.all() if self.instance else None)
+        colaboradores = list(colaboradores_qs) if colaboradores_qs is not None else []
+
+        fecha = data.get('fecha', self.instance.fecha if self.instance else None)
+
+        servicios_qs = data.get('servicios', self.instance.servicios.all() if self.instance else None)
+        servicios = list(servicios_qs) if servicios_qs is not None else []
+
+        sede = data.get('sede', self.instance.sede if self.instance else None)
         cita_id = self.instance.id if self.instance else None
 
-        if all([colaboradores, fecha, servicios, sede]):
+        # CRITICAL FIX: Always validate availability when we have all required data
+        # Check that all required values are present and not empty
+        if colaboradores and fecha and servicios and sede:
             check_appointment_availability(sede, servicios, colaboradores, fecha, cita_id)
+        elif not self.instance:
+            # For new appointments, all fields are required
+            if not colaboradores:
+                raise serializers.ValidationError("Debe seleccionar al menos un colaborador.")
+            if not servicios:
+                raise serializers.ValidationError("Debe seleccionar al menos un servicio.")
+            if not sede:
+                raise serializers.ValidationError("Debe seleccionar una sede.")
+            if not fecha:
+                raise serializers.ValidationError("Debe seleccionar una fecha.")
 
         return data
 

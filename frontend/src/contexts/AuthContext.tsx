@@ -26,6 +26,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
         logoutInProgressRef.current = true;
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
         setUser(null);
         if (message) {
@@ -62,6 +63,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const login = async (username: string, password: string) => {
         const response = await apiLogin(username, password);
         localStorage.setItem('token', response.access);
+        if (response.refresh) {
+            localStorage.setItem('refreshToken', response.refresh);
+        }
         localStorage.setItem('user', JSON.stringify(response.user));
         setUser(response.user);
     };
@@ -69,6 +73,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const loginWithMagicLink = async (token: string) => {
         const response = await authenticateWithMagicLink(token);
         localStorage.setItem('token', response.access);
+        if (response.refresh) {
+            localStorage.setItem('refreshToken', response.refresh);
+        }
         localStorage.setItem('user', JSON.stringify(response.user));
         setUser(response.user);
     };

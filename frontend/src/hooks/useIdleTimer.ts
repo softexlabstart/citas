@@ -3,18 +3,24 @@ import { useState, useEffect, useRef } from 'react';
 const useIdleTimer = (timeout: number, onIdle: () => void) => {
   const [isIdle, setIsIdle] = useState(false);
   const timeoutId = useRef<number | null>(null);
+  const onIdleRef = useRef(onIdle);
 
-  const resetTimer = () => {
-    if (timeoutId.current) {
-      window.clearTimeout(timeoutId.current);
-    }
-    timeoutId.current = window.setTimeout(() => {
-      setIsIdle(true);
-      onIdle();
-    }, timeout);
-  };
+  // Actualizar la referencia cuando onIdle cambie, sin provocar re-render
+  useEffect(() => {
+    onIdleRef.current = onIdle;
+  }, [onIdle]);
 
   useEffect(() => {
+    const resetTimer = () => {
+      if (timeoutId.current) {
+        window.clearTimeout(timeoutId.current);
+      }
+      timeoutId.current = window.setTimeout(() => {
+        setIsIdle(true);
+        onIdleRef.current();
+      }, timeout);
+    };
+
     const events = ['mousemove', 'keydown', 'mousedown', 'touchstart'];
 
     const handleActivity = () => {
@@ -36,7 +42,7 @@ const useIdleTimer = (timeout: number, onIdle: () => void) => {
         window.removeEventListener(event, handleActivity);
       });
     };
-  }, [timeout, onIdle]);
+  }, [timeout]); // Solo depende de timeout, no de onIdle
 
   return isIdle;
 };

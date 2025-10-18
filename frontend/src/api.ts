@@ -40,13 +40,74 @@ api.interceptors.request.use(
     }
 );
 
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+    failedQueue.forEach(prom => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+    failedQueue = [];
+};
+
 export const setupInterceptors = (logout: (message?: string) => void) => {
     api.interceptors.response.use(
         (response: any) => response,
-        (error: any) => {
-            if (error.response && error.response.status === 401) {
-                logout('Tu sesión ha expirado. Por favor, inicia sesión de nuevo.');
+        async (error: any) => {
+            const originalRequest = error.config;
+
+            // Si el error es 401 y no hemos intentado refrescar aún
+            if (error.response && error.response.status === 401 && !originalRequest._retry) {
+                if (isRefreshing) {
+                    // Si ya estamos refrescando, poner en cola esta petición
+                    return new Promise((resolve, reject) => {
+                        failedQueue.push({ resolve, reject });
+                    }).then(token => {
+                        originalRequest.headers['Authorization'] = 'Bearer ' + token;
+                        return api(originalRequest);
+                    }).catch(err => {
+                        return Promise.reject(err);
+                    });
+                }
+
+                originalRequest._retry = true;
+                isRefreshing = true;
+
+                const refreshToken = localStorage.getItem('refreshToken');
+
+                if (!refreshToken) {
+                    logout('Tu sesión ha expirado. Por favor, inicia sesión de nuevo.');
+                    return Promise.reject(error);
+                }
+
+                try {
+                    const response = await api.post('/api/token/refresh/', { refresh: refreshToken });
+                    const { access, refresh } = response.data;
+
+                    localStorage.setItem('token', access);
+                    if (refresh) {
+                        localStorage.setItem('refreshToken', refresh);
+                    }
+
+                    api.defaults.headers.common['Authorization'] = 'Bearer ' + access;
+                    originalRequest.headers['Authorization'] = 'Bearer ' + access;
+
+                    processQueue(null, access);
+                    isRefreshing = false;
+
+                    return api(originalRequest);
+                } catch (refreshError) {
+                    processQueue(refreshError, null);
+                    isRefreshing = false;
+                    logout('Tu sesión ha expirado. Por favor, inicia sesión de nuevo.');
+                    return Promise.reject(refreshError);
+                }
             }
+
             return Promise.reject(error);
         }
     );
