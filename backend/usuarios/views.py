@@ -14,7 +14,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth.models import User, Group # Added Group
 from citas.permissions import IsAdminOrSedeAdmin
 from rest_framework.decorators import action
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from citas.models import Cita
 from citas.serializers import CitaSerializer
 from django.core.mail import send_mail
@@ -364,15 +364,27 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
             'user__perfil__sedes_administradas'
         ).distinct().order_by('-fecha')
 
+        # Calcular estadísticas generales
         stats = citas.aggregate(
             total=Count('id'),
             asistidas=Count('id', filter=Q(estado='Asistio')),
             canceladas=Count('id', filter=Q(estado='Cancelada')),
             no_asistidas=Count('id', filter=Q(estado='No Asistio'))
         )
-        
+
+        # Calcular el Lifetime Value (LTV) del cliente
+        # LTV = suma de precios de todos los servicios en citas con estado 'Asistio'
+        ltv_result = citas.filter(
+            estado='Asistio'
+        ).aggregate(
+            ltv=Sum('servicios__precio')
+        )
+
+        # Asegurar que LTV sea 0 si no hay citas asistidas o si el resultado es None
+        stats['ltv'] = ltv_result['ltv'] or 0
+
         servicios_usados = citas.values('servicios__nombre').annotate(count=Count('servicios__id')).order_by('-count')
-        
+
         return Response({
             'citas': CitaSerializer(citas, many=True).data,
             'stats': stats,
