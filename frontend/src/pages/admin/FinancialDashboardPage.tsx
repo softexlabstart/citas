@@ -27,28 +27,27 @@ const FinancialDashboardPage: React.FC = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
-    // Initialize default dates (last 30 days)
+    // Initialize default dates (last 30 days) and fetch data
     useEffect(() => {
         const today = new Date();
         const thirtyDaysAgo = new Date(today);
         thirtyDaysAgo.setDate(today.getDate() - 30);
 
-        setEndDate(today.toISOString().split('T')[0]);
-        setStartDate(thirtyDaysAgo.toISOString().split('T')[0]);
+        const end = today.toISOString().split('T')[0];
+        const start = thirtyDaysAgo.toISOString().split('T')[0];
+
+        setEndDate(end);
+        setStartDate(start);
+
+        // Fetch data immediately with the calculated dates
+        fetchDataWithDates(start, end);
     }, []);
 
-    // Fetch data when component mounts
-    useEffect(() => {
-        if (startDate && endDate) {
-            fetchData();
-        }
-    }, []); // Solo al montar
-
-    const fetchData = async () => {
+    const fetchDataWithDates = async (start: string, end: string) => {
         try {
             setLoading(true);
             setError(null);
-            const response = await getFinancialSummary(startDate, endDate);
+            const response = await getFinancialSummary(start, end);
             setData(response.data);
         } catch (err: any) {
             console.error('Error fetching financial summary:', err);
@@ -60,6 +59,10 @@ const FinancialDashboardPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const fetchData = async () => {
+        await fetchDataWithDates(startDate, endDate);
     };
 
     const handleGenerateReport = (e: React.FormEvent) => {
@@ -297,7 +300,7 @@ const FinancialDashboardPage: React.FC = () => {
                                             style={{ fontSize: '12px' }}
                                         />
                                         <YAxis
-                                            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
+                                            tickFormatter={(value: number) => `$${(value / 1000).toFixed(0)}K`}
                                             style={{ fontSize: '12px' }}
                                         />
                                         <Tooltip
