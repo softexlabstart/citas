@@ -1,6 +1,39 @@
 # Sistema de Gestión de Citas Multi-Tenant
 
+![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![Django](https://img.shields.io/badge/django-5.x-green.svg)
+![React](https://img.shields.io/badge/react-18+-61dafb.svg)
+![TypeScript](https://img.shields.io/badge/typescript-5.x-blue.svg)
+![PostgreSQL](https://img.shields.io/badge/postgresql-15+-336791.svg)
+![Redis](https://img.shields.io/badge/redis-7+-dc382d.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+
 Sistema completo de gestión de citas con frontend en **React** y backend en **Django**, diseñado para soportar múltiples organizaciones independientes en una misma plataforma.
+
+## 📋 Tabla de Contenidos
+
+- [Características Principales](#características-principales)
+- [Tecnologías](#tecnologías)
+- [Documentación](#documentación)
+- [Instalación Rápida](#instalación-rápida)
+- [Servicios Adicionales](#servicios-adicionales)
+- [Uso Básico](#uso-básico)
+- [Configuración de Producción](#configuración-de-producción)
+- [API Endpoints](#api-endpoints-principales)
+- [Casos de Uso](#casos-de-uso)
+- [Optimizaciones](#optimizaciones-implementadas)
+- [Comandos Útiles](#comandos-útiles)
+- [Monitoreo](#monitoreo)
+- [Troubleshooting](#troubleshooting)
+- [Licencia](#licencia)
+
+## ⚡ Quick Links
+
+- 📖 [Manual de Usuario](docs/MANUAL_DE_USO.md)
+- 🚀 [Guía de Deployment](docs/DEPLOYMENT_GUIDE.md)
+- 🔐 [Checklist de Seguridad](docs/SECURITY_CHECKLIST.md)
+- 🔧 [Configuración Celery + Redis](CELERY_SETUP.md)
+- 📚 [Documentación Completa](docs/)
 
 ## Características Principales
 
@@ -168,18 +201,18 @@ Ver [docs/ROLES_Y_PERMISOS.md](docs/ROLES_Y_PERMISOS.md) para más detalles.
 ### 1. Instalar Redis (si no está instalado)
 
 ```bash
-bash install_redis.sh
+bash scripts/install_redis.sh
 ```
 
 ### 2. Configurar Celery Worker
 
 ```bash
-bash setup_celery.sh
+bash scripts/setup_celery.sh
 ```
 
 ### 3. Variables de Entorno
 
-Configurar `.env` en el backend:
+Configurar `.env` en el backend (usar `backend/.env.example` como base):
 
 ```env
 DEBUG=False
@@ -199,6 +232,8 @@ FRONTEND_URL=https://tu-dominio.com
 cd backend
 gunicorn --config gunicorn_config.py core.wsgi:application
 ```
+
+Ver `scripts/systemd/gunicorn.service` para configurar como servicio.
 
 ### 5. Build del Frontend
 
@@ -400,6 +435,6 @@ Para reportar problemas o solicitar ayuda:
 
 ---
 
-**Versión:** 2.0
-**Última actualización:** 2025-10-18
+**Versión:** 2.0  
+**Última actualización:** 2025-10-18  
 **Generado con:** Claude Code 🤖

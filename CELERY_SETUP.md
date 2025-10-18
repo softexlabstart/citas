@@ -21,7 +21,7 @@ cd ~/appcitas/citas
 git pull origin main
 
 # PRIMERO: Instalar Redis
-bash install_redis.sh
+bash scripts/install_redis.sh
 ```
 
 **Distribuciones soportadas:**
@@ -48,7 +48,7 @@ Una vez que Redis esté funcionando:
 
 ```bash
 # Ejecutar script de instalación de Celery
-bash setup_celery.sh
+bash scripts/setup_celery.sh
 ```
 
 Este script:
@@ -72,7 +72,7 @@ sudo systemctl start redis
 sudo systemctl enable redis
 
 # 3. Instalar servicio
-sudo cp celery.service /etc/systemd/system/
+sudo cp scripts/systemd/celery.service /etc/systemd/system/
 sudo chmod 644 /etc/systemd/system/celery.service
 sudo systemctl daemon-reload
 

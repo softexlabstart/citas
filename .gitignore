@@ -1,94 +1,93 @@
-# Python / Django
+# ======================
+# PYTHON
+# ======================
+*.py[cod]
+*$py.class
+*.so
+.Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.py[cod]
-*$py.class
-.Python
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-pip-log.txt
-pip-delete-this-directory.txt
-instance/
-
-# Django
-db.sqlite3
-*.sqlite3
-*.db
-.env
-.env.local
-.env.*.local
-local_settings.py
-staticfiles/
-static/
-media/
-*.log
-migrations/__pycache__/
-**/migrations/*.pyc
-gunicorn.sock
-gunicorn.pid
-
-# Celery
-celerybeat-schedule
-celerybeat.pid
-*.pid
-*.sock
-
-# Testing / Coverage
-.coverage
-.coverage.*
-htmlcov/
-.tox/
 .pytest_cache/
-.hypothesis/
-*.cover
-*.py,cover
-.cache
-nosetests.xml
-coverage.xml
-*.coveragerc
-
-# Node / React / Frontend
-node_modules/
+*.egg-info/
 dist/
 build/
-dist-ssr/
-.npm
+eggs/
+.eggs/
+*.egg
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+*.pot
+
+# ======================
+# NODE / REACT
+# ======================
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-.pnp/
+.npm
+.pnp
 .pnp.js
-.pnp.cjs
-coverage/
+
+# Build outputs
+/build
+/dist
+/.next/
+/out/
+
+# Testing
+/coverage
+*.lcov
+
+# ======================
+# ENVIRONMENT VARIABLES
+# ======================
+.env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
-vite.config.ts.timestamp-*.mjs
-*.tsbuildinfo
-.turbo
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-.next/
-out/
-.nuxt/
-.cache/
-.parcel-cache/
-.eslintcache
+.env.development
+.env.production
+.env.*.local
+*.env
 
-# Cypress
-/cypress/videos/
-/cypress/screenshots/
+# ======================
+# IDEs
+# ======================
+# VSCode
+.vscode/
+*.code-workspace
 
+# PyCharm
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ======================
 # OS
+# ======================
 .DS_Store
 .DS_Store?
 ._*
@@ -96,98 +95,38 @@ out/
 .Trashes
 ehthumbs.db
 Thumbs.db
-Desktop.ini
+desktop.ini
 
-# Editor & IDEs
-.vscode/
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-.idea/
-*.swp
-*~
-*.sw?
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
-*.sublime-project
-.atom/
-.editorconfig
+# ======================
+# SERVICIOS Y LOGS
+# ======================
+*.pid
+*.seed
+*.pid.lock
+*.log
+logs/
+pids/
 
-# JetBrains
-.idea/**/workspace.xml
-.idea/**/tasks.xml
-.idea/**/usage.statistics.xml
-.idea/**/dictionaries
-.idea/**/shelf
+# Redis
+dump.rdb
 
-# Documentation (temporal/working files)
-MULTITENANCY_README.md
-*.draft.md
-*.wip.md
-ROLES_Y_PERMISOS.md
-notes/
-TODO.md
-CHANGELOG.draft.md
+# Celery
+celerybeat-schedule
+celerybeat.pid
 
-# Secrets and credentials
-*.pem
-*.key
-*.cert
-.envrc
-secrets.json
-credentials.json
-.aws/
-.gcp/
-.azure/
-*.p12
-*.pfx
-.ssh/
-
-# Backup files
+# ======================
+# BACKUPS
+# ======================
 *.bak
 *.backup
-*.tmp
-*.old
-*.orig
-*~
+*.sql
+*.dump
 
-# Compiled files
-*.com
-*.class
-*.dll
-*.exe
-*.o
-*.so
-*.dylib
-
-# Mac OS
-.AppleDouble
-.LSOverride
-.DocumentRevisions-V100
-.fseventsd
-.TemporaryItems
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-
-# Linux
-*~
-.directory
-.Trash-*
-
-# Windows
-[Tt]humbs.db
-[Tt]humbs.db:encryptable
-ehthumbs_vista.db
-[Dd]esktop.ini
-$RECYCLE.BIN/
-*.lnk
+# ======================
+# OTROS
+# ======================
+.sass-cache/
+.cache/
+*.tgz
+.yarn-integrity
+.vercel
