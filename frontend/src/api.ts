@@ -321,10 +321,11 @@ export interface FinancialSummary {
     total_citas: number;
 }
 
-export const getFinancialSummary = (startDate?: string, endDate?: string) => {
+export const getFinancialSummary = (startDate?: string, endDate?: string, colaboradorId?: string) => {
     const params = new URLSearchParams();
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
+    if (colaboradorId) params.append('colaborador_id', colaboradorId);
     const queryString = params.toString();
     return api.get<FinancialSummary>(`/api/reports/financial-summary/${queryString ? `?${queryString}` : ''}`);
 };

@@ -26,8 +26,11 @@ const HomePage: React.FC = () => {
         setLoading(true);
         const response = await getDashboardSummary();
         setDashboardData(response.data);
-      } catch (err) {
-        setError(t('error_fetching_dashboard_data'));
+      } catch (err: any) {
+        // Solo mostrar error si NO es 401 (no autorizado es esperado al cargar)
+        if (err.response?.status !== 401) {
+          setError(t('error_fetching_dashboard_data'));
+        }
       } finally {
         setLoading(false);
       }

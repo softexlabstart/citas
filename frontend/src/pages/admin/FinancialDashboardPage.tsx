@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Spinner, Alert, Form, Button } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { getFinancialSummary, FinancialSummary } from '../../api';
+import { getFinancialSummary, FinancialSummary, getRecursos } from '../../api';
+import { Recurso } from '../../interfaces/Recurso';
 import {
     BarChart,
     Bar,
@@ -27,27 +28,44 @@ const FinancialDashboardPage: React.FC = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
+    // Colaborador filter
+    const [colaboradores, setColaboradores] = useState<Recurso[]>([]);
+    const [selectedColaborador, setSelectedColaborador] = useState<string>('');
+
     // Initialize default dates (last 30 days) and fetch data
     useEffect(() => {
-        const today = new Date();
-        const thirtyDaysAgo = new Date(today);
-        thirtyDaysAgo.setDate(today.getDate() - 30);
+        const loadInitialData = async () => {
+            // Cargar colaboradores
+            try {
+                const response = await getRecursos();
+                setColaboradores(response.data);
+            } catch (err) {
+                console.error('Error loading colaboradores:', err);
+            }
 
-        const end = today.toISOString().split('T')[0];
-        const start = thirtyDaysAgo.toISOString().split('T')[0];
+            // Configurar fechas y cargar datos financieros
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today);
+            thirtyDaysAgo.setDate(today.getDate() - 30);
 
-        setEndDate(end);
-        setStartDate(start);
+            const end = today.toISOString().split('T')[0];
+            const start = thirtyDaysAgo.toISOString().split('T')[0];
 
-        // Fetch data immediately with the calculated dates
-        fetchDataWithDates(start, end);
+            setEndDate(end);
+            setStartDate(start);
+
+            // Fetch data immediately with the calculated dates
+            fetchDataWithDates(start, end, '');
+        };
+
+        loadInitialData();
     }, []);
 
-    const fetchDataWithDates = async (start: string, end: string) => {
+    const fetchDataWithDates = async (start: string, end: string, colaboradorId: string) => {
         try {
             setLoading(true);
             setError(null);
-            const response = await getFinancialSummary(start, end);
+            const response = await getFinancialSummary(start, end, colaboradorId || undefined);
             setData(response.data);
         } catch (err: any) {
             console.error('Error fetching financial summary:', err);
@@ -62,7 +80,7 @@ const FinancialDashboardPage: React.FC = () => {
     };
 
     const fetchData = async () => {
-        await fetchDataWithDates(startDate, endDate);
+        await fetchDataWithDates(startDate, endDate, selectedColaborador);
     };
 
     const handleGenerateReport = (e: React.FormEvent) => {
@@ -147,8 +165,8 @@ const FinancialDashboardPage: React.FC = () => {
                         📅 {t('date_filters') || 'Filtros de Fecha'}
                     </h5>
                     <Form onSubmit={handleGenerateReport}>
-                        <Row className="align-items-end">
-                            <Col md={4}>
+                        <Row className="align-items-end mb-3">
+                            <Col md={3}>
                                 <Form.Group>
                                     <Form.Label className="fw-semibold">
                                         {t('start_date') || 'Fecha Inicio'}
@@ -161,7 +179,7 @@ const FinancialDashboardPage: React.FC = () => {
                                     />
                                 </Form.Group>
                             </Col>
-                            <Col md={4}>
+                            <Col md={3}>
                                 <Form.Group>
                                     <Form.Label className="fw-semibold">
                                         {t('end_date') || 'Fecha Fin'}
@@ -174,7 +192,27 @@ const FinancialDashboardPage: React.FC = () => {
                                     />
                                 </Form.Group>
                             </Col>
-                            <Col md={4}>
+                            <Col md={3}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold">
+                                        {t('filter_by_resource') || 'Filtrar por Colaborador'}
+                                    </Form.Label>
+                                    <Form.Select
+                                        value={selectedColaborador}
+                                        onChange={(e) => setSelectedColaborador(e.target.value)}
+                                    >
+                                        <option value="">
+                                            {t('all_resources') || 'Todos los colaboradores'}
+                                        </option>
+                                        {colaboradores.map((colaborador) => (
+                                            <option key={colaborador.id} value={colaborador.id}>
+                                                {colaborador.nombre}
+                                            </option>
+                                        ))}
+                                    </Form.Select>
+                                </Form.Group>
+                            </Col>
+                            <Col md={3}>
                                 <Button
                                     variant="primary"
                                     type="submit"

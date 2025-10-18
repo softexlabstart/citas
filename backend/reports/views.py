@@ -43,6 +43,15 @@ class FinancialSummaryView(APIView):
         # 3. Filtrar por rango de fechas
         queryset = queryset.filter(fecha__gte=start_date, fecha__lte=end_date)
 
+        # 4. Filtrar por colaborador específico (si se proporciona)
+        colaborador_id = request.query_params.get('colaborador_id')
+        if colaborador_id:
+            try:
+                queryset = queryset.filter(colaboradores__id=int(colaborador_id))
+            except (ValueError, TypeError):
+                # Si el ID no es válido, ignorar el filtro
+                pass
+
         # 4. OPTIMIZACIÓN: Calcular todas las métricas principales en UNA SOLA QUERY
         metrics = queryset.aggregate(
             # Ingresos realizados (citas con estado 'Asistio')

@@ -146,5 +146,7 @@
   "based_on_appointments": "Based on {{count}} appointments in the selected period",
   "no_permission_view_financial_data": "You don't have permission to view this financial information",
   "error_loading_financial_summary": "Error loading financial summary. Please try again.",
-  "retry": "Retry"
+  "retry": "Retry",
+  "filter_by_resource": "Filter by Resource",
+  "all_resources": "All resources"
 }

@@ -77,7 +77,6 @@
   "end_date": "Fecha de Fin",
   "optional": "opcional",
   "all_services": "Todos los servicios",
-  "all_resources": "Todos los colaboradores",
   "report_results": "Resultados del Reporte",
   "count": "Cantidad",
   "select_start_and_end_date": "Por favor, selecciona una fecha de inicio y fin.",
@@ -317,5 +316,6 @@
   "based_on_appointments": "Basado en {{count}} citas en el período seleccionado",
   "no_permission_view_financial_data": "No tienes permisos para ver esta información financiera",
   "error_loading_financial_summary": "Error al cargar el resumen financiero. Por favor, intenta de nuevo.",
-  "retry": "Reintentar"
+  "retry": "Reintentar",
+  "all_resources": "Todos los colaboradores"
 }
