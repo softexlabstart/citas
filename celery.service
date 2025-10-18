@@ -1,6 +1,8 @@
 [Unit]
 Description=Celery Worker for Proyecto Citas
-After=network.target redis.service
+After=network.target
+# Redis puede ser redis.service o redis6.service dependiendo de la distro
+Wants=redis6.service redis.service
 
 [Service]
 Type=forking
