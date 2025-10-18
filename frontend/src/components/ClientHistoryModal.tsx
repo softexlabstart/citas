@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { Modal, Button, Spinner, Alert, Table, Card, Row, Col } from 'react-bootstrap';
+import { Modal, Button, Spinner, Alert, Table, Card, Row, Col, Badge } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useApi } from '../hooks/useApi';
 import { getClientHistory } from '../api';
 import { Client } from '../interfaces/Client';
+import './ClientHistoryModal.css';
 
 interface ClientHistoryModalProps {
     client: Client | null;
@@ -32,148 +33,198 @@ const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({ client, show, o
     };
 
     return (
-        <Modal show={show} onHide={onHide} size="xl" centered>
-            <Modal.Header closeButton>
-                <Modal.Title>{t('client_history')} - {client?.full_name}</Modal.Title>
+        <Modal show={show} onHide={onHide} size="xl" centered className="client-history-modal">
+            <Modal.Header closeButton className="border-0 pb-0">
+                <Modal.Title className="w-100">
+                    <div className="d-flex align-items-center">
+                        <div className="client-avatar me-3">
+                            {client?.full_name?.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <h4 className="mb-0 fw-bold">{client?.full_name}</h4>
+                            <small className="text-muted">{t('client_history') || 'Historial del Cliente'}</small>
+                        </div>
+                    </div>
+                </Modal.Title>
             </Modal.Header>
-            <Modal.Body style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+            <Modal.Body style={{ maxHeight: '75vh', overflowY: 'auto' }} className="px-4">
                 {loading && (
-                    <div className="text-center py-5">
-                        <Spinner animation="border" variant="primary" />
-                        <p className="mt-3">{t('loading')}...</p>
+                    <div className="loading-container text-center py-5">
+                        <Spinner animation="border" variant="primary" className="mb-3" />
+                        <p className="text-muted">{t('loading')}...</p>
                     </div>
                 )}
-                {error && <Alert variant="danger">{error}</Alert>}
+                {error && <Alert variant="danger" className="rounded-3">{error}</Alert>}
                 {history && (
                     <div>
-                        {/* LTV Card - Métrica Destacada */}
-                        <h5 className="mb-3">💰 {t('financial_metrics') || 'Métricas Financieras'}</h5>
-                        <Card bg="success" text="white" className="shadow mb-4">
-                            <Card.Body>
+                        {/* LTV Card - Métrica Destacada con Gradiente */}
+                        <div className="section-header mb-3">
+                            <span className="section-icon">💰</span>
+                            <h5 className="mb-0 fw-semibold">{t('financial_metrics') || 'Métricas Financieras'}</h5>
+                        </div>
+                        <Card className="ltv-card border-0 shadow-lg mb-4">
+                            <Card.Body className="p-4">
                                 <div className="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <h6 className="mb-1 text-white-50">Ingresos Generados (LTV)</h6>
-                                        <h2 className="mb-0 fw-bold">{formatCurrency(history.stats.ltv || 0)}</h2>
-                                        <small className="text-white-50">Total de servicios en citas asistidas</small>
+                                        <p className="ltv-label mb-2">Ingresos Generados (LTV)</p>
+                                        <h1 className="ltv-amount mb-1">{formatCurrency(history.stats.ltv || 0)}</h1>
+                                        <p className="ltv-description mb-0">Total de servicios en citas asistidas</p>
                                     </div>
-                                    <div style={{ fontSize: '3.5rem', opacity: 0.25 }}>💵</div>
+                                    <div className="ltv-icon">💵</div>
                                 </div>
                             </Card.Body>
                         </Card>
 
-                        {/* Estadísticas de Citas */}
-                        <h5 className="mb-3">📊 {t('appointment_stats') || 'Estadísticas de Citas'}</h5>
-                        <Row className="mb-4">
-                            <Col md={6} lg={3} className="mb-3">
-                                <Card className="h-100 shadow-sm border-primary">
-                                    <Card.Body className="text-center">
-                                        <div style={{ fontSize: '2rem' }}>📅</div>
-                                        <h6 className="text-muted mb-1">{t('total') || 'Total'}</h6>
-                                        <h3 className="mb-0 fw-bold text-primary">{history.stats.total}</h3>
+                        {/* Estadísticas de Citas - Cards Mejorados */}
+                        <div className="section-header mb-3">
+                            <span className="section-icon">📊</span>
+                            <h5 className="mb-0 fw-semibold">{t('appointment_stats') || 'Estadísticas de Citas'}</h5>
+                        </div>
+                        <Row className="g-3 mb-4">
+                            <Col xs={6} lg={3}>
+                                <Card className="stat-card stat-card-total h-100 border-0 shadow-sm">
+                                    <Card.Body className="p-3">
+                                        <div className="stat-icon mb-2">📅</div>
+                                        <p className="stat-label mb-1">total</p>
+                                        <h2 className="stat-value mb-0">{history.stats.total}</h2>
                                     </Card.Body>
                                 </Card>
                             </Col>
-                            <Col md={6} lg={3} className="mb-3">
-                                <Card className="h-100 shadow-sm border-success">
-                                    <Card.Body className="text-center">
-                                        <div style={{ fontSize: '2rem' }}>✅</div>
-                                        <h6 className="text-muted mb-1">{t('attended') || 'Asistidas'}</h6>
-                                        <h3 className="mb-0 fw-bold text-success">{history.stats.asistidas}</h3>
+                            <Col xs={6} lg={3}>
+                                <Card className="stat-card stat-card-attended h-100 border-0 shadow-sm">
+                                    <Card.Body className="p-3">
+                                        <div className="stat-icon mb-2">✅</div>
+                                        <p className="stat-label mb-1">Asistió</p>
+                                        <h2 className="stat-value mb-0">{history.stats.asistidas}</h2>
                                     </Card.Body>
                                 </Card>
                             </Col>
-                            <Col md={6} lg={3} className="mb-3">
-                                <Card className="h-100 shadow-sm border-danger">
-                                    <Card.Body className="text-center">
-                                        <div style={{ fontSize: '2rem' }}>❌</div>
-                                        <h6 className="text-muted mb-1">{t('canceled') || 'Canceladas'}</h6>
-                                        <h3 className="mb-0 fw-bold text-danger">{history.stats.canceladas}</h3>
+                            <Col xs={6} lg={3}>
+                                <Card className="stat-card stat-card-canceled h-100 border-0 shadow-sm">
+                                    <Card.Body className="p-3">
+                                        <div className="stat-icon mb-2">❌</div>
+                                        <p className="stat-label mb-1">canceladas</p>
+                                        <h2 className="stat-value mb-0">{history.stats.canceladas}</h2>
                                     </Card.Body>
                                 </Card>
                             </Col>
-                            <Col md={6} lg={3} className="mb-3">
-                                <Card className="h-100 shadow-sm border-warning">
-                                    <Card.Body className="text-center">
-                                        <div style={{ fontSize: '2rem' }}>🚫</div>
-                                        <h6 className="text-muted mb-1">{t('not_attended') || 'No Asistidas'}</h6>
-                                        <h3 className="mb-0 fw-bold text-warning">{history.stats.no_asistidas}</h3>
+                            <Col xs={6} lg={3}>
+                                <Card className="stat-card stat-card-missed h-100 border-0 shadow-sm">
+                                    <Card.Body className="p-3">
+                                        <div className="stat-icon mb-2">🚫</div>
+                                        <p className="stat-label mb-1">No Asistió</p>
+                                        <h2 className="stat-value mb-0">{history.stats.no_asistidas}</h2>
                                     </Card.Body>
                                 </Card>
                             </Col>
                         </Row>
 
-                        {/* Servicios Más Usados */}
+                        {/* Servicios Más Usados - Rediseñado */}
                         {history.servicios_mas_usados && history.servicios_mas_usados.length > 0 && (
                             <>
-                                <h5 className="mb-3">🎯 {t('most_used_services') || 'Servicios Más Usados'}</h5>
-                                <Card className="mb-4 shadow-sm">
-                                    <Card.Body>
+                                <div className="section-header mb-3">
+                                    <span className="section-icon">🎯</span>
+                                    <h5 className="mb-0 fw-semibold">{t('most_used_services') || 'Servicios Más Usados'}</h5>
+                                </div>
+                                <Card className="services-card border-0 shadow-sm mb-4">
+                                    <Card.Body className="p-3">
                                         {history.servicios_mas_usados.map((servicio: any, index: number) => (
                                             <div
                                                 key={index}
-                                                className={`d-flex justify-content-between align-items-center ${index !== history.servicios_mas_usados.length - 1 ? 'mb-2 pb-2 border-bottom' : ''}`}
+                                                className={`service-item d-flex justify-content-between align-items-center ${
+                                                    index !== history.servicios_mas_usados.length - 1 ? 'mb-3 pb-3' : ''
+                                                }`}
                                             >
-                                                <span className="fw-bold">{servicio.servicios__nombre || 'Sin servicio'}</span>
-                                                <span className="badge bg-primary rounded-pill">{servicio.count} {t('times') || 'veces'}</span>
+                                                <div className="d-flex align-items-center">
+                                                    <div className="service-rank me-3">{index + 1}</div>
+                                                    <span className="service-name">{servicio.servicios__nombre || 'Sin servicio'}</span>
+                                                </div>
+                                                <Badge bg="primary" pill className="service-count px-3 py-2">
+                                                    {servicio.count}
+                                                </Badge>
                                             </div>
                                         ))}
-                                        {history.servicios_mas_usados.length === 0 && (
-                                            <p className="text-muted text-center mb-0">No hay servicios registrados</p>
-                                        )}
                                     </Card.Body>
                                 </Card>
                             </>
                         )}
 
-                        {/* Historial de Citas */}
-                        <h5 className="mb-3">📋 {t('appointment_history') || 'Historial de Citas'}</h5>
-                        <div className="table-responsive">
-                            <Table striped bordered hover>
-                                <thead className="table-light">
-                                    <tr>
-                                        <th>{t('date') || 'Fecha'}</th>
-                                        <th>{t('service') || 'Servicio'}</th>
-                                        <th>{t('status') || 'Estado'}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {history.citas && history.citas.length > 0 ? (
-                                        history.citas.map((cita: any) => (
-                                            <tr key={cita.id}>
-                                                <td>{new Date(cita.fecha).toLocaleString('es-CO')}</td>
-                                                <td>
-                                                    {cita.servicios && cita.servicios.length > 0
-                                                        ? cita.servicios.map((s: any) => s.nombre).join(', ')
-                                                        : 'Sin servicio'}
-                                                </td>
-                                                <td>
-                                                    <span className={`badge ${
-                                                        cita.estado === 'Asistio' ? 'bg-success' :
-                                                        cita.estado === 'Cancelada' ? 'bg-danger' :
-                                                        cita.estado === 'No Asistio' ? 'bg-warning' :
-                                                        cita.estado === 'Confirmada' ? 'bg-info' :
-                                                        'bg-secondary'
-                                                    }`}>
-                                                        {t(cita.estado) || cita.estado}
-                                                    </span>
+                        {/* Historial de Citas - Tabla Mejorada */}
+                        <div className="section-header mb-3">
+                            <span className="section-icon">📋</span>
+                            <h5 className="mb-0 fw-semibold">{t('appointment_history') || 'Historial de Citas'}</h5>
+                        </div>
+                        <Card className="history-table-card border-0 shadow-sm">
+                            <div className="table-responsive">
+                                <Table hover className="mb-0 history-table">
+                                    <thead>
+                                        <tr>
+                                            <th>{t('date') || 'Fecha'}</th>
+                                            <th>{t('service') || 'Servicio'}</th>
+                                            <th className="text-center">{t('status') || 'Estado'}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {history.citas && history.citas.length > 0 ? (
+                                            history.citas.map((cita: any) => (
+                                                <tr key={cita.id}>
+                                                    <td className="text-nowrap">
+                                                        <div className="date-cell">
+                                                            {new Date(cita.fecha).toLocaleDateString('es-CO', {
+                                                                year: 'numeric',
+                                                                month: 'short',
+                                                                day: 'numeric'
+                                                            })}
+                                                            <small className="d-block text-muted">
+                                                                {new Date(cita.fecha).toLocaleTimeString('es-CO', {
+                                                                    hour: '2-digit',
+                                                                    minute: '2-digit'
+                                                                })}
+                                                            </small>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div className="service-cell">
+                                                            {cita.servicios && cita.servicios.length > 0
+                                                                ? cita.servicios.map((s: any) => s.nombre).join(', ')
+                                                                : <span className="text-muted">Sin servicio</span>}
+                                                        </div>
+                                                    </td>
+                                                    <td className="text-center">
+                                                        <Badge
+                                                            bg={
+                                                                cita.estado === 'Asistio' ? 'success' :
+                                                                cita.estado === 'Cancelada' ? 'danger' :
+                                                                cita.estado === 'No Asistio' ? 'warning' :
+                                                                cita.estado === 'Confirmada' ? 'info' :
+                                                                'secondary'
+                                                            }
+                                                            className="status-badge px-3 py-2"
+                                                        >
+                                                            {t(cita.estado) || cita.estado}
+                                                        </Badge>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={3} className="text-center py-5">
+                                                    <div className="text-muted">
+                                                        <div className="mb-2" style={{ fontSize: '2rem' }}>📅</div>
+                                                        <p className="mb-0">No hay citas registradas</p>
+                                                    </div>
                                                 </td>
                                             </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={3} className="text-center text-muted">
-                                                No hay citas registradas
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </Table>
-                        </div>
+                                        )}
+                                    </tbody>
+                                </Table>
+                            </div>
+                        </Card>
                     </div>
                 )}
             </Modal.Body>
-            <Modal.Footer>
-                <Button variant="secondary" onClick={onHide}>
+            <Modal.Footer className="border-0 pt-0">
+                <Button variant="light" onClick={onHide} className="px-4 py-2 btn-close-modal">
                     {t('close') || 'Cerrar'}
                 </Button>
             </Modal.Footer>

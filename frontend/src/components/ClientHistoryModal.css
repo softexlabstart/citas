@@ -1,0 +1,305 @@
+/* ClientHistoryModal - Estilos consistentes con el diseño de la aplicación */
+
+/* Header del Modal con Avatar */
+.client-history-modal .client-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #457b9d, #a8dadc);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(69, 123, 157, 0.3);
+}
+
+/* Section Headers */
+.client-history-modal .section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.client-history-modal .section-icon {
+  font-size: 1.3rem;
+}
+
+/* LTV Card con Gradiente de la App */
+.client-history-modal .ltv-card {
+  background: linear-gradient(135deg, #457b9d, #1d3557);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.client-history-modal .ltv-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.75rem 1.5rem rgba(69, 123, 157, 0.3) !important;
+}
+
+.client-history-modal .ltv-label {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.client-history-modal .ltv-amount {
+  color: white;
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.client-history-modal .ltv-description {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.85rem;
+}
+
+.client-history-modal .ltv-icon {
+  font-size: 4rem;
+  opacity: 0.2;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* Stat Cards */
+.client-history-modal .stat-card {
+  border-radius: 0.5rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: default;
+}
+
+.client-history-modal .stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.client-history-modal .stat-icon {
+  font-size: 2rem;
+  filter: grayscale(0.2);
+}
+
+.client-history-modal .stat-label {
+  font-size: 0.85rem;
+  color: #6c757d;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.client-history-modal .stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+/* Colores de las stat cards alineados con Bootstrap */
+.client-history-modal .stat-card-total {
+  border-left: 4px solid #0d6efd;
+  background: linear-gradient(to right, rgba(13, 110, 253, 0.05), transparent);
+}
+
+.client-history-modal .stat-card-total .stat-value {
+  color: #0d6efd;
+}
+
+.client-history-modal .stat-card-attended {
+  border-left: 4px solid #198754;
+  background: linear-gradient(to right, rgba(25, 135, 84, 0.05), transparent);
+}
+
+.client-history-modal .stat-card-attended .stat-value {
+  color: #198754;
+}
+
+.client-history-modal .stat-card-canceled {
+  border-left: 4px solid #dc3545;
+  background: linear-gradient(to right, rgba(220, 53, 69, 0.05), transparent);
+}
+
+.client-history-modal .stat-card-canceled .stat-value {
+  color: #dc3545;
+}
+
+.client-history-modal .stat-card-missed {
+  border-left: 4px solid #ffc107;
+  background: linear-gradient(to right, rgba(255, 193, 7, 0.05), transparent);
+}
+
+.client-history-modal .stat-card-missed .stat-value {
+  color: #ffc107;
+}
+
+/* Services Card */
+.client-history-modal .services-card {
+  border-radius: 0.5rem;
+  transition: box-shadow 0.3s ease;
+}
+
+.client-history-modal .services-card:hover {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+}
+
+.client-history-modal .service-item {
+  border-bottom: 1px solid #e9ecef;
+  transition: background-color 0.2s ease;
+  padding: 0.5rem;
+  border-radius: 0.35rem;
+}
+
+.client-history-modal .service-item:hover {
+  background-color: #f8f9fa;
+}
+
+.client-history-modal .service-rank {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a8dadc, #457b9d);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.client-history-modal .service-name {
+  font-weight: 500;
+  color: #495057;
+}
+
+.client-history-modal .service-count {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* History Table */
+.client-history-modal .history-table-card {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.client-history-modal .history-table {
+  margin-bottom: 0;
+}
+
+.client-history-modal .history-table thead {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.client-history-modal .history-table thead th {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  color: #495057;
+  padding: 1rem;
+  border: none;
+}
+
+.client-history-modal .history-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.client-history-modal .history-table tbody tr:hover {
+  background-color: rgba(168, 218, 220, 0.1);
+}
+
+.client-history-modal .history-table tbody td {
+  padding: 1rem;
+  vertical-align: middle;
+  border-color: #f1f3f5;
+}
+
+.client-history-modal .date-cell {
+  font-weight: 500;
+  color: #495057;
+}
+
+.client-history-modal .date-cell small {
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.client-history-modal .service-cell {
+  color: #495057;
+}
+
+.client-history-modal .status-badge {
+  font-weight: 500;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+  letter-spacing: 0.3px;
+}
+
+/* Loading State */
+.client-history-modal .loading-container {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Close Button */
+.client-history-modal .btn-close-modal {
+  font-weight: 500;
+  border-radius: 0.35rem;
+  border: 1px solid #dee2e6;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.client-history-modal .btn-close-modal:hover {
+  background-color: #e9ecef !important;
+  color: #495057 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .client-history-modal .ltv-amount {
+    font-size: 2rem;
+  }
+
+  .client-history-modal .stat-value {
+    font-size: 1.5rem;
+  }
+
+  .client-history-modal .stat-icon {
+    font-size: 1.5rem;
+  }
+
+  .client-history-modal .client-avatar {
+    width: 50px;
+    height: 50px;
+    font-size: 1.25rem;
+  }
+
+  .client-history-modal .section-header h5 {
+    font-size: 1rem;
+  }
+}
+
+/* Smooth scrollbar */
+.client-history-modal .modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.client-history-modal .modal-body::-webkit-scrollbar-track {
+  background: #f1f3f5;
+  border-radius: 4px;
+}
+
+.client-history-modal .modal-body::-webkit-scrollbar-thumb {
+  background: #adb5bd;
+  border-radius: 4px;
+}
+
+.client-history-modal .modal-body::-webkit-scrollbar-thumb:hover {
+  background: #868e96;
+}
