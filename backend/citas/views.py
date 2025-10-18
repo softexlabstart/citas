@@ -537,17 +537,23 @@ class DashboardSummaryView(APIView):
         if is_admin_user:
             citas_hoy = base_queryset.filter(fecha__date=today).count()
             pendientes_confirmacion = base_queryset.filter(estado='Pendiente').count()
-            
+
             start_of_month = today.replace(day=1)
-            ingresos_mes = base_queryset.filter(
+            # Optimized query: Use prefetch_related and limit results to prevent OOM
+            citas_asistidas = base_queryset.filter(
                 estado='Asistio',
                 fecha__gte=start_of_month
-            ).aggregate(total=Sum(F('servicios__precio')))['total'] or 0
+            ).prefetch_related('servicios').only('id')[:500]  # Limit to 500 citas max
+
+            # Calculate sum in Python (more reliable than aggregating ManyToMany)
+            ingresos_mes = 0
+            for cita in citas_asistidas:
+                ingresos_mes += sum(servicio.precio for servicio in cita.servicios.all())
 
             proximas_citas = base_queryset.filter(
                 fecha__gte=timezone.now(),
                 estado__in=['Pendiente', 'Confirmada']
-            ).order_by('fecha')[:5]
+            ).select_related('sede').prefetch_related('servicios', 'colaboradores')[:5]
 
             summary = { 'citas_hoy': citas_hoy, 'pendientes_confirmacion': pendientes_confirmacion, 'ingresos_mes': ingresos_mes, 'proximas_citas': CitaSerializer(proximas_citas, many=True).data }
         else: # Regular user stats
