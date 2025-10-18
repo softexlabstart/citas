@@ -55,14 +55,40 @@ if [ "$REDIS_SERVICE" == "redis6" ]; then
     REDIS_CONF="/etc/redis6/redis6.conf"
 elif [ "$REDIS_SERVICE" == "redis@redis" ]; then
     redis-cli --version
-    redis-cli ping
-    REDIS_CONF="/etc/redis/default.conf.example"
+
     # En OpenSUSE, crear configuración personalizada
-    if [ ! -f "/etc/redis/redis.conf" ]; then
-        echo "📝 Creando configuración Redis para OpenSUSE..."
-        sudo cp /etc/redis/default.conf.example /etc/redis/redis.conf
-    fi
     REDIS_CONF="/etc/redis/redis.conf"
+    if [ ! -f "$REDIS_CONF" ]; then
+        echo "📝 Creando configuración Redis para OpenSUSE..."
+        if [ -f "/etc/redis/default.conf.example" ]; then
+            sudo cp /etc/redis/default.conf.example $REDIS_CONF
+        else
+            # Crear configuración mínima si no existe template
+            echo "📝 Creando configuración mínima..."
+            sudo bash -c "cat > $REDIS_CONF << 'EOF'
+# Redis configuration for Celery
+bind 127.0.0.1
+port 6379
+daemonize no
+supervised systemd
+dir /var/lib/redis
+logfile /var/log/redis/redis.log
+pidfile /run/redis/redis.pid
+maxmemory 256mb
+maxmemory-policy allkeys-lru
+EOF"
+        fi
+
+        # Asegurar permisos correctos
+        sudo chown redis:redis $REDIS_CONF 2>/dev/null || true
+        sudo chmod 640 $REDIS_CONF
+
+        # Reiniciar con nueva configuración
+        echo "🔄 Reiniciando Redis con nueva configuración..."
+        sudo systemctl restart $REDIS_SERVICE
+    fi
+
+    redis-cli ping
 else
     redis-cli --version
     redis-cli ping
