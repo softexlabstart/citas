@@ -427,7 +427,9 @@ class ClientViewSet(viewsets.ModelViewSet):
 
         servicios_usados = citas.values('servicios__nombre').annotate(count=Count('servicios__id')).order_by('-count')
 
+        # Incluir datos del cliente en la respuesta para evitar llamada adicional en el frontend
         return Response({
+            'client': ClientSerializer(client).data,
             'citas': CitaSerializer(citas, many=True).data,
             'stats': stats,
             'servicios_mas_usados': list(servicios_usados)
@@ -599,29 +601,21 @@ class InvitationView(APIView):
                     'current_year': timezone.now().year
                 }
 
-                # Enviar email
+                # Enviar email de forma asíncrona usando Celery
                 try:
-                    from django.template.loader import render_to_string
-                    from django.conf import settings
+                    from .tasks import send_invitation_email_task
 
-                    html_message = render_to_string(
-                        'emails/invitation_email.html',
-                        context
+                    # Ejecutar tarea asíncrona (no bloqueante)
+                    send_invitation_email_task.delay(
+                        invitation_id=invitation.id,
+                        email=email,
+                        context=context
                     )
 
-                    send_mail(
-                        subject=f'Invitación a {organizacion.nombre}',
-                        message=f'Has sido invitado a {organizacion.nombre}. Visita {accept_url} para aceptar.',
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[email],
-                        html_message=html_message,
-                        fail_silently=False,
-                    )
-
-                    logger.info(f'Invitación enviada exitosamente a {email} por {request.user.username}')
+                    logger.info(f'Tarea de envío de invitación encolada para {email} por {request.user.username}')
 
                     return Response({
-                        'message': 'Invitación enviada exitosamente',
+                        'message': 'Invitación creada y el correo será enviado en breve',
                         'invitation': {
                             'id': invitation.id,
                             'email': invitation.email,
@@ -633,9 +627,9 @@ class InvitationView(APIView):
                     }, status=status.HTTP_201_CREATED)
 
                 except Exception as email_error:
-                    # Si falla el envío del email, eliminar la invitación
+                    # Si falla encolar la tarea, eliminar la invitación
                     invitation.delete()
-                    logger.error(f'Error al enviar invitación: {str(email_error)}')
+                    logger.error(f'Error al encolar tarea de invitación: {str(email_error)}')
                     return Response({
                         'error': f'Error al enviar el correo de invitación: {str(email_error)}'
                     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

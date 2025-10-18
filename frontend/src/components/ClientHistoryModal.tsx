@@ -22,6 +22,10 @@ const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({ client, show, o
         }
     }, [client, show, fetchHistory]);
 
+    // Optimización: El backend ahora devuelve datos del cliente en history.client
+    // para evitar llamadas adicionales a la API
+    const clientData = history?.client || client;
+
     // Formatear número como moneda colombiana (COP)
     const formatCurrency = (amount: number): string => {
         return new Intl.NumberFormat('es-CO', {
@@ -38,10 +42,10 @@ const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({ client, show, o
                 <Modal.Title className="w-100">
                     <div className="d-flex align-items-center">
                         <div className="client-avatar me-3">
-                            {client?.full_name?.charAt(0).toUpperCase()}
+                            {clientData?.full_name?.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <h4 className="mb-0 fw-bold">{client?.full_name}</h4>
+                            <h4 className="mb-0 fw-bold">{clientData?.full_name}</h4>
                             <small className="text-muted">{t('client_history') || 'Historial del Cliente'}</small>
                         </div>
                     </div>
