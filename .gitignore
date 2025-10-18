@@ -14,8 +14,6 @@ venv.bak/
 pip-log.txt
 pip-delete-this-directory.txt
 instance/
-.vscode/
-.gitignore
 
 # Django
 db.sqlite3
@@ -26,8 +24,13 @@ db.sqlite3
 .env.*.local
 local_settings.py
 staticfiles/
+static/
 media/
 *.log
+migrations/__pycache__/
+**/migrations/*.pyc
+gunicorn.sock
+gunicorn.pid
 
 # Celery
 celerybeat-schedule
@@ -71,6 +74,15 @@ coverage/
 vite.config.ts.timestamp-*.mjs
 *.tsbuildinfo
 .turbo
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.next/
+out/
+.nuxt/
+.cache/
+.parcel-cache/
+.eslintcache
 
 # Cypress
 /cypress/videos/
@@ -87,6 +99,7 @@ Thumbs.db
 Desktop.ini
 
 # Editor & IDEs
+.vscode/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
@@ -106,6 +119,9 @@ Desktop.ini
 *.launch
 .settings/
 *.sublime-workspace
+*.sublime-project
+.atom/
+.editorconfig
 
 # JetBrains
 .idea/**/workspace.xml
@@ -119,7 +135,10 @@ MULTITENANCY_README.md
 *.draft.md
 *.wip.md
 ROLES_Y_PERMISOS.md
-tatus --ignored
+notes/
+TODO.md
+CHANGELOG.draft.md
+
 # Secrets and credentials
 *.pem
 *.key
@@ -127,11 +146,19 @@ tatus --ignored
 .envrc
 secrets.json
 credentials.json
+.aws/
+.gcp/
+.azure/
+*.p12
+*.pfx
+.ssh/
 
 # Backup files
 *.bak
 *.backup
 *.tmp
+*.old
+*.orig
 *~
 
 # Compiled files
@@ -141,7 +168,26 @@ credentials.json
 *.exe
 *.o
 *.so
+*.dylib
 
 # Mac OS
 .AppleDouble
 .LSOverride
+.DocumentRevisions-V100
+.fseventsd
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# Windows
+[Tt]humbs.db
+[Tt]humbs.db:encryptable
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk

@@ -7,8 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
-from citas.models import Cita
-from organizacion.models import Colaborador
+from citas.models import Cita, Colaborador
 from .permissions import IsAdminOrSedeAdmin
 
 

@@ -103,9 +103,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         <Megaphone className="nav-icon" /> {t('marketing')}
                       </Nav.Link>
                       <Nav.Link as={Link} to="/reports" onClick={handleClose} className="nav-link-custom">
-                        <BarChart className="nav-icon" /> {t('reports')}
-                      </Nav.Link>
-                      <Nav.Link as={Link} to="/financial-dashboard" onClick={handleClose} className="nav-link-custom">
                         <CurrencyDollar className="nav-icon" /> {t('financial_dashboard') || 'Dashboard Financiero'}
                       </Nav.Link>
                       <Nav.Link as={Link} to="/admin-settings" onClick={handleClose} className="nav-link-custom">

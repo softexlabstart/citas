@@ -24,13 +24,12 @@ const Services = lazy(() => import('./components/Services'));
 const Appointments = lazy(() => import('./components/Appointments'));
 const AppointmentsCalendar = lazy(() => import('./components/AppointmentsCalendar'));
 const Disponibilidad = lazy(() => import('./components/Disponibilidad'));
-const ReportsPage = lazy(() => import('./pages/ReportsPage'));
+const FinancialDashboardPage = lazy(() => import('./pages/admin/FinancialDashboardPage'));
 const AdminSettings = lazy(() => import('./components/AdminSettings'));
 const UserGuide = lazy(() => import('./components/UserGuide'));
 const RecursoDashboard = lazy(() => import('./components/RecursoDashboard'));
 const Clients = lazy(() => import('./components/Clients'));
 const MarketingPage = lazy(() => import('./pages/MarketingPage')); // Import MarketingPage
-const FinancialDashboard = lazy(() => import('./pages/FinancialDashboard')); // Import FinancialDashboard
 // If EditProfilePage is a named export:
 const EditProfilePage = lazy(() =>
   import('./pages/EditProfilePage').then(module => ({ default: module.EditProfilePage }))
@@ -83,8 +82,7 @@ const App: React.FC = () => {
 
               {/* Routes for admin users only */}
               <Route element={<AdminRoute />}>
-                <Route path="/reports" element={<ReportsPage />} />
-                <Route path="/financial-dashboard" element={<FinancialDashboard />} />
+                <Route path="/reports" element={<FinancialDashboardPage />} />
                 <Route path="/admin-settings" element={<AdminSettings />} />
                 <Route path="/clients" element={<Clients />} />
                 <Route path="/marketing" element={<MarketingPage />} />
