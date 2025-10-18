@@ -315,7 +315,18 @@ class CitaViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        base_queryset = Cita.all_objects.select_related('user', 'sede', 'sede__organizacion').prefetch_related('servicios', 'colaboradores')
+
+        # CRITICAL FIX: Use Prefetch with _base_manager to bypass OrganizacionManager
+        # This ensures servicios and colaboradores are fetched correctly
+        servicios_prefetch = Prefetch('servicios', queryset=Servicio._base_manager.all())
+        colaboradores_prefetch = Prefetch('colaboradores', queryset=Colaborador._base_manager.all())
+
+        base_queryset = Cita.all_objects.select_related(
+            'user', 'sede', 'sede__organizacion'
+        ).prefetch_related(
+            servicios_prefetch,
+            colaboradores_prefetch
+        )
 
         # SUPERUSUARIO: puede ver todas las citas
         if user.is_superuser:
