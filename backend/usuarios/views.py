@@ -25,30 +25,38 @@ import logging
 logger = logging.getLogger(__name__)
 
 class ClientEmailListView(generics.ListAPIView):
+    """
+    Vista optimizada para obtener emails de clientes.
+    Soporta filtrado por IDs y retorna todos los resultados sin paginación cuando ?all=true.
+    """
     serializer_class = ClientEmailSerializer
     permission_classes = [IsAdminOrSedeAdmin]
+    pagination_class = None  # Deshabilitar paginación por defecto
 
     def get_queryset(self):
-        queryset = User.objects.filter(is_active=True, is_staff=False).exclude(groups__name='SedeAdmin').exclude(groups__name='Recurso')
-        client_ids = self.request.query_params.get('ids', None)
-        if client_ids:
-            client_ids = [int(id) for id in client_ids.split(',')]
-            queryset = queryset.filter(id__in=client_ids)
-        return queryset.order_by('first_name', 'last_name')
+        """
+        Retorna queryset de clientes filtrado por parámetros.
+        Toda la lógica de filtrado está aquí, siguiendo el patrón DRF.
+        """
+        # Base queryset: usuarios activos que no son staff, sede admin o colaboradores
+        queryset = User.objects.filter(
+            is_active=True,
+            is_staff=False
+        ).exclude(
+            groups__name__in=['SedeAdmin', 'Recurso']
+        )
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        # Si se pasa ?all=true, devolver todos los clientes
-        if request.query_params.get('all', '').lower() == 'true':
-            serializer = self.get_serializer(queryset, many=True)
-            return Response(serializer.data)
-        # Si se pasan ids, devolver solo esos
-        client_ids = request.query_params.get('ids', None)
+        # Filtrar por IDs específicos si se proporcionan
+        client_ids = self.request.query_params.get('ids')
         if client_ids:
-            client_ids = [int(id) for id in client_ids.split(',')]
-            queryset = queryset.filter(id__in=client_ids)
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+            try:
+                client_ids = [int(id.strip()) for id in client_ids.split(',')]
+                queryset = queryset.filter(id__in=client_ids)
+            except (ValueError, TypeError):
+                # Si los IDs son inválidos, retornar queryset vacío
+                return User.objects.none()
+
+        return queryset.order_by('first_name', 'last_name')
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
@@ -262,95 +270,128 @@ class DeleteAccountView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
+class ClientViewSet(viewsets.ModelViewSet):
     """
-    A viewset for viewing and managing client data.
-    Accessible to admin users, sede administrators, and colaboradores.
+    ViewSet optimizado para gestión de clientes con aislamiento multi-tenant.
 
-    Multi-tenant: Solo se muestran clientes de la misma organización/sede.
+    Regla principal: Un usuario autenticado (no superusuario) solo puede ver
+    clientes de su propia organización.
+
+    Roles soportados:
+    - Superusuario: ve todos los clientes
+    - Administrador de Sede: ve clientes de su organización
+    - Colaborador: ve clientes de su organización/sede
+    - Cliente regular: no ve otros clientes
     """
     serializer_class = ClientSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        """
+        Retorna queryset de clientes con filtrado multi-tenant.
+        Optimizado para usar ORM de Django en lugar de SQL directo.
+        """
         user = self.request.user
 
         # Base queryset: usuarios que NO son staff, ni admins de sede, ni colaboradores
-        try:
-            sede_admin_group = Group.objects.get(name='SedeAdmin')
-            recurso_group = Group.objects.get(name='Recurso')
-            base_queryset = User.objects.filter(is_staff=False) \
-                .exclude(groups=sede_admin_group) \
-                .exclude(groups=recurso_group) \
-                .exclude(email__isnull=True) \
-                .exclude(email__exact='') \
-                .select_related('perfil')
-        except Group.DoesNotExist:
-            # Si los grupos no existen, filtrar solo por is_staff
-            base_queryset = User.objects.filter(is_staff=False) \
-                .exclude(email__isnull=True) \
-                .exclude(email__exact='') \
-                .select_related('perfil')
+        # Optimización: usar exclude con lista en lugar de múltiples exclude
+        base_queryset = User.objects.filter(
+            is_staff=False
+        ).exclude(
+            Q(email__isnull=True) | Q(email__exact='')
+        ).exclude(
+            groups__name__in=['SedeAdmin', 'Recurso']
+        ).select_related('perfil__organizacion', 'perfil__sede').distinct()
 
-        # Filtrar por consentimiento si se especifica en los parámetros
-        consent_filter = self.request.query_params.get('consent', None)
+        # Filtrar por consentimiento si se especifica
+        consent_filter = self.request.query_params.get('consent')
         if consent_filter == 'true':
-            # Solo usuarios que aceptaron las políticas
             base_queryset = base_queryset.filter(perfil__has_consented_data_processing=True)
         elif consent_filter == 'false':
-            # Solo usuarios que NO aceptaron las políticas
             base_queryset = base_queryset.filter(perfil__has_consented_data_processing=False)
-        # Si consent_filter es None o 'all', no filtrar por consentimiento
 
-        # SUPERUSUARIO: puede ver todos los clientes
+        # SUPERUSUARIO: acceso completo
         if user.is_superuser:
             return base_queryset
 
-        # ADMINISTRADOR DE SEDE: solo clientes de su organización
-        if hasattr(user, 'perfil') and user.perfil:
-            # Verificar si tiene sedes administradas usando consulta SQL directa
-            from django.db import connection
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    SELECT COUNT(*) FROM usuarios_perfilusuario_sedes_administradas
-                    WHERE perfilusuario_id = %s
-                """, [user.perfil.id])
-                sedes_admin_count = cursor.fetchone()[0]
+        # Verificar si el usuario tiene perfil
+        if not hasattr(user, 'perfil') or not user.perfil:
+            return User.objects.none()
 
-            if sedes_admin_count > 0:
-                org = user.perfil.organizacion
-                if org:
-                    return base_queryset.filter(perfil__organizacion=org)
-                else:
-                    # Si el admin no tiene organización asignada, no puede ver clientes
-                    return User.objects.none()
+        user_org = user.perfil.organizacion
 
-        # COLABORADOR: solo clientes de su sede/organización
+        # Si no tiene organización, no puede ver clientes
+        if not user_org:
+            return User.objects.none()
+
+        # REGLA PRINCIPAL: Filtrar por organización
+        # Esto cubre tanto administradores de sede como colaboradores
+        queryset = base_queryset.filter(perfil__organizacion=user_org)
+
+        # COLABORADOR: filtrado adicional por sede si es necesario
+        # Verificar si es colaborador usando ORM en lugar de SQL directo
         from citas.models import Colaborador
-        from django.db.models import Q
-        if Colaborador.all_objects.filter(usuario=user).exists():
-            colaborador = Colaborador.all_objects.get(usuario=user)
-            org = colaborador.sede.organizacion
-            sede = colaborador.sede
 
-            # Filtrar clientes que pertenezcan a la misma organización O a la misma sede
-            # Esto permite ver clientes que tienen sede asignada pero no organización
-            return base_queryset.filter(
-                Q(perfil__organizacion=org) | Q(perfil__sede=sede)
+        try:
+            colaborador = Colaborador.all_objects.select_related('sede__organizacion').get(usuario=user)
+            # Si es colaborador, también permitir clientes de su sede específica
+            # que puedan no tener organización pero sí sede
+            queryset = base_queryset.filter(
+                Q(perfil__organizacion=user_org) | Q(perfil__sede=colaborador.sede)
             )
+        except Colaborador.DoesNotExist:
+            # No es colaborador, usar filtrado por organización únicamente
+            pass
 
-        # CLIENTE: no puede ver otros clientes
-        return User.objects.none()
-
-    # Dejar que DRF maneje la paginación automáticamente.
-    # La paginación se puede configurar globalmente en settings.py o aquí con `pagination_class`.
+        return queryset
 
     def perform_create(self, serializer):
+        """Crear cliente asegurando aislamiento de organización."""
         serializer.save()
 
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
+        """
+        Retorna el historial de citas de un cliente con validación de organización.
+
+        SEGURIDAD: Verifica que el usuario solicitante y el cliente pertenezcan
+        a la misma organización (excepto superusuarios).
+        """
+        from django.db.models import Prefetch
+        from citas.models import Servicio, Colaborador
+        from rest_framework.exceptions import PermissionDenied
+
         client = self.get_object()
+        user = request.user
+
+        # VALIDACIÓN DE SEGURIDAD MULTI-TENANT
+        # Superusuarios tienen acceso completo
+        if not user.is_superuser:
+            # Verificar que ambos usuarios tienen perfil
+            if not hasattr(user, 'perfil') or not user.perfil:
+                raise PermissionDenied("Tu cuenta no tiene un perfil asignado.")
+
+            if not hasattr(client, 'perfil') or not client.perfil:
+                raise PermissionDenied("El cliente solicitado no tiene un perfil asignado.")
+
+            # Verificar que pertenecen a la misma organización
+            user_org = user.perfil.organizacion
+            client_org = client.perfil.organizacion
+
+            if not user_org:
+                raise PermissionDenied("Tu cuenta no está asociada a ninguna organización.")
+
+            if user_org != client_org:
+                raise PermissionDenied(
+                    "No tienes permiso para ver el historial de este cliente. "
+                    "Solo puedes acceder a clientes de tu organización."
+                )
+
+        # CRITICAL FIX: Use Prefetch with _base_manager to bypass OrganizacionManager
+        # This ensures servicios and colaboradores are fetched correctly
+        servicios_prefetch = Prefetch('servicios', queryset=Servicio._base_manager.all())
+        colaboradores_prefetch = Prefetch('colaboradores', queryset=Colaborador._base_manager.all())
+
         # Usar all_objects para evitar filtrado por OrganizacionManager
         citas = Cita.all_objects.filter(
             Q(user=client) | Q(nombre=client.username)
@@ -358,8 +399,8 @@ class ClientViewSet(viewsets.ModelViewSet): # Changed to ModelViewSet
             'user__perfil',
             'sede'
         ).prefetch_related(
-            'servicios',
-            'colaboradores',
+            servicios_prefetch,
+            colaboradores_prefetch,
             'user__groups',
             'user__perfil__sedes_administradas'
         ).distinct().order_by('-fecha')
