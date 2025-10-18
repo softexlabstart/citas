@@ -1,7 +1,7 @@
 app_name = 'usuarios'
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import LoginView, RegisterView, RegisterByOrganizacionView, TimezoneView, UserDetailView, ClientViewSet, ClientEmailListView, PersonalDataView, DeleteAccountView, MultiTenantRegistrationView, OrganizationManagementView, InvitationView, OrganizationMembersView, RequestHistoryLinkView, AccessHistoryWithTokenView
+from .views import LoginView, RegisterView, RegisterByOrganizacionView, TimezoneView, UserDetailView, ClientViewSet, ClientEmailListView, PersonalDataView, DeleteAccountView, MultiTenantRegistrationView, OrganizationManagementView, InvitationView, AcceptInvitationView, OrganizationMembersView, RequestHistoryLinkView, AccessHistoryWithTokenView
 from .views_password_reset import RequestPasswordResetView, ConfirmPasswordResetView
 from .views_onboarding import OnboardingProgressViewSet
 
@@ -24,6 +24,7 @@ urlpatterns = [
     path('organization/', OrganizationManagementView.as_view(), name='organization_management'),
     path('organization/members/', OrganizationMembersView.as_view(), name='organization_members'),
     path('organization/invite/', InvitationView.as_view(), name='organization_invite'),
+    path('invitations/<uuid:token>/', AcceptInvitationView.as_view(), name='accept_invitation'),
     # URLs para Magic Link
     path('auth/request-history-link/', RequestHistoryLinkView.as_view(), name='request_history_link'),
     path('auth/access-history-with-token/', AccessHistoryWithTokenView.as_view(), name='access_history_with_token'),

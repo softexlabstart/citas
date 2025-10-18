@@ -210,3 +210,115 @@ class OnboardingProgress(models.Model):
         if not self.has_completed_profile:
             steps.append('complete_profile')
         return steps
+
+
+class Invitation(models.Model):
+    """
+    Modelo para invitaciones de usuarios a una organización.
+    Permite invitar nuevos usuarios por email con un enlace único que expira en 7 días.
+    """
+    ROLE_CHOICES = [
+        ('admin', 'Administrador'),
+        ('sede_admin', 'Administrador de Sede'),
+        ('colaborador', 'Colaborador'),
+        ('miembro', 'Miembro'),
+    ]
+
+    email = models.EmailField(
+        verbose_name='Email del invitado',
+        db_index=True,
+        help_text='Email al que se enviará la invitación'
+    )
+    organization = models.ForeignKey(
+        Organizacion,
+        on_delete=models.CASCADE,
+        related_name='invitations',
+        verbose_name='Organización'
+    )
+    sender = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='sent_invitations',
+        verbose_name='Enviado por'
+    )
+    sede = models.ForeignKey(
+        Sede,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='invitations',
+        verbose_name='Sede',
+        help_text='Sede a la que se invita al usuario (opcional)'
+    )
+    role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        verbose_name='Rol',
+        help_text='Rol que tendrá el usuario invitado'
+    )
+    first_name = models.CharField(
+        max_length=30,
+        verbose_name='Nombre',
+        blank=True
+    )
+    last_name = models.CharField(
+        max_length=30,
+        verbose_name='Apellido',
+        blank=True
+    )
+    token = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+        db_index=True,
+        verbose_name='Token de invitación'
+    )
+    is_accepted = models.BooleanField(
+        default=False,
+        verbose_name='Aceptada',
+        help_text='Indica si la invitación ha sido aceptada'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Creada'
+    )
+    expires_at = models.DateTimeField(
+        editable=False,
+        verbose_name='Expira'
+    )
+    accepted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Aceptada el'
+    )
+
+    class Meta:
+        verbose_name = 'Invitación'
+        verbose_name_plural = 'Invitaciones'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['email', 'is_accepted']),
+            models.Index(fields=['token', 'expires_at']),
+            models.Index(fields=['organization', 'is_accepted']),
+        ]
+        unique_together = [['email', 'organization', 'is_accepted']]
+
+    def save(self, *args, **kwargs):
+        """Establece la fecha de expiración a 7 días desde la creación."""
+        if not self.pk:  # Solo al crear
+            self.expires_at = timezone.now() + timedelta(days=7)
+        super().save(*args, **kwargs)
+
+    def is_valid(self):
+        """Verifica si la invitación no ha sido aceptada y no ha expirado."""
+        return not self.is_accepted and timezone.now() <= self.expires_at
+
+    def accept(self):
+        """Marca la invitación como aceptada."""
+        self.is_accepted = True
+        self.accepted_at = timezone.now()
+        self.save()
+
+    def __str__(self):
+        status = 'Aceptada' if self.is_accepted else 'Pendiente'
+        return f"Invitación a {self.email} - {self.organization.nombre} ({status})"

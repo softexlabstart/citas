@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invitación a {{ organization_name }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #4CAF50;
+        }
+        .header h1 {
+            color: #4CAF50;
+            margin: 0;
+            font-size: 28px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        .message {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #555;
+        }
+        .organization-name {
+            font-weight: 700;
+            color: #4CAF50;
+        }
+        .role-badge {
+            display: inline-block;
+            background-color: #e3f2fd;
+            color: #1976d2;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+        .button-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+        .accept-button {
+            display: inline-block;
+            padding: 15px 40px;
+            background-color: #4CAF50;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 4px 6px rgba(76, 175, 80, 0.3);
+        }
+        .accept-button:hover {
+            background-color: #45a049;
+            box-shadow: 0 6px 8px rgba(76, 175, 80, 0.4);
+        }
+        .info-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info-box p {
+            margin: 0;
+            font-size: 14px;
+            color: #856404;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 14px;
+            color: #777;
+        }
+        .link-text {
+            font-size: 12px;
+            color: #999;
+            word-break: break-all;
+            margin-top: 15px;
+        }
+        .sender-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .sender-info p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📩 Invitación a {{ organization_name }}</h1>
+        </div>
+
+        <div class="content">
+            <div class="greeting">
+                Hola{% if first_name %} {{ first_name }}{% endif %}!
+            </div>
+
+            <div class="message">
+                <p>Has sido invitado/a a unirte a <span class="organization-name">{{ organization_name }}</span>
+                con el rol de:</p>
+                <div class="role-badge">{{ role_display }}</div>
+            </div>
+
+            {% if sede_name %}
+            <div class="message">
+                <p><strong>Sede asignada:</strong> {{ sede_name }}</p>
+            </div>
+            {% endif %}
+
+            <div class="sender-info">
+                <p><strong>Invitado por:</strong> {{ sender_name }}</p>
+                <p><strong>Email del remitente:</strong> {{ sender_email }}</p>
+            </div>
+
+            <div class="message">
+                <p>Al aceptar esta invitación, podrás:</p>
+                <ul>
+                    <li>Crear tu cuenta en la plataforma</li>
+                    <li>Acceder a todas las funcionalidades de tu rol</li>
+                    <li>Colaborar con tu equipo en {{ organization_name }}</li>
+                </ul>
+            </div>
+
+            <div class="button-container">
+                <a href="{{ accept_url }}" class="accept-button">
+                    Aceptar Invitación
+                </a>
+            </div>
+
+            <div class="info-box">
+                <p><strong>⏰ Importante:</strong> Este enlace de invitación es válido por 7 días
+                y expirará el {{ expiration_date }}.</p>
+            </div>
+
+            <div class="link-text">
+                <p>Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
+                <p>{{ accept_url }}</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Este es un mensaje automático. Por favor, no respondas a este correo.</p>
+            <p>Si no esperabas esta invitación, puedes ignorar este mensaje.</p>
+            <p>&copy; {{ current_year }} {{ organization_name }}. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>

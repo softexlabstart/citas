@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from organizacion.models import Sede
-from .models import PerfilUsuario, MagicLinkToken
+from .models import PerfilUsuario, MagicLinkToken, Invitation
 from .serializers import UserSerializer, MyTokenObtainPairSerializer, ClientSerializer, ClientEmailSerializer, MultiTenantRegistrationSerializer, InvitationSerializer, OrganizacionSerializer, SedeDetailSerializer
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from .permissions import IsSuperAdmin
@@ -20,6 +20,7 @@ from citas.serializers import CitaSerializer
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
+from django.utils import timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -509,30 +510,39 @@ class OrganizationManagementView(APIView):
 
 
 class InvitationView(APIView):
-    """Vista para enviar invitaciones a la organización."""
+    """
+    Vista para crear y enviar invitaciones a la organización.
+    Crea el objeto Invitation, genera token único y envía email.
+    """
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request, *args, **kwargs):
-        """Enviar invitación a un usuario."""
+        """Crear y enviar invitación a un usuario."""
         try:
             perfil = request.user.perfil
             organizacion = perfil.organizacion
-            
+
             if not organizacion:
                 return Response({
                     'error': 'Usuario no pertenece a ninguna organización'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
+
             # Verificar que el usuario puede invitar (es admin o sede admin)
             if not (request.user.is_staff or perfil.sedes_administradas.exists()):
                 return Response({
                     'error': 'No tienes permisos para enviar invitaciones'
                 }, status=status.HTTP_403_FORBIDDEN)
-            
+
             serializer = InvitationSerializer(data=request.data)
             if serializer.is_valid():
-                # Validar que la sede pertenece a la organización
+                email = serializer.validated_data['email']
+                role = serializer.validated_data['role']
+                first_name = serializer.validated_data.get('first_name', '')
+                last_name = serializer.validated_data.get('last_name', '')
                 sede_id = serializer.validated_data.get('sede_id')
+
+                # Validar que la sede pertenece a la organización
+                sede = None
                 if sede_id:
                     try:
                         sede = Sede.objects.get(id=sede_id, organizacion=organizacion)
@@ -540,20 +550,262 @@ class InvitationView(APIView):
                         return Response({
                             'error': 'La sede especificada no pertenece a tu organización'
                         }, status=status.HTTP_400_BAD_REQUEST)
-                
-                # Aquí se enviaría el email de invitación
-                # Por ahora solo devolvemos éxito
-                return Response({
-                    'message': 'Invitación enviada exitosamente',
-                    'invitation_data': serializer.validated_data
-                }, status=status.HTTP_201_CREATED)
-            
+
+                # Verificar si ya existe una invitación pendiente para este email
+                existing_invitation = Invitation.objects.filter(
+                    email=email,
+                    organization=organizacion,
+                    is_accepted=False,
+                    expires_at__gt=timezone.now()
+                ).first()
+
+                if existing_invitation:
+                    return Response({
+                        'error': f'Ya existe una invitación pendiente para {email}. Por favor, espera a que expire o sea aceptada.'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                # Crear la invitación
+                invitation = Invitation.objects.create(
+                    email=email,
+                    organization=organizacion,
+                    sender=request.user,
+                    sede=sede,
+                    role=role,
+                    first_name=first_name,
+                    last_name=last_name
+                )
+
+                # Construir URL de aceptación
+                frontend_url = settings.FRONTEND_URL
+                accept_url = f"{frontend_url}/accept-invitation/{invitation.token}"
+
+                # Preparar contexto para el email
+                role_display_map = {
+                    'admin': 'Administrador',
+                    'sede_admin': 'Administrador de Sede',
+                    'colaborador': 'Colaborador',
+                    'miembro': 'Miembro'
+                }
+
+                context = {
+                    'organization_name': organizacion.nombre,
+                    'role_display': role_display_map.get(role, role),
+                    'sede_name': sede.nombre if sede else None,
+                    'sender_name': f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username,
+                    'sender_email': request.user.email,
+                    'first_name': first_name,
+                    'accept_url': accept_url,
+                    'expiration_date': invitation.expires_at.strftime('%d de %B de %Y a las %H:%M'),
+                    'current_year': timezone.now().year
+                }
+
+                # Enviar email
+                try:
+                    from django.template.loader import render_to_string
+                    from django.conf import settings
+
+                    html_message = render_to_string(
+                        'emails/invitation_email.html',
+                        context
+                    )
+
+                    send_mail(
+                        subject=f'Invitación a {organizacion.nombre}',
+                        message=f'Has sido invitado a {organizacion.nombre}. Visita {accept_url} para aceptar.',
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email],
+                        html_message=html_message,
+                        fail_silently=False,
+                    )
+
+                    logger.info(f'Invitación enviada exitosamente a {email} por {request.user.username}')
+
+                    return Response({
+                        'message': 'Invitación enviada exitosamente',
+                        'invitation': {
+                            'id': invitation.id,
+                            'email': invitation.email,
+                            'role': invitation.role,
+                            'sede': sede.nombre if sede else None,
+                            'expires_at': invitation.expires_at.isoformat(),
+                            'token': str(invitation.token)
+                        }
+                    }, status=status.HTTP_201_CREATED)
+
+                except Exception as email_error:
+                    # Si falla el envío del email, eliminar la invitación
+                    invitation.delete()
+                    logger.error(f'Error al enviar invitación: {str(email_error)}')
+                    return Response({
+                        'error': f'Error al enviar el correo de invitación: {str(email_error)}'
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
+
         except PerfilUsuario.DoesNotExist:
             return Response({
                 'error': 'Usuario no tiene perfil configurado'
             }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f'Error inesperado en InvitationView: {str(e)}')
+            return Response({
+                'error': f'Error inesperado: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AcceptInvitationView(APIView):
+    """
+    Vista para aceptar invitaciones y registrar nuevos usuarios.
+    Permite a usuarios invitados crear su cuenta y unirse a la organización.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, token, *args, **kwargs):
+        """Obtener detalles de la invitación por token."""
+        try:
+            invitation = Invitation.objects.select_related(
+                'organization', 'sender', 'sede'
+            ).get(token=token)
+
+            if not invitation.is_valid():
+                return Response({
+                    'error': 'Esta invitación ha expirado o ya ha sido aceptada',
+                    'is_valid': False
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            role_display_map = {
+                'admin': 'Administrador',
+                'sede_admin': 'Administrador de Sede',
+                'colaborador': 'Colaborador',
+                'miembro': 'Miembro'
+            }
+
+            return Response({
+                'is_valid': True,
+                'invitation': {
+                    'email': invitation.email,
+                    'organization_name': invitation.organization.nombre,
+                    'role': invitation.role,
+                    'role_display': role_display_map.get(invitation.role, invitation.role),
+                    'sede_name': invitation.sede.nombre if invitation.sede else None,
+                    'sender_name': f"{invitation.sender.first_name} {invitation.sender.last_name}".strip() or invitation.sender.username,
+                    'first_name': invitation.first_name,
+                    'last_name': invitation.last_name,
+                    'expires_at': invitation.expires_at.isoformat()
+                }
+            }, status=status.HTTP_200_OK)
+
+        except Invitation.DoesNotExist:
+            return Response({
+                'error': 'Invitación no encontrada',
+                'is_valid': False
+            }, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request, token, *args, **kwargs):
+        """Aceptar invitación y crear cuenta de usuario."""
+        try:
+            invitation = Invitation.objects.select_related(
+                'organization', 'sender', 'sede'
+            ).get(token=token)
+
+            if not invitation.is_valid():
+                return Response({
+                    'error': 'Esta invitación ha expirado o ya ha sido aceptada'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Validar datos de registro
+            username = request.data.get('username')
+            password = request.data.get('password')
+            first_name = request.data.get('first_name', invitation.first_name)
+            last_name = request.data.get('last_name', invitation.last_name)
+
+            if not username or not password:
+                return Response({
+                    'error': 'Los campos username y password son requeridos'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Verificar que el username no existe
+            if User.objects.filter(username=username).exists():
+                return Response({
+                    'error': 'El nombre de usuario ya está en uso'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Verificar que el email no existe
+            if User.objects.filter(email=invitation.email).exists():
+                return Response({
+                    'error': 'Ya existe una cuenta con este email'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Crear usuario
+            user = User.objects.create_user(
+                username=username,
+                email=invitation.email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name
+            )
+
+            # Crear perfil asociado a la organización
+            perfil = PerfilUsuario.objects.create(
+                user=user,
+                organizacion=invitation.organization,
+                sede=invitation.sede
+            )
+
+            # Asignar rol
+            if invitation.role == 'admin':
+                user.is_staff = True
+                user.save()
+            elif invitation.role == 'sede_admin':
+                try:
+                    sede_admin_group, _ = Group.objects.get_or_create(name='SedeAdmin')
+                    user.groups.add(sede_admin_group)
+                    if invitation.sede:
+                        perfil.sedes_administradas.add(invitation.sede)
+                except Exception as e:
+                    logger.error(f'Error al asignar grupo SedeAdmin: {str(e)}')
+            elif invitation.role == 'colaborador':
+                try:
+                    colaborador_group, _ = Group.objects.get_or_create(name='Recurso')
+                    user.groups.add(colaborador_group)
+                    # Crear el colaborador en citas.models
+                    from citas.models import Colaborador
+                    if invitation.sede:
+                        Colaborador.objects.create(
+                            usuario=user,
+                            nombre=f"{first_name} {last_name}".strip(),
+                            email=invitation.email,
+                            sede=invitation.sede
+                        )
+                except Exception as e:
+                    logger.error(f'Error al crear colaborador: {str(e)}')
+
+            # Marcar invitación como aceptada
+            invitation.accept()
+
+            # Generar tokens JWT
+            refresh = RefreshToken.for_user(user)
+
+            logger.info(f'Usuario {user.username} registrado exitosamente mediante invitación')
+
+            return Response({
+                'message': f'Cuenta creada exitosamente. Bienvenido/a a {invitation.organization.nombre}',
+                'tokens': {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                },
+                'user': UserSerializer(user).data
+            }, status=status.HTTP_201_CREATED)
+
+        except Invitation.DoesNotExist:
+            return Response({
+                'error': 'Invitación no encontrada'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f'Error al aceptar invitación: {str(e)}')
+            return Response({
+                'error': f'Error al procesar la invitación: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class OrganizationMembersView(APIView):
