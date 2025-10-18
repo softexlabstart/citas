@@ -1,193 +1,405 @@
-# Sistema de Gestión de Citas
+# Sistema de Gestión de Citas Multi-Tenant
 
-Este es un sistema de gestión de citas completo con un frontend en **React** y un backend en **Django**. Permite a los usuarios registrarse, iniciar sesión, ver servicios, consultar disponibilidad y gestionar sus citas. Incluye un panel de administración robusto y funcionalidades avanzadas como la generación de informes y roles de usuario diferenciados.
+Sistema completo de gestión de citas con frontend en **React** y backend en **Django**, diseñado para soportar múltiples organizaciones independientes en una misma plataforma.
 
-## Características
+## Características Principales
 
-*   **Autenticación de Usuarios**: Registro e inicio de sesión con tokens JWT.
-*   **Gestión de Múltiples Sedes**: El sistema está diseñado para operar con distintas sucursales o sedes.
-*   **Gestión de Citas**: Los usuarios pueden agendar, reprogramar y cancelar citas.
-*   **Visualización Avanzada**: Las citas se muestran en una tabla filtrable y en un calendario interactivo.
-*   **Consulta de Disponibilidad**: Interfaz para consultar horarios disponibles por recurso y fecha, incluyendo la búsqueda de la próxima cita disponible para un servicio específico en una sede.
-*   **Roles y Permisos**: Sistema de roles diferenciados (Usuario Regular, Administrador de Sede, Staff).
-*   **Informes y Exportación**: Generación de informes de citas con filtros y opción de exportar a CSV.
-*   **Notificaciones**: Notificaciones en la interfaz y por correo electrónico (confirmación y recordatorios).
-*   **Internacionalización (i18n)**: Interfaz traducida al español.
-*   **Panel de Administración**: Panel de Django para una gestión de bajo nivel de todos los modelos de datos.
+- **Multi-Tenant**: Múltiples organizaciones con datos completamente aislados
+- **Gestión de Múltiples Sedes**: Cada organización puede tener varias sucursales
+- **Roles y Permisos**: Sistema de roles diferenciados (Cliente, Colaborador, Admin de Sede, Superusuario)
+- **Autenticación JWT**: Registro e inicio de sesión seguro con tokens
+- **Registro por Organización**: Cada organización tiene su URL de registro personalizada
+- **Gestión de Citas**: Agendar, reprogramar, confirmar y cancelar citas
+- **Disponibilidad Inteligente**: Consulta de horarios disponibles y próxima cita disponible
+- **Visualización Avanzada**: Vista de tabla filtrable y calendario interactivo
+- **Informes y Reportes**: Generación con filtros avanzados y exportación a CSV
+- **Emails Asíncronos**: Envío de notificaciones mediante Celery
+- **Notificaciones**: Confirmación, recordatorios y reprogramación por email
+- **Reservas Anónimas**: Permite agendar sin registro previo
+- **Dashboard Financiero**: Métricas y gráficos en tiempo real con Recharts
+- **Internacionalización**: Interfaz en español con soporte i18n
+- **Alta Concurrencia**: Optimizado con Redis, throttling y query optimization
 
-## Roles y Permisos
-
-El sistema define tres roles principales para controlar el acceso y las funcionalidades:
-
-1.  **Usuario Regular**:
-    *   Puede agendar nuevas citas para sí mismo.
-    *   Puede ver, reprogramar y cancelar sus propias citas.
-    *   Su visibilidad está limitada a su propia actividad.
-
-2.  **Administrador de Sede**:
-    *   Gestiona una o más sedes asignadas.
-    *   Puede ver y administrar todas las citas, recursos y horarios de sus sedes.
-    *   Tiene acceso a informes específicos de sus sedes.
-    *   **No puede** agendar nuevas citas desde la interfaz de usuario regular; su rol es de gestión.
-
-3.  **Staff / Superusuario**:
-    *   Tiene control total sobre el sistema.
-    *   Puede gestionar todas las sedes, usuarios, citas y configuraciones.
-    *   Tiene acceso a todos los informes y funcionalidades administrativas.
-
-## Documentación de la API
-
-La API RESTful es el núcleo del backend. Todos los endpoints están prefijados con `/api/`.
-
-### Autenticación
-*   `POST /api/login/`: Iniciar sesión.
-*   `POST /api/register/`: Registrar un nuevo usuario.
-*   `POST /api/token/refresh/`: Refrescar el token de acceso.
-
-### Citas
-*   `GET /api/citas/citas/`: Obtener lista de citas (filtrada por rol).
-*   `GET /api/citas/citas/?estado={estado}`: Filtrar citas por estado.
-*   `POST /api/citas/citas/`: Crear una nueva cita.
-*   `PATCH /api/citas/citas/{id}/`: Actualizar parcialmente una cita (ej. para reprogramar).
-*   `DELETE /api/citas/citas/{id}/`: Cancelar una cita (cambia el estado a 'Cancelada').
-*   `POST /api/citas/citas/{id}/confirmar/`: Confirmar una cita pendiente.
-*   `GET /api/citas/next-availability/?servicio_id={id}&sede_id={id}`: Obtener los próximos horarios disponibles para un servicio en una sede.
-
-### Configuración (Servicios, Recursos, Sedes)
-*   `GET /api/citas/servicios/`: Obtener lista de servicios.
-*   `GET /api/citas/recursos/`: Obtener lista de recursos.
-*   `GET /api/organizacion/sedes/`: Obtener lista de sedes.
-*   `GET /api/citas/disponibilidad/?fecha={YYYY-MM-DD}&recurso_id={id}`: Consultar horarios disponibles.
-
-### Informes
-*   **Endpoint:** `GET /api/citas/reports/appointments/`
-*   **Descripción:** Genera un informe de citas en un rango de fechas.
-*   **Parámetros:**
-    *   `start_date` (requerido): Fecha de inicio (`YYYY-MM-DD`).
-    *   `end_date` (requerido): Fecha de fin (`YYYY-MM-DD`).
-    *   `servicio_id` (opcional): Filtrar por ID de servicio.
-    *   `recurso_id` (opcional): Filtrar por ID de recurso.
-    *   `export` (opcional): Si el valor es `csv`, la respuesta será un archivo CSV descargable. De lo contrario, será un resumen en JSON.
-*   **Ejemplo (Exportar a CSV):**
-    ```
-    GET /api/citas/reports/appointments/?start_date=2025-01-01&end_date=2025-01-31&export=csv
-    ```
-
-## Funcionalidades Adicionales
-
-### Campo `metadata` para Flexibilidad
-*   Los modelos `Servicio` y `Recurso` incluyen un campo `metadata` (`JSONField`) en el backend.
-*   **Propósito:** Permite almacenar datos adicionales específicos de una industria (ej. "color_tinte" para un servicio de peluquería) sin modificar la base de datos.
-*   **Nota:** La gestión de este campo se realiza actualmente a través del panel de administración de Django.
-
-### Notificaciones por Correo Electrónico
-*   **Confirmación de Cita:** Se envía un correo al usuario al agendar una nueva cita.
-*   **Recordatorios de Cita:** Un comando de Django (`send_reminders`) permite enviar recordatorios para las citas del día siguiente. Este comando debe ser automatizado (ej. con un cron job).
-*   **Configuración:** Requiere configurar las variables de entorno del servidor SMTP en el archivo `.env` del backend.
-
-## Tecnologías Utilizadas
+## Tecnologías
 
 ### Frontend
-- React
-- TypeScript
-- React Router
-- React Bootstrap
-- React Big Calendar
-- i18next
-- React Toastify
-- Axios
+- React + TypeScript
+- React Router, React Bootstrap
+- React Big Calendar, Recharts
+- i18next, Axios, React Toastify
 
 ### Backend
-- Django
-- Django REST Framework
-- PostgreSQL (o la base de datos que se configure)
-- Openpyxl (para exportar a Excel)
-- ReportLab (para exportar a PDF)
-- `django-cors-headers`
-- `djangorestframework-simplejwt`
+- Django + Django REST Framework
+- PostgreSQL
+- Redis (caché y Celery broker)
+- Celery (tareas asíncronas)
+- JWT Authentication
+- Gunicorn (WSGI server)
 
-## Instalación y Configuración
+## Documentación
+
+### 📚 Guías Principales
+- **[Manual de Usuario](docs/MANUAL_DE_USO.md)** - Guía completa de uso para todos los roles
+- **[Configuración de Producción](docs/DEPLOYMENT_GUIDE.md)** - Despliegue y optimizaciones
+- **[Configuración de Celery + Redis](CELERY_SETUP.md)** - Emails asíncronos y workers
+
+### 🔧 Documentación Técnica
+- **[Arquitectura Multi-Tenant](docs/MULTITENANCY.md)** - Cómo funciona el aislamiento de datos
+- **[Roles y Permisos](docs/ROLES_Y_PERMISOS.md)** - Sistema de autorizaciones
+- **[Registro por Organización](docs/REGISTRO_ORGANIZACION.md)** - URLs personalizadas de registro
+- **[Seguridad](docs/SECURITY_CHECKLIST.md)** - Checklist para producción
+
+### 📊 Optimizaciones
+- **[Resumen de Optimizaciones](docs/OPTIMIZATIONS.md)** - Performance y concurrencia
+
+## Instalación Rápida
 
 ### Prerrequisitos
-
-- Node.js y npm
-- Python y pip
-- PostgreSQL (o la base de datos de su elección)
+- Python 3.8+
+- Node.js 14+
+- PostgreSQL
+- Redis
 
 ### Backend
 
-1.  **Clona el repositorio**:
+```bash
+# Clonar repositorio
+git clone <URL-DEL-REPOSITORIO>
+cd proyecto-citas-/backend
 
-    ```bash
-    git clone <URL-DEL-REPOSITORIO>
-    cd proyecto-citas-/backend
-    ```
+# Crear entorno virtual
+python -m venv venv
+source venv/bin/activate  # En Windows: venv\Scripts\activate
 
-2.  **Crea y activa un entorno virtual**:
+# Instalar dependencias
+pip install -r requirements.txt
 
-    ```bash
-    python -m venv venv
-    source venv/bin/activate
-    ```
+# Configurar .env
+cp .env.example .env
+# Editar .env con tus credenciales
 
-3.  **Instala las dependencias**:
+# Aplicar migraciones
+python manage.py migrate
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+# Crear superusuario
+python manage.py createsuperuser
 
-4.  **Configura la base de datos**:
-
-    -   Crea un archivo `.env` en la raíz del directorio `backend/` y configura tus variables de base de datos, correo electrónico y `SECRET_KEY`.
-    -   Ajusta la configuración de `DATABASES` en `core/settings.py` si no usas variables de entorno.
-
-5.  **Aplica las migraciones**:
-
-    ```bash
-    python manage.py migrate
-    ```
-
-6.  **Crea un superusuario**:
-
-    ```bash
-    python manage.py createsuperuser
-    ```
-
-7.  **Inicia el servidor de desarrollo**:
-
-    ```bash
-    python manage.py runserver
-    ```
+# Iniciar servidor
+python manage.py runserver
+```
 
 ### Frontend
 
-1.  **Navega al directorio del frontend**:
+```bash
+cd ../frontend
 
-    ```bash
-    cd ../frontend
-    ```
+# Instalar dependencias
+npm install
 
-2.  **Instala las dependencias**:
+# Iniciar servidor de desarrollo
+npm start
+```
 
-    ```bash
-    npm install
-    ```
+La aplicación estará disponible en `http://localhost:3001`
 
-3.  **Inicia el servidor de desarrollo**:
+## Servicios Adicionales
 
-    ```bash
-    npm start # La aplicación se abrirá en http://localhost:3001 por defecto
-    ```
+### Redis (requerido para caché y Celery)
 
-## Uso
+```bash
+# Ubuntu/Debian
+sudo apt install redis-server
+sudo systemctl start redis-server
 
--   Accede a la aplicación en `http://localhost:3001`.
--   Regístrate o inicia sesión para empezar a gestionar tus citas.
--   Accede al panel de administración en `http://127.0.0.1:8000/admin` para gestionar los datos de la aplicación.
+# macOS
+brew install redis
+brew services start redis
+
+# OpenSUSE (ver CELERY_SETUP.md para más detalles)
+sudo zypper install redis
+sudo systemctl start redis-server
+```
+
+### Celery Worker (para emails asíncronos)
+
+```bash
+cd backend
+celery -A core worker --loglevel=info
+```
+
+**Para producción**, ver [CELERY_SETUP.md](CELERY_SETUP.md) para configurar como servicio systemd.
+
+## Uso Básico
+
+### Crear una Organización
+
+Como superusuario en Django Admin (`/admin`):
+1. Ir a "Organizaciones"
+2. Crear nueva organización (el slug se genera automáticamente)
+3. Crear sedes para esa organización
+
+### Registrar Usuarios por Organización
+
+Cada organización tiene su URL de registro personalizada:
+```
+http://tu-dominio.com/register/{slug-organizacion}
+```
+
+Ejemplo:
+```
+http://localhost:3001/register/clinica-abc
+```
+
+Los usuarios que se registren con este link se asociarán automáticamente a "Clínica ABC".
+
+### Roles de Usuario
+
+| Rol | Descripción | Permisos |
+|-----|-------------|----------|
+| **Cliente** | Usuario final | Agendar sus propias citas, ver su historial |
+| **Colaborador** | Profesional que ofrece servicios | Ver sus citas asignadas, crear citas para clientes |
+| **Admin de Sede** | Gerente de sucursal | Gestionar citas, servicios y colaboradores de sus sedes |
+| **Superusuario** | Admin del sistema | Acceso total, gestiona todas las organizaciones |
+
+Ver [docs/ROLES_Y_PERMISOS.md](docs/ROLES_Y_PERMISOS.md) para más detalles.
+
+## Configuración de Producción
+
+### 1. Instalar Redis (si no está instalado)
+
+```bash
+bash install_redis.sh
+```
+
+### 2. Configurar Celery Worker
+
+```bash
+bash setup_celery.sh
+```
+
+### 3. Variables de Entorno
+
+Configurar `.env` en el backend:
+
+```env
+DEBUG=False
+SECRET_KEY=tu-clave-secreta-muy-larga
+DB_NAME=citas_prod
+DB_USER=citas_user
+DB_PASSWORD=contraseña-segura
+EMAIL_HOST=smtp.gmail.com
+EMAIL_HOST_USER=tu-email@gmail.com
+EMAIL_HOST_PASSWORD=tu-contraseña-de-app
+FRONTEND_URL=https://tu-dominio.com
+```
+
+### 4. Configurar Gunicorn
+
+```bash
+cd backend
+gunicorn --config gunicorn_config.py core.wsgi:application
+```
+
+### 5. Build del Frontend
+
+```bash
+cd frontend
+npm run build
+```
+
+Ver [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) para configuración completa de Nginx, SSL y más.
+
+## API Endpoints Principales
+
+### Autenticación
+- `POST /api/login/` - Iniciar sesión
+- `POST /api/register/{slug}/` - Registro por organización
+- `POST /api/token/refresh/` - Refrescar token
+
+### Citas
+- `GET /api/citas/citas/` - Listar citas (filtradas por rol)
+- `POST /api/citas/citas/` - Crear cita
+- `PATCH /api/citas/citas/{id}/` - Actualizar cita
+- `DELETE /api/citas/citas/{id}/` - Cancelar cita
+- `POST /api/citas/citas/{id}/confirmar/` - Confirmar cita
+
+### Disponibilidad
+- `GET /api/citas/disponibilidad/?fecha={YYYY-MM-DD}&recurso_id={id}` - Horarios disponibles
+- `GET /api/citas/next-availability/?servicio_id={id}&sede_id={id}` - Próxima cita disponible
+
+### Servicios y Recursos
+- `GET /api/citas/servicios/` - Listar servicios
+- `GET /api/citas/recursos/` - Listar colaboradores
+
+### Informes
+- `GET /api/citas/reports/appointments/?start_date={YYYY-MM-DD}&end_date={YYYY-MM-DD}&export=csv` - Exportar informe
 
 ## Casos de Uso
 
--   **Clínicas y consultorios médicos**: Para que los pacientes puedan agendar citas con los doctores.
--   **Salones de belleza y spas**: Para que los clientes puedan reservar servicios.
--   **Talleres mecánicos**: Para que los clientes puedan agendar citas para la revisión de sus vehículos.
--   **Cualquier negocio que requiera agendamiento de citas**.
+- **Clínicas y Consultorios Médicos**: Pacientes agendando citas con doctores
+- **Salones de Belleza y Spas**: Clientes reservando servicios de estética
+- **Talleres Mecánicos**: Clientes agendando revisiones de vehículos
+- **Cualquier negocio con citas**: Sistema flexible y personalizable
+
+## Optimizaciones Implementadas
+
+### Performance
+- **Rate Limiting**: 100 req/h anónimos, 1000 req/h autenticados
+- **Redis Cache**: Servicios y recursos cacheados (5 min)
+- **Query Optimization**: `select_related` y `prefetch_related` para evitar N+1
+- **Database Indexes**: Índices en campos frecuentes
+- **Gunicorn con Gevent**: Workers optimizados para I/O
+
+### Seguridad
+- **Django-Axes**: Bloqueo después de 5 intentos fallidos
+- **CORS**: Origins específicos (no wildcard)
+- **CSP Headers**: Content Security Policy
+- **Validación de Contraseñas**: 4 validadores activos
+- **JWT Tokens**: Access + Refresh tokens
+
+### Asíncrono
+- **Celery**: Envío de emails sin bloquear requests
+- **Redis Broker**: Cola de tareas con DB 2
+- **Auto-reintentos**: 3 intentos con 60s de delay
+
+## Comandos Útiles
+
+### Backend
+
+```bash
+# Aplicar migraciones
+python manage.py migrate
+
+# Crear superusuario
+python manage.py createsuperuser
+
+# Ejecutar tests
+python manage.py test
+
+# Enviar recordatorios (cron job)
+python manage.py send_reminders
+
+# Verificar deployment
+python manage.py check --deploy
+```
+
+### Frontend
+
+```bash
+# Desarrollo
+npm start
+
+# Build para producción
+npm run build
+
+# Linting
+npm run lint
+```
+
+### Celery
+
+```bash
+# Iniciar worker
+celery -A core worker --loglevel=info
+
+# Ver estado
+celery -A core inspect stats
+
+# Monitorear tareas
+celery -A core events
+```
+
+### Redis
+
+```bash
+# Verificar conexión
+redis-cli ping  # Debe responder: PONG
+
+# Ver estadísticas
+redis-cli INFO stats
+
+# Limpiar cache
+redis-cli FLUSHDB
+```
+
+## Monitoreo
+
+### Ver Logs
+
+```bash
+# Gunicorn
+sudo journalctl -u gunicorn -f
+
+# Celery
+sudo journalctl -u celery -f
+tail -f /var/log/celery/worker.log
+
+# Nginx
+sudo tail -f /var/log/nginx/error.log
+sudo tail -f /var/log/nginx/access.log
+```
+
+### Estado de Servicios
+
+```bash
+# Backend
+sudo systemctl status gunicorn
+
+# Celery
+sudo systemctl status celery
+
+# Redis
+sudo systemctl status redis-server  # o redis6, redis@redis
+
+# Nginx
+sudo systemctl status nginx
+```
+
+## Troubleshooting
+
+### Problema: Emails no se envían
+
+**Verificar:**
+1. Celery worker está corriendo: `sudo systemctl status celery`
+2. Redis está activo: `redis-cli ping`
+3. Logs de Celery: `tail -f /var/log/celery/worker.log`
+4. Configuración SMTP en `.env`
+
+**Solución:**
+```bash
+sudo systemctl restart celery
+```
+
+### Problema: Worker timeout en Gunicorn
+
+**Causa**: Query muy pesado en endpoint
+
+**Solución**: Ver [docs/OPTIMIZATIONS.md](docs/OPTIMIZATIONS.md) para optimizaciones de queries
+
+### Problema: Organización no encontrada al registrar
+
+**Verificar:**
+1. Slug de la organización existe en DB
+2. URL es correcta: `/register/{slug-exacto}`
+3. Endpoint: `GET /api/organizacion/organizaciones/{slug}/`
+
+## Licencia
+
+[Especificar licencia]
+
+## Contribuidores
+
+[Lista de contribuidores]
+
+## Soporte
+
+Para reportar problemas o solicitar ayuda:
+- **Issues**: [GitHub Issues](link-al-repo)
+- **Documentación**: Ver carpeta `docs/`
+- **Email**: [email de soporte]
+
+---
+
+**Versión:** 2.0
+**Última actualización:** 2025-10-18
+**Generado con:** Claude Code 🤖
