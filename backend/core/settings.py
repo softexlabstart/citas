@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'guide',
     'axes',
     'csp',
+    'reports',
 ]
 
 MIDDLEWARE = [

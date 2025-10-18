@@ -1,0 +1,237 @@
+/* Financial Dashboard - Estilos consistentes con la aplicación */
+
+.financial-dashboard {
+    background-color: transparent;
+}
+
+/* Metric Cards */
+.metric-card {
+    border-radius: 0.5rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: default;
+}
+
+.metric-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.metric-icon {
+    font-size: 2rem;
+    filter: grayscale(0.1);
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1d3557;
+}
+
+/* Specific metric card styles */
+.metric-card-realized {
+    border-left: 4px solid #198754;
+    background: linear-gradient(to right, rgba(25, 135, 84, 0.05), transparent);
+}
+
+.metric-card-realized .metric-value {
+    color: #198754;
+}
+
+.metric-card-projected {
+    border-left: 4px solid #0dcaf0;
+    background: linear-gradient(to right, rgba(13, 202, 240, 0.05), transparent);
+}
+
+.metric-card-projected .metric-value {
+    color: #0dcaf0;
+}
+
+.metric-card-lost {
+    border-left: 4px solid #ffc107;
+    background: linear-gradient(to right, rgba(255, 193, 7, 0.05), transparent);
+}
+
+.metric-card-lost .metric-value {
+    color: #ffc107;
+}
+
+.metric-card-canceled {
+    border-left: 4px solid #dc3545;
+    background: linear-gradient(to right, rgba(220, 53, 69, 0.05), transparent);
+}
+
+.metric-card-canceled .metric-value {
+    color: #dc3545;
+}
+
+/* Total Card */
+.total-card {
+    background: linear-gradient(135deg, #457b9d, #1d3557);
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+.total-label {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.total-amount {
+    color: white;
+    font-size: 3rem;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.total-description {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.9rem;
+}
+
+.total-icon {
+    font-size: 5rem;
+    opacity: 0.2;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* Appointments Chart */
+.appointments-chart {
+    margin-top: 1rem;
+}
+
+.appointment-status-item {
+    transition: background-color 0.2s ease;
+    padding: 0.5rem;
+    border-radius: 0.35rem;
+}
+
+.appointment-status-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Services Table */
+.services-table {
+    font-size: 0.95rem;
+}
+
+.services-table thead {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.services-table thead th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    color: #495057;
+    padding: 0.75rem;
+    border: none;
+}
+
+.services-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.services-table tbody tr:hover {
+    background-color: rgba(168, 218, 220, 0.1);
+}
+
+.services-table tbody td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    border-color: #f1f3f5;
+}
+
+.service-rank {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a8dadc, #457b9d);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+/* Date Filter Card */
+.financial-dashboard .card-body .form-label {
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.financial-dashboard .form-control:focus {
+    border-color: #457b9d;
+    box-shadow: 0 0 0 0.2rem rgba(69, 123, 157, 0.25);
+}
+
+/* Progress bars */
+.progress {
+    border-radius: 4px;
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    border-radius: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .total-amount {
+        font-size: 2rem;
+    }
+
+    .metric-value {
+        font-size: 1.25rem;
+    }
+
+    .metric-icon {
+        font-size: 1.5rem;
+    }
+
+    .total-icon {
+        font-size: 3rem;
+    }
+
+    .services-table {
+        font-size: 0.85rem;
+    }
+
+    .service-rank {
+        width: 24px;
+        height: 24px;
+        font-size: 0.75rem;
+    }
+}
+
+/* Card headers */
+.financial-dashboard .card-header {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.financial-dashboard .card-header h5 {
+    color: #1d3557;
+}
+
+/* Badges */
+.financial-dashboard .badge {
+    font-weight: 500;
+}
+
+/* Smooth animations */
+.financial-dashboard * {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}

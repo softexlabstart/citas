@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import moment from 'moment';
-import { HouseDoor, Briefcase, CalendarCheck, CalendarWeek, BarChart, Gear, QuestionCircle, Search, People, Megaphone, Building, PlusCircle } from 'react-bootstrap-icons';
+import { HouseDoor, Briefcase, CalendarCheck, CalendarWeek, BarChart, Gear, QuestionCircle, Search, People, Megaphone, Building, PlusCircle, CurrencyDollar } from 'react-bootstrap-icons';
 import Footer from './Footer';
 import '../styles/custom.css';
 
@@ -104,6 +104,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       </Nav.Link>
                       <Nav.Link as={Link} to="/reports" onClick={handleClose} className="nav-link-custom">
                         <BarChart className="nav-icon" /> {t('reports')}
+                      </Nav.Link>
+                      <Nav.Link as={Link} to="/financial-dashboard" onClick={handleClose} className="nav-link-custom">
+                        <CurrencyDollar className="nav-icon" /> {t('financial_dashboard') || 'Dashboard Financiero'}
                       </Nav.Link>
                       <Nav.Link as={Link} to="/admin-settings" onClick={handleClose} className="nav-link-custom">
                         <Gear className="nav-icon" /> {t('admin_settings')}

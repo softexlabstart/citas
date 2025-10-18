@@ -295,6 +295,39 @@ export const downloadAppointmentsReportCSV = (startDate: string, endDate: string
     return api.get(`/api/citas/reports/appointments/?${params.toString()}`, { responseType: 'blob' });
 };
 
+// Financial Dashboard
+export interface FinancialSummary {
+    periodo: {
+        inicio: string;
+        fin: string;
+    };
+    metricas_principales: {
+        ingresos_realizados: number;
+        ingresos_proyectados: number;
+        ingresos_perdidos: number;
+        ingresos_cancelados: number;
+        total_ingresos: number;
+    };
+    citas_por_estado: Array<{
+        estado: string;
+        cantidad: number;
+        porcentaje: number;
+    }>;
+    ingresos_por_servicio: Array<{
+        servicio: string;
+        total_ingresos: number;
+        cantidad_citas: number;
+    }>;
+    total_citas: number;
+}
+
+export const getFinancialSummary = (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    const queryString = params.toString();
+    return api.get<FinancialSummary>(`/api/reports/financial-summary/${queryString ? `?${queryString}` : ''}`);
+};
 
 // Funciones para Autenticación
 export const login = async (username: string, password: string) => {
