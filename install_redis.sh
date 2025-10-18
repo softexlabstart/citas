@@ -7,28 +7,39 @@ set -e  # Exit on error
 echo "🚀 Instalando Redis..."
 
 # Detectar el gestor de paquetes
-if command -v dnf &> /dev/null; then
+if command -v zypper &> /dev/null; then
+    PKG_MANAGER="zypper"
+    REDIS_PKG="redis"
+    REDIS_SERVICE="redis"
+    echo "📦 Detectado: OpenSUSE (zypper)"
+    UPDATE_CMD="zypper refresh"
+    INSTALL_CMD="zypper install -y"
+elif command -v dnf &> /dev/null; then
     PKG_MANAGER="dnf"
     REDIS_PKG="redis6"
     REDIS_SERVICE="redis6"
     echo "📦 Detectado: Amazon Linux 2023 (dnf)"
+    UPDATE_CMD="dnf update -y"
+    INSTALL_CMD="dnf install -y"
 elif command -v yum &> /dev/null; then
     PKG_MANAGER="yum"
     REDIS_PKG="redis"
     REDIS_SERVICE="redis"
     echo "📦 Detectado: Amazon Linux 2 (yum)"
+    UPDATE_CMD="yum update -y"
+    INSTALL_CMD="yum install -y"
 else
-    echo "❌ ERROR: No se encontró dnf ni yum"
+    echo "❌ ERROR: No se encontró zypper, dnf ni yum"
     exit 1
 fi
 
 # 1. Actualizar paquetes
 echo "📦 Actualizando lista de paquetes..."
-sudo $PKG_MANAGER update -y
+sudo $UPDATE_CMD
 
 # 2. Instalar Redis
 echo "⬇️  Instalando Redis ($REDIS_PKG)..."
-sudo $PKG_MANAGER install -y $REDIS_PKG
+sudo $INSTALL_CMD $REDIS_PKG
 
 # 3. Iniciar Redis
 echo "▶️  Iniciando Redis..."
