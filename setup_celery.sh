@@ -15,14 +15,19 @@ sudo chown -R ec2-user:ec2-user /var/run/celery
 
 # 2. Verificar que Redis está corriendo
 echo "🔍 Verificando Redis..."
-# Intentar con redis6 primero (Amazon Linux 2023), luego redis (otras distros)
-if sudo systemctl is-active --quiet redis6; then
+# Intentar con redis@redis (OpenSUSE), redis6 (Amazon Linux 2023), luego redis (otras distros)
+if sudo systemctl is-active --quiet redis@redis; then
+    echo "✅ Redis@redis está corriendo (OpenSUSE)"
+elif sudo systemctl is-active --quiet redis6; then
     echo "✅ Redis6 está corriendo"
 elif sudo systemctl is-active --quiet redis; then
     echo "✅ Redis está corriendo"
 else
     echo "⚠️  Redis no está corriendo. Intentando iniciar..."
-    if sudo systemctl start redis6 2>/dev/null; then
+    if sudo systemctl start redis@redis 2>/dev/null; then
+        sudo systemctl enable redis@redis
+        echo "✅ Redis@redis iniciado (OpenSUSE)"
+    elif sudo systemctl start redis6 2>/dev/null; then
         sudo systemctl enable redis6
         echo "✅ Redis6 iniciado"
     elif sudo systemctl start redis 2>/dev/null; then

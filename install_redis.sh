@@ -10,7 +10,7 @@ echo "🚀 Instalando Redis..."
 if command -v zypper &> /dev/null; then
     PKG_MANAGER="zypper"
     REDIS_PKG="redis"
-    REDIS_SERVICE="redis"
+    REDIS_SERVICE="redis@redis"  # OpenSUSE uses instanced service
     echo "📦 Detectado: OpenSUSE (zypper)"
     UPDATE_CMD="zypper refresh"
     INSTALL_CMD="zypper install -y"
@@ -53,6 +53,16 @@ if [ "$REDIS_SERVICE" == "redis6" ]; then
     redis6-cli --version
     redis6-cli ping
     REDIS_CONF="/etc/redis6/redis6.conf"
+elif [ "$REDIS_SERVICE" == "redis@redis" ]; then
+    redis-cli --version
+    redis-cli ping
+    REDIS_CONF="/etc/redis/default.conf.example"
+    # En OpenSUSE, crear configuración personalizada
+    if [ ! -f "/etc/redis/redis.conf" ]; then
+        echo "📝 Creando configuración Redis para OpenSUSE..."
+        sudo cp /etc/redis/default.conf.example /etc/redis/redis.conf
+    fi
+    REDIS_CONF="/etc/redis/redis.conf"
 else
     redis-cli --version
     redis-cli ping
@@ -95,6 +105,13 @@ if [ "$REDIS_SERVICE" == "redis6" ]; then
     echo "   sudo systemctl status redis6     # Ver estado"
     echo "   redis6-cli ping                  # Probar conexión"
     echo "   redis6-cli monitor               # Ver comandos en tiempo real"
+elif [ "$REDIS_SERVICE" == "redis@redis" ]; then
+    echo "   sudo systemctl start redis@redis     # Iniciar"
+    echo "   sudo systemctl stop redis@redis      # Detener"
+    echo "   sudo systemctl restart redis@redis   # Reiniciar"
+    echo "   sudo systemctl status redis@redis    # Ver estado"
+    echo "   redis-cli ping                       # Probar conexión"
+    echo "   redis-cli monitor                    # Ver comandos en tiempo real"
 else
     echo "   sudo systemctl start redis       # Iniciar"
     echo "   sudo systemctl stop redis        # Detener"
