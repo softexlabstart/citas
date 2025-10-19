@@ -1,7 +1,14 @@
 app_name = 'usuarios'
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import LoginView, RegisterView, RegisterByOrganizacionView, TimezoneView, UserDetailView, ClientViewSet, ClientEmailListView, PersonalDataView, DeleteAccountView, MultiTenantRegistrationView, OrganizationManagementView, InvitationView, AcceptInvitationView, OrganizationMembersView, RequestHistoryLinkView, AccessHistoryWithTokenView
+from .views import (
+    LoginView, RegisterView, RegisterByOrganizacionView, TimezoneView,
+    UserDetailView, ClientViewSet, ClientEmailListView, PersonalDataView,
+    DeleteAccountView, MultiTenantRegistrationView, OrganizationManagementView,
+    InvitationView, AcceptInvitationView, OrganizationMembersView,
+    RequestHistoryLinkView, AccessHistoryWithTokenView,
+    CreateUserWithRoleView, UserOrganizationsView, SwitchOrganizationView
+)
 from .views_password_reset import RequestPasswordResetView, ConfirmPasswordResetView
 from .views_onboarding import OnboardingProgressViewSet
 
@@ -31,4 +38,8 @@ urlpatterns = [
     # URLs para Password Reset
     path('auth/request-password-reset/', RequestPasswordResetView.as_view(), name='request_password_reset'),
     path('auth/confirm-password-reset/', ConfirmPasswordResetView.as_view(), name='confirm_password_reset'),
+    # URLs para Nuevo Sistema de Roles
+    path('create-user/', CreateUserWithRoleView.as_view(), name='create_user_with_role'),
+    path('my-organizations/', UserOrganizationsView.as_view(), name='user_organizations'),
+    path('switch-organization/', SwitchOrganizationView.as_view(), name='switch_organization'),
 ]

@@ -31,6 +31,7 @@ const UserGuide = lazy(() => import('./components/UserGuide'));
 const RecursoDashboard = lazy(() => import('./components/RecursoDashboard'));
 const Clients = lazy(() => import('./components/Clients'));
 const MarketingPage = lazy(() => import('./pages/MarketingPage')); // Import MarketingPage
+const UserManagementPage = lazy(() => import('./pages/UserManagementPage')); // New Role System
 // If EditProfilePage is a named export:
 const EditProfilePage = lazy(() =>
   import('./pages/EditProfilePage').then(module => ({ default: module.EditProfilePage }))
@@ -84,6 +85,7 @@ const App: React.FC = () => {
 
               {/* Routes for admin users only */}
               <Route element={<AdminRoute />}>
+                <Route path="/users" element={<UserManagementPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/admin-settings" element={<AdminSettings />} />
                 <Route path="/clients" element={<Clients />} />

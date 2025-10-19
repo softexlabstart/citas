@@ -136,3 +136,188 @@ def has_perfil_in_current_org(user):
         return True
     except PermissionDenied:
         return False
+
+
+# ==================== NUEVOS HELPERS PARA SISTEMA DE ROLES ====================
+
+def get_user_role_in_org(user, organizacion):
+    """
+    Obtiene el rol principal de un usuario en una organización específica.
+
+    Args:
+        user: Usuario Django
+        organizacion: Instancia de Organizacion
+
+    Returns:
+        str: 'owner', 'admin', 'sede_admin', 'colaborador', 'cliente', o None
+    """
+    from usuarios.models import PerfilUsuario
+
+    try:
+        perfil = PerfilUsuario.all_objects.get(user=user, organizacion=organizacion, is_active=True)
+        return perfil.role
+    except PerfilUsuario.DoesNotExist:
+        return None
+
+
+def get_all_user_roles_in_org(user, organizacion):
+    """
+    Obtiene TODOS los roles de un usuario en una organización (principal + adicionales).
+
+    Args:
+        user: Usuario Django
+        organizacion: Instancia de Organizacion
+
+    Returns:
+        list: Lista de roles, ej: ['colaborador', 'cliente']
+    """
+    from usuarios.models import PerfilUsuario
+
+    try:
+        perfil = PerfilUsuario.all_objects.get(user=user, organizacion=organizacion, is_active=True)
+        return perfil.all_roles
+    except PerfilUsuario.DoesNotExist:
+        return []
+
+
+def user_has_role(user, role, organizacion=None):
+    """
+    Verifica si un usuario tiene un rol específico.
+
+    Args:
+        user: Usuario Django
+        role: Rol a verificar ('owner', 'admin', 'sede_admin', 'colaborador', 'cliente')
+        organizacion: Instancia de Organizacion (opcional, usa contexto actual si no se provee)
+
+    Returns:
+        bool: True si tiene el rol
+    """
+    from usuarios.models import PerfilUsuario
+
+    if not organizacion:
+        organizacion = get_current_organization()
+
+    if not organizacion:
+        return False
+
+    try:
+        perfil = PerfilUsuario.all_objects.get(user=user, organizacion=organizacion, is_active=True)
+        return perfil.has_role(role)
+    except PerfilUsuario.DoesNotExist:
+        return False
+
+
+def user_can_access_sede(user, sede):
+    """
+    Verifica si un usuario puede acceder a una sede específica.
+
+    Args:
+        user: Usuario Django
+        sede: Instancia de Sede
+
+    Returns:
+        bool: True si tiene acceso
+    """
+    from usuarios.models import PerfilUsuario
+
+    if user.is_superuser:
+        return True
+
+    try:
+        perfil = PerfilUsuario.all_objects.get(
+            user=user,
+            organizacion=sede.organizacion,
+            is_active=True
+        )
+        return sede in perfil.accessible_sedes
+    except PerfilUsuario.DoesNotExist:
+        return False
+
+
+def get_user_accessible_sedes(user, organizacion=None):
+    """
+    Retorna todas las sedes accesibles para un usuario.
+
+    Args:
+        user: Usuario Django
+        organizacion: Instancia de Organizacion (opcional, usa contexto actual si no se provee)
+
+    Returns:
+        QuerySet: Sedes accesibles
+    """
+    from usuarios.models import PerfilUsuario
+    from organizacion.models import Sede
+
+    if user.is_superuser:
+        if organizacion:
+            return Sede.all_objects.filter(organizacion=organizacion)
+        return Sede.all_objects.all()
+
+    if not organizacion:
+        organizacion = get_current_organization()
+
+    if not organizacion:
+        return Sede.all_objects.none()
+
+    try:
+        perfil = PerfilUsuario.all_objects.get(
+            user=user,
+            organizacion=organizacion,
+            is_active=True
+        )
+        return perfil.accessible_sedes
+    except PerfilUsuario.DoesNotExist:
+        return Sede.all_objects.none()
+
+
+def get_user_organizations(user):
+    """
+    Retorna todas las organizaciones donde el usuario tiene membresía activa.
+
+    Args:
+        user: Usuario Django
+
+    Returns:
+        QuerySet: Organizaciones con perfiles activos
+    """
+    from organizacion.models import Organizacion
+
+    return Organizacion.objects.filter(
+        miembros__user=user,
+        miembros__is_active=True
+    ).distinct()
+
+
+def switch_organization_context(request, organizacion_id):
+    """
+    Cambia el contexto de organización del usuario en la sesión.
+    Útil para el selector de organización en el frontend.
+
+    Args:
+        request: HttpRequest
+        organizacion_id: ID de la organización
+
+    Returns:
+        bool: True si el cambio fue exitoso
+    """
+    from organizacion.models import Organizacion
+    from usuarios.models import PerfilUsuario
+    from organizacion.thread_locals import set_current_organization
+
+    try:
+        org = Organizacion.objects.get(id=organizacion_id)
+
+        # Verificar que el usuario tiene acceso
+        perfil = PerfilUsuario.all_objects.get(
+            user=request.user,
+            organizacion=org,
+            is_active=True
+        )
+
+        # Cambiar contexto
+        set_current_organization(org)
+        request.session['current_organization_id'] = org.id
+
+        return True
+    except (Organizacion.DoesNotExist, PerfilUsuario.DoesNotExist):
+        return False

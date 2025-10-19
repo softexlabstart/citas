@@ -18,12 +18,6 @@ class OrganizacionMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        import sys
-        print(f"[MIDDLEWARE] === Request path: {request.path} ===", file=sys.stderr)
-        print(f"[MIDDLEWARE] User authenticated: {request.user.is_authenticated}", file=sys.stderr)
-        if request.user.is_authenticated:
-            print(f"[MIDDLEWARE] User: {request.user.username} (ID: {request.user.id})", file=sys.stderr)
-
         user = request.user if request.user.is_authenticated else None
         set_current_user(user)
 
@@ -31,7 +25,6 @@ class OrganizacionMiddleware:
 
         # MULTI-TENANT: Priority 1 - Check HTTP Header X-Organization-ID
         org_id = request.META.get('HTTP_X_ORGANIZATION_ID')
-        print(f"[MIDDLEWARE] X-Organization-ID header: {org_id}", file=sys.stderr)
         if org_id:
             try:
                 organizacion = Organizacion.objects.get(id=int(org_id))
@@ -41,17 +34,14 @@ class OrganizacionMiddleware:
 
         # Priority 2 - Get organization from authenticated user's profile
         if organizacion is None and request.user.is_authenticated:
-            print(f"[MIDDLEWARE] Priority 2: Getting org from user profile...", file=sys.stderr)
             logger.debug(f"[OrgMiddleware] User: {request.user.username}, is_staff: {request.user.is_staff}, is_superuser: {request.user.is_superuser}")
             try:
                 # MULTI-TENANT: Check if user has multiple profiles
                 # CRITICAL: Use PerfilUsuario.all_objects to bypass OrganizacionManager filtering
                 # because at this point no organization is set yet (we're setting it now!)
                 from usuarios.models import PerfilUsuario
-                print(f"[MIDDLEWARE] Querying perfiles with all_objects...", file=sys.stderr)
                 perfiles = PerfilUsuario.all_objects.filter(user=request.user).select_related('organizacion')
                 perfiles_count = perfiles.count()
-                print(f"[MIDDLEWARE] Found {perfiles_count} perfiles for user {request.user.username}", file=sys.stderr)
 
                 if perfiles_count == 1:
                     # Single profile: use that organization
@@ -81,7 +71,6 @@ class OrganizacionMiddleware:
                 logger.debug(f"[OrgMiddleware] No org from URL: {e}")
 
         set_current_organization(organizacion)
-        print(f"[MIDDLEWARE] Final organization set: {organizacion.nombre if organizacion else 'None'}", file=sys.stderr)
 
         response = self.get_response(request)
         return response

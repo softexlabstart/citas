@@ -23,6 +23,12 @@ export interface PerfilUsuario {
     fecha_nacimiento?: string | null;
     has_consented_data_processing?: boolean;
     data_processing_opt_out?: boolean;
+    // New Role System Fields
+    role?: 'owner' | 'admin' | 'sede_admin' | 'colaborador' | 'cliente';
+    additional_roles?: string[];
+    display_badge?: string;
+    is_active?: boolean;
+    permissions?: Record<string, boolean>;
 }
 
 export interface User {

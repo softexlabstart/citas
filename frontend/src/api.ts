@@ -6,12 +6,13 @@ import { Service } from './interfaces/Service';
 import { Recurso } from './interfaces/Recurso';
 import { Sede } from './interfaces/Sede'; // Added Sede import
 import { Client } from './interfaces/Client';
-import { 
-    MultiTenantRegistrationData, 
-    InvitationData, 
-    OrganizationInfo, 
-    OrganizationMembersResponse 
+import {
+    MultiTenantRegistrationData,
+    InvitationData,
+    OrganizationInfo,
+    OrganizationMembersResponse
 } from './interfaces/Organization';
+import { CreateUserPayload, UserOrganizationsResponse } from './interfaces/Role';
 
 export interface PaginatedResponse<T> {
     count: number;
@@ -507,4 +508,17 @@ export interface PublicBookingData {
 export const createPublicBooking = async (bookingData: PublicBookingData) => {
     const response = await api.post('/api/citas/public-booking/', bookingData);
     return response.data;
+};
+
+// Funciones para Sistema de Roles (New Role System)
+export const createUserWithRole = (userData: CreateUserPayload) => {
+    return api.post('/api/usuarios/create-user/', userData);
+};
+
+export const getUserOrganizations = () => {
+    return api.get<UserOrganizationsResponse>('/api/usuarios/my-organizations/');
+};
+
+export const switchOrganization = (organizationId: number) => {
+    return api.post('/api/usuarios/switch-organization/', { organization_id: organizationId });
 };

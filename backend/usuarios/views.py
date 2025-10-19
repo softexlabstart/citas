@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, login
+from django.core.exceptions import PermissionDenied
 from rest_framework import status, generics, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -1056,3 +1057,134 @@ class AccessHistoryWithTokenView(APIView):
             return Response({
                 'error': 'Error al procesar el token'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ==================== NUEVO SISTEMA DE ROLES ====================
+
+class CreateUserWithRoleView(APIView):
+    """
+    Endpoint simplificado para crear usuarios con roles.
+
+    POST /api/usuarios/create-user/
+    {
+        "email": "ana@example.com",
+        "first_name": "Ana",
+        "last_name": "García",
+        "password": "secure123",
+        "role": "colaborador",
+        "additional_roles": ["cliente"],
+        "sede_principal_id": 1,
+        "sedes_trabajo_ids": [1, 2],
+        "permissions": {"can_view_reports": true}
+    }
+
+    Permisos: Solo propietarios y administradores pueden crear usuarios.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from .serializers import CreateUserWithRoleSerializer
+        from .permissions import IsOwnerOrAdmin
+
+        # Verificar permisos manualmente
+        permission = IsOwnerOrAdmin()
+        if not permission.has_permission(request, self):
+            return Response({
+                'error': 'No tienes permisos para crear usuarios. Solo propietarios y administradores.'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = CreateUserWithRoleSerializer(data=request.data)
+
+        if serializer.is_valid():
+            try:
+                perfil = serializer.save()
+
+                return Response({
+                    'id': perfil.user.id,
+                    'email': perfil.user.email,
+                    'role': perfil.role,
+                    'additional_roles': perfil.additional_roles,
+                    'display_badge': perfil.display_badge,
+                    'message': f'Usuario creado exitosamente como {perfil.get_role_display()}'
+                }, status=status.HTTP_201_CREATED)
+
+            except Exception as e:
+                logger.error(f"Error al crear usuario con rol: {str(e)}")
+                return Response({
+                    'error': f'Error al crear usuario: {str(e)}'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserOrganizationsView(APIView):
+    """
+    Lista todas las organizaciones donde el usuario tiene membresía.
+
+    GET /api/usuarios/my-organizations/
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from .utils import get_user_organizations
+
+        organizations = get_user_organizations(request.user)
+        org_data = []
+        
+        for org in organizations:
+            try:
+                perfil = PerfilUsuario.all_objects.get(
+                    user=request.user,
+                    organizacion=org,
+                    is_active=True
+                )
+                org_data.append({
+                    'id': org.id,
+                    'nombre': org.nombre,
+                    'slug': org.slug,
+                    'role': perfil.role,
+                    'all_roles': perfil.all_roles,
+                    'display_badge': perfil.display_badge,
+                })
+            except PerfilUsuario.DoesNotExist:
+                continue
+
+        return Response({
+            'count': len(org_data),
+            'organizations': org_data
+        }, status=status.HTTP_200_OK)
+
+
+class SwitchOrganizationView(APIView):
+    """
+    Cambia la organización activa en la sesión del usuario.
+
+    POST /api/usuarios/switch-organization/
+    {"organization_id": 123}
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from .utils import switch_organization_context
+
+        organization_id = request.data.get('organization_id')
+        if not organization_id:
+            return Response({
+                'error': 'Se requiere organization_id'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        success = switch_organization_context(request, organization_id)
+
+        if success:
+            return Response({
+                'message': 'Organización cambiada exitosamente',
+                'organization_id': organization_id
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'error': 'No tienes acceso a esta organización o no existe'
+            }, status=status.HTTP_403_FORBIDDEN)
+

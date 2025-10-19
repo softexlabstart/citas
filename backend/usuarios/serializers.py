@@ -432,3 +432,198 @@ class OnboardingProgressSerializer(serializers.ModelSerializer):
             'completed_at',
         ]
         read_only_fields = ['user', 'created_at', 'updated_at', 'completed_at']
+
+
+# ==================== SERIALIZERS PARA SISTEMA DE ROLES ====================
+
+class CreateUserWithRoleSerializer(serializers.Serializer):
+    """
+    Serializer para crear usuarios con roles en el sistema multi-tenant.
+
+    Simplifica la creación de usuarios permitiendo especificar:
+    - Datos básicos del usuario
+    - Rol principal y roles adicionales
+    - Sedes según el rol
+    - Permisos personalizados (opcional)
+    """
+
+    # Datos básicos del usuario
+    email = serializers.EmailField(required=True)
+    first_name = serializers.CharField(required=True, max_length=30)
+    last_name = serializers.CharField(required=True, max_length=30)
+    password = serializers.CharField(write_only=True, required=True, min_length=8)
+
+    # Sistema de roles
+    role = serializers.ChoiceField(
+        choices=PerfilUsuario.ROLE_CHOICES,
+        required=True,
+        help_text='Rol principal del usuario'
+    )
+    additional_roles = serializers.ListField(
+        child=serializers.ChoiceField(choices=PerfilUsuario.ROLE_CHOICES),
+        required=False,
+        default=list,
+        help_text='Roles adicionales (opcional). Ej: ["cliente"] si un colaborador también es cliente'
+    )
+
+    # Sedes según rol
+    sede_principal_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text='ID de la sede principal (requerido para colaboradores y admins de sede)'
+    )
+    sedes_trabajo_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        default=list,
+        help_text='IDs de sedes donde trabaja (para colaboradores multi-sede)'
+    )
+    sedes_administradas_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        default=list,
+        help_text='IDs de sedes que administra (para admins de sede)'
+    )
+
+    # Permisos personalizados
+    permissions = serializers.JSONField(
+        required=False,
+        default=dict,
+        help_text='Permisos granulares en JSON. Ej: {"can_view_reports": true}'
+    )
+
+    # Datos opcionales
+    telefono = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    timezone = serializers.CharField(max_length=100, required=False, default='UTC')
+
+    def validate_email(self, value):
+        """Verifica que el email no esté en uso en esta organización"""
+        from organizacion.thread_locals import get_current_organization
+        org = get_current_organization()
+
+        if org:
+            # Verificar si ya existe un usuario con este email en esta org
+            existing_perfil = PerfilUsuario.all_objects.filter(
+                user__email=value,
+                organizacion=org
+            ).first()
+
+            if existing_perfil:
+                raise serializers.ValidationError(
+                    f"Ya existe un usuario con este email en la organización {org.nombre}"
+                )
+
+        return value.lower()
+
+    def validate(self, data):
+        """Validaciones cruzadas"""
+        role = data.get('role')
+        additional_roles = data.get('additional_roles', [])
+
+        # Validar que sede_principal es requerida para ciertos roles
+        if role in ['colaborador', 'sede_admin'] and not data.get('sede_principal_id'):
+            raise serializers.ValidationError({
+                'sede_principal_id': f'La sede principal es requerida para el rol {role}'
+            })
+
+        # No permitir rol duplicado en additional_roles
+        if role in additional_roles:
+            raise serializers.ValidationError({
+                'additional_roles': f'El rol {role} ya está como rol principal'
+            })
+
+        return data
+
+    def create(self, validated_data):
+        """
+        Crea el usuario, perfil y sincroniza con Colaborador si es necesario.
+        """
+        from django.contrib.auth.models import User
+        from organizacion.thread_locals import get_current_organization
+        from citas.models import Colaborador
+
+        org = get_current_organization()
+        if not org:
+            raise serializers.ValidationError("No se pudo determinar la organización")
+
+        # Crear usuario Django
+        email = validated_data['email']
+        username = f"{email.split('@')[0]}_{org.id}"
+
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name'],
+            password=validated_data['password'],
+        )
+
+        # Crear perfil
+        perfil = PerfilUsuario.objects.create(
+            user=user,
+            organizacion=org,
+            role=validated_data['role'],
+            additional_roles=validated_data.get('additional_roles', []),
+            sede_id=validated_data.get('sede_principal_id'),
+            permissions=validated_data.get('permissions', {}),
+            telefono=validated_data.get('telefono', ''),
+            timezone=validated_data.get('timezone', 'UTC'),
+        )
+
+        # Asignar sedes según rol
+        if validated_data.get('sedes_trabajo_ids'):
+            perfil.sedes.set(validated_data['sedes_trabajo_ids'])
+
+        if validated_data.get('sedes_administradas_ids'):
+            perfil.sedes_administradas.set(validated_data['sedes_administradas_ids'])
+
+        # Si es colaborador, crear registro en Colaborador
+        if 'colaborador' in perfil.all_roles:
+            Colaborador.objects.create(
+                usuario=user,
+                nombre=user.get_full_name(),
+                email=user.email,
+                sede=perfil.sede,
+                organizacion=org,
+            )
+
+        return perfil
+
+
+class PerfilWithRolesSerializer(serializers.ModelSerializer):
+    """
+    Serializer para mostrar información del perfil con el nuevo sistema de roles.
+    Incluye roles, sedes accesibles y permisos.
+    """
+
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    user_name = serializers.SerializerMethodField()
+    all_roles = serializers.ReadOnlyField()
+    display_badge = serializers.ReadOnlyField()
+    accessible_sedes = SedeSerializer(many=True, read_only=True)
+    can_access_all_sedes = serializers.ReadOnlyField()
+
+    class Meta:
+        model = PerfilUsuario
+        fields = [
+            'id',
+            'user_email',
+            'user_name',
+            'organizacion',
+            'role',
+            'additional_roles',
+            'all_roles',
+            'display_badge',
+            'is_active',
+            'sede',
+            'accessible_sedes',
+            'can_access_all_sedes',
+            'permissions',
+            'timezone',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_user_name(self, obj):
+        return obj.user.get_full_name() or obj.user.username

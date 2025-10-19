@@ -11,29 +11,61 @@ from .utils import get_perfil_or_first
 
 @admin.register(PerfilUsuario)
 class PerfilUsuarioAdmin(admin.ModelAdmin):
-    list_display = ('user', 'get_email', 'organizacion', 'get_sede_nombre', 'get_otros_perfiles')
-    search_fields = ('user__username', 'user__email', 'nombre')
-    list_filter = ('organizacion', 'sede')
-    filter_horizontal = ('sedes', 'sedes_administradas',)
-    actions = ['crear_perfil_en_otra_organizacion']
-    readonly_fields = ('get_otros_perfiles_detalle',)
+    list_display = (
+        'user',
+        'get_email',
+        'organizacion',
+        'display_badge',
+        'get_additional_roles_display',
+        'is_active',
+        'get_sedes_count',
+        'get_otros_perfiles'
+    )
+    search_fields = ('user__username', 'user__email', 'user__first_name', 'user__last_name')
+    list_filter = ('role', 'is_active', 'organizacion', 'created_at')
+    filter_horizontal = ('sedes', 'sedes_administradas')
+    actions = ['activar_perfiles', 'desactivar_perfiles']
+    readonly_fields = ('get_otros_perfiles_detalle', 'created_at', 'updated_at', 'get_accessible_sedes_display')
+
     fieldsets = (
-        ('Información de Usuario', {
-            'fields': ('user', 'organizacion', 'timezone')
+        ('👤 Usuario y Organización', {
+            'fields': ('user', 'organizacion', 'is_active'),
+            'description': 'Usuario y su membresía en la organización'
         }),
-        ('Sedes', {
-            'fields': ('sede', 'sedes', 'sedes_administradas'),
-            'description': 'Sede principal y sedes adicionales a las que tiene acceso'
+        ('🎭 Sistema de Roles', {
+            'fields': ('role', 'additional_roles'),
+            'description': '✨ ROL PRINCIPAL: Selecciona el rol principal del usuario. '
+                          'ROLES ADICIONALES: Puedes agregar roles adicionales como ["cliente"] si un colaborador también es cliente.'
         }),
-        ('Datos Personales', {
+        ('🏢 Sedes según Rol', {
+            'fields': ('sede', 'sedes', 'sedes_administradas', 'get_accessible_sedes_display'),
+            'description': '📍 SEDE: Sede principal del usuario | '
+                          'SEDES: Para colaboradores que trabajan en múltiples sedes | '
+                          'SEDES ADMINISTRADAS: Para administradores de sede'
+        }),
+        ('🔐 Permisos Personalizados', {
+            'fields': ('permissions',),
+            'classes': ('collapse',),
+            'description': 'Permisos granulares adicionales en formato JSON. '
+                          'Ejemplo: {"can_view_reports": true, "can_export_data": false}'
+        }),
+        ('⚙️ Configuración', {
+            'fields': ('timezone',),
+            'classes': ('collapse',)
+        }),
+        ('📋 Datos Personales', {
             'fields': ('telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento'),
             'classes': ('collapse',)
         }),
-        ('Consentimiento de Datos', {
+        ('✅ Consentimiento de Datos', {
             'fields': ('has_consented_data_processing', 'data_processing_opt_out'),
             'classes': ('collapse',)
         }),
-        ('Información Multi-organización', {
+        ('📅 Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+        ('🔗 Información Multi-organización', {
             'fields': ('get_otros_perfiles_detalle',),
             'classes': ('collapse',)
         }),
@@ -76,30 +108,86 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
         return format_html(''.join(info))
     get_otros_perfiles_detalle.short_description = 'Otros perfiles del mismo email'
 
-    def crear_perfil_en_otra_organizacion(self, request, queryset):
+    def get_additional_roles_display(self, obj):
+        """Muestra roles adicionales de manera legible"""
+        if not obj.additional_roles or len(obj.additional_roles) == 0:
+            return '-'
+        role_names = {
+            'owner': 'Propietario',
+            'admin': 'Admin',
+            'sede_admin': 'Admin Sede',
+            'colaborador': 'Colaborador',
+            'cliente': 'Cliente'
+        }
+        return ', '.join([role_names.get(r, r) for r in obj.additional_roles])
+    get_additional_roles_display.short_description = 'Roles Adicionales'
+
+    def get_sedes_count(self, obj):
+        """Muestra cantidad de sedes accesibles"""
+        count = obj.accessible_sedes.count()
+        if obj.can_access_all_sedes:
+            return f'✨ Todas ({count})'
+        return str(count)
+    get_sedes_count.short_description = 'Sedes Accesibles'
+
+    def get_accessible_sedes_display(self, obj):
+        """Muestra lista de sedes accesibles (readonly)"""
+        sedes = obj.accessible_sedes
+        if not sedes.exists():
+            return "Ninguna sede accesible"
+
+        sede_list = [f"• {sede.nombre}" for sede in sedes[:10]]
+        if sedes.count() > 10:
+            sede_list.append(f"... y {sedes.count() - 10} más")
+
+        from django.utils.html import format_html
+        return format_html('<br>'.join(sede_list))
+    get_accessible_sedes_display.short_description = 'Sedes Accesibles (según roles)'
+
+    def activar_perfiles(self, request, queryset):
+        """Activa perfiles seleccionados"""
+        count = queryset.update(is_active=True)
+        self.message_user(request, f"{count} perfil(es) activado(s) exitosamente.", messages.SUCCESS)
+    activar_perfiles.short_description = "✅ Activar perfiles seleccionados"
+
+    def desactivar_perfiles(self, request, queryset):
+        """Desactiva perfiles seleccionados"""
+        count = queryset.update(is_active=False)
+        self.message_user(request, f"{count} perfil(es) desactivado(s) exitosamente.", messages.WARNING)
+    desactivar_perfiles.short_description = "❌ Desactivar perfiles seleccionados"
+
+    def save_model(self, request, obj, form, change):
         """
-        Crea un nuevo usuario con el mismo email en otra organización.
-        Útil para usuarios que necesitan acceso a múltiples organizaciones.
+        Auto-sincroniza el perfil con otros modelos del sistema cuando se guarda.
+        - Si es colaborador: crea/actualiza registro en Colaborador
+        - Si cambia de sede: actualiza Colaborador
         """
-        if queryset.count() != 1:
-            self.message_user(request, "Por favor selecciona solo un perfil.", messages.ERROR)
-            return
+        super().save_model(request, obj, form, change)
 
-        perfil_original = queryset.first()
-        original_user = perfil_original.user
+        # Sincronizar con Colaborador si tiene rol de colaborador
+        if 'colaborador' in obj.all_roles:
+            from citas.models import Colaborador
 
-        # Mostrar formulario o mensaje
-        self.message_user(
-            request,
-            f"Para crear acceso a otra organización para {original_user.email}: "
-            f"1) Ve a Usuarios > Agregar usuario, "
-            f"2) Username: {original_user.email.split('@')[0]}_NOMBREORG, "
-            f"3) Email: {original_user.email}, "
-            f"4) Luego crea su perfil con la nueva organización.",
-            messages.INFO
-        )
+            # Crear o actualizar colaborador
+            colaborador, created = Colaborador.all_objects.get_or_create(
+                usuario=obj.user,
+                organizacion=obj.organizacion,
+                defaults={
+                    'nombre': obj.user.get_full_name() or obj.user.username,
+                    'email': obj.user.email,
+                    'sede': obj.sede,
+                }
+            )
 
-    crear_perfil_en_otra_organizacion.short_description = "Instrucciones: Crear en otra organización"
+            # Si ya existe, actualizar sede si cambió
+            if not created and obj.sede and colaborador.sede != obj.sede:
+                colaborador.sede = obj.sede
+                colaborador.save()
+                self.message_user(
+                    request,
+                    f"Se actualizó la sede del colaborador a '{obj.sede.nombre}'",
+                    messages.INFO
+                )
 
     def get_queryset(self, request):
         qs = self.model.all_objects.all()

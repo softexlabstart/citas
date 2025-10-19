@@ -8,6 +8,21 @@ from django.utils import timezone
 import uuid
 
 class PerfilUsuario(models.Model):
+    """
+    Representa la membresía de un usuario en una organización.
+    Un usuario puede tener MÚLTIPLES perfiles (uno por organización).
+
+    Sistema de Roles:
+    - owner: Propietario de la organización (acceso total)
+    - admin: Administrador global de la organización
+    - sede_admin: Administrador de sedes específicas
+    - colaborador: Empleado/recurso que atiende citas
+    - cliente: Usuario final que agenda citas
+
+    Un usuario puede tener múltiples roles simultáneos usando 'additional_roles'.
+    Ejemplo: role='colaborador', additional_roles=['cliente']
+    """
+
     TIMEZONE_CHOICES = [(tz, tz) for tz in pytz.common_timezones]
     GENERO_CHOICES = [
         ('M', 'Masculino'),
@@ -15,23 +30,105 @@ class PerfilUsuario(models.Model):
         ('O', 'Otro'),
     ]
 
-    # IMPORTANTE: Cambiado de OneToOneField a ForeignKey para permitir múltiples perfiles por usuario
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='perfiles')
-    organizacion = models.ForeignKey(Organizacion, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
-    timezone = models.CharField(max_length=100, choices=TIMEZONE_CHOICES, default='UTC')
-    sede = models.ForeignKey(Sede, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios', help_text='Sede principal del usuario')
-    sedes = models.ManyToManyField(Sede, related_name='usuarios_multisede', blank=True, help_text='Sedes a las que tiene acceso el usuario')
-    sedes_administradas = models.ManyToManyField(Sede, related_name='administradores', blank=True, help_text='Sedes que puede administrar')
+    ROLE_CHOICES = [
+        ('owner', 'Propietario'),
+        ('admin', 'Administrador'),
+        ('sede_admin', 'Administrador de Sede'),
+        ('colaborador', 'Colaborador'),
+        ('cliente', 'Cliente'),
+    ]
 
-    # New fields for client data
+    # ==================== RELACIONES BÁSICAS ====================
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='perfiles')
+    organizacion = models.ForeignKey(
+        Organizacion,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='miembros'
+    )
+
+    # ==================== SISTEMA DE ROLES ====================
+    role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        default='cliente',
+        verbose_name='Rol Principal',
+        help_text='Rol principal del usuario en esta organización',
+        db_index=True
+    )
+
+    additional_roles = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name='Roles Adicionales',
+        help_text='Roles adicionales del usuario (ej: ["cliente", "colaborador"])'
+    )
+
+    # ==================== ESTADO DE MEMBRESÍA ====================
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Membresía Activa',
+        help_text='Indica si el usuario tiene acceso activo a esta organización',
+        db_index=True
+    )
+
+    # ==================== SEDES POR ROL ====================
+    sede = models.ForeignKey(
+        Sede,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='usuarios_principales',
+        verbose_name='Sede Principal',
+        help_text='Sede principal del usuario'
+    )
+
+    # Para colaboradores: sedes donde trabaja
+    sedes = models.ManyToManyField(
+        Sede,
+        related_name='colaboradores_multisede',
+        blank=True,
+        verbose_name='Sedes de Trabajo',
+        help_text='Sedes donde este usuario trabaja (para colaboradores)'
+    )
+
+    # Para admins de sede: sedes que administra
+    sedes_administradas = models.ManyToManyField(
+        Sede,
+        related_name='administradores',
+        blank=True,
+        verbose_name='Sedes Administradas',
+        help_text='Sedes que este usuario administra (para sede_admin)'
+    )
+
+    # ==================== PERMISOS PERSONALIZADOS ====================
+    permissions = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Permisos Personalizados',
+        help_text='Permisos granulares adicionales en formato JSON'
+    )
+
+    # ==================== CONFIGURACIÓN ====================
+    timezone = models.CharField(max_length=100, choices=TIMEZONE_CHOICES, default='UTC')
+
+    # ==================== DATOS PERSONALES ====================
     telefono = models.CharField(max_length=20, blank=True, null=True, db_index=True)
     ciudad = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     barrio = models.CharField(max_length=100, blank=True, null=True)
     genero = models.CharField(max_length=1, choices=GENERO_CHOICES, blank=True, null=True)
     fecha_nacimiento = models.DateField(blank=True, null=True)
-    has_consented_data_processing = models.BooleanField(default=False) # New field for consent
-    data_processing_opt_out = models.BooleanField(default=False) # New field for opting out of data processing
 
+    # ==================== CONSENTIMIENTO DE DATOS ====================
+    has_consented_data_processing = models.BooleanField(default=False)
+    data_processing_opt_out = models.BooleanField(default=False)
+
+    # ==================== METADATA ====================
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Creado')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Actualizado')
+
+    # ==================== MANAGERS ====================
     objects = OrganizacionManager(organization_filter_path='organizacion')
     all_objects = models.Manager()
 
@@ -60,24 +157,150 @@ class PerfilUsuario(models.Model):
             return today.year - self.fecha_nacimiento.year - ((today.month, today.day) < (self.fecha_nacimiento.month, self.fecha_nacimiento.day))
         return None
 
+    # ==================== HELPER METHODS ====================
+
+    @property
+    def all_roles(self):
+        """
+        Retorna todos los roles del usuario (principal + adicionales).
+
+        Returns:
+            list: Lista de roles, ej: ['colaborador', 'cliente']
+        """
+        roles = [self.role]
+        if self.additional_roles and isinstance(self.additional_roles, list):
+            roles.extend(self.additional_roles)
+        return list(set(roles))  # Eliminar duplicados
+
+    def has_role(self, role):
+        """
+        Verifica si el usuario tiene un rol específico (principal o adicional).
+
+        Args:
+            role (str): Rol a verificar ('owner', 'admin', 'sede_admin', 'colaborador', 'cliente')
+
+        Returns:
+            bool: True si tiene el rol
+        """
+        return role in self.all_roles
+
+    def has_permission(self, permission_key):
+        """
+        Verifica si tiene un permiso personalizado específico.
+
+        Args:
+            permission_key (str): Clave del permiso en el JSON
+
+        Returns:
+            bool: True si tiene el permiso
+        """
+        if not isinstance(self.permissions, dict):
+            return False
+        return self.permissions.get(permission_key, False)
+
+    @property
+    def can_access_all_sedes(self):
+        """
+        Retorna True si puede acceder a todas las sedes de la organización.
+        Propietarios y administradores tienen acceso total.
+
+        Returns:
+            bool: True si tiene acceso a todas las sedes
+        """
+        return self.role in ['owner', 'admin']
+
+    @property
+    def accessible_sedes(self):
+        """
+        Retorna QuerySet de todas las sedes accesibles según sus roles.
+
+        Returns:
+            QuerySet: Sedes a las que el usuario tiene acceso
+        """
+        if not self.organizacion:
+            return Sede.all_objects.none()
+
+        if self.can_access_all_sedes:
+            return Sede.all_objects.filter(organizacion=self.organizacion)
+
+        sede_ids = set()
+
+        # Sedes donde trabaja como colaborador
+        if self.has_role('colaborador'):
+            sede_ids.update(self.sedes.values_list('id', flat=True))
+
+        # Sedes que administra
+        if self.has_role('sede_admin'):
+            sede_ids.update(self.sedes_administradas.values_list('id', flat=True))
+
+        # Sede principal
+        if self.sede:
+            sede_ids.add(self.sede.id)
+
+        # Si no tiene sedes específicas pero es cliente, puede acceder a todas
+        if self.has_role('cliente') and not sede_ids:
+            return Sede.all_objects.filter(organizacion=self.organizacion)
+
+        return Sede.all_objects.filter(id__in=sede_ids)
+
     @property
     def sedes_acceso(self):
         """
+        LEGACY: Mantener compatibilidad con código anterior.
         Retorna las sedes del campo M2M 'sedes' sin filtrado del OrganizacionManager.
-
-        Este property es necesario porque cuando accedemos a perfil.sedes.all(),
-        Django usa el manager por defecto del modelo Sede (OrganizacionManager),
-        que filtra las sedes por la organización del thread-local.
-
-        Esta property obtiene los IDs de las sedes y luego consulta con all_objects
-        para evitar el filtrado, respetando así el patrón del OrganizacionManager
-        en el resto del sistema.
 
         Returns:
             QuerySet: Sedes a las que el usuario tiene acceso
         """
         sede_ids = self.sedes.values_list('id', flat=True)
         return Sede.all_objects.filter(id__in=sede_ids)
+
+    @property
+    def display_badge(self):
+        """
+        Badge visual del rol para mostrar en admin y frontend.
+
+        Returns:
+            str: Badge con emoji, ej: "🟢 Colaborador +1"
+        """
+        badges = {
+            'owner': '👑 Propietario',
+            'admin': '🔴 Admin',
+            'sede_admin': '🟠 Admin Sede',
+            'colaborador': '🟢 Colaborador',
+            'cliente': '🔵 Cliente',
+        }
+        badge = badges.get(self.role, self.role)
+
+        if self.additional_roles and len(self.additional_roles) > 0:
+            badge += f" +{len(self.additional_roles)}"
+
+        return badge
+
+    @property
+    def is_owner(self):
+        """Verifica si es propietario de la organización"""
+        return self.role == 'owner'
+
+    @property
+    def is_admin(self):
+        """Verifica si es administrador"""
+        return self.role == 'admin'
+
+    @property
+    def is_sede_admin(self):
+        """Verifica si es administrador de sede"""
+        return self.has_role('sede_admin')
+
+    @property
+    def is_colaborador(self):
+        """Verifica si es colaborador"""
+        return self.has_role('colaborador')
+
+    @property
+    def is_cliente(self):
+        """Verifica si es cliente"""
+        return self.has_role('cliente')
 
 
 class Usuario(models.Model):

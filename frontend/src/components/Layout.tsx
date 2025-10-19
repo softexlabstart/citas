@@ -4,8 +4,11 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import moment from 'moment';
-import { HouseDoor, Briefcase, CalendarCheck, CalendarWeek, BarChart, Gear, QuestionCircle, Search, People, Megaphone, Building, PlusCircle, CurrencyDollar } from 'react-bootstrap-icons';
+import { HouseDoor, Briefcase, CalendarCheck, CalendarWeek, Gear, QuestionCircle, Search, People, Megaphone, Building, PlusCircle, CurrencyDollar, PersonPlus } from 'react-bootstrap-icons';
 import Footer from './Footer';
+import OrganizationSelector from './OrganizationSelector';
+import RoleBadge from './RoleBadge';
+import { useRolePermissions } from '../hooks/useRolePermissions';
 import '../styles/custom.css';
 
 interface LayoutProps {
@@ -17,6 +20,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const [show, setShow] = useState(false);
   const { t, i18n } = useTranslation();
+  const { canManageUsers, canViewReports, isSedeAdminOrHigher } = useRolePermissions();
 
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
@@ -40,7 +44,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </Navbar.Brand>
             </div>
             <div className="navbar-section-right">
-              <Nav className="flex-row align-items-center">
+              <Nav className="flex-row align-items-center gap-2">
+                {user?.perfil?.role && (
+                  <div className="d-none d-md-block">
+                    <RoleBadge
+                      role={user.perfil.role}
+                      additionalRoles={user.perfil.additional_roles as any || []}
+                      size="sm"
+                    />
+                  </div>
+                )}
+                <OrganizationSelector />
                 <NavDropdown title={t('language')} id="language-dropdown" align="end">
                   <NavDropdown.Item onClick={() => changeLanguage('es')}>Español</NavDropdown.Item>
                   <NavDropdown.Item onClick={() => changeLanguage('en')}>English</NavDropdown.Item>
@@ -91,19 +105,26 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       </Nav.Link>
                     </>
                   )}
-                  {(user?.is_staff || user?.perfil?.is_sede_admin || user?.groups.includes('SedeAdmin')) && !user?.groups.includes('Recurso') && (
+                  {isSedeAdminOrHigher && (
                     <>
                       <hr className="my-2" />
                       <h6 className="text-muted ps-3 mt-2 mb-1">{t('admin_tools')}</h6>
+                      {canManageUsers && (
+                        <Nav.Link as={Link} to="/users" onClick={handleClose} className="nav-link-custom">
+                          <PersonPlus className="nav-icon" /> Gestión de Usuarios
+                        </Nav.Link>
+                      )}
                       <Nav.Link as={Link} to="/clients" onClick={handleClose} className="nav-link-custom">
                         <People className="nav-icon" /> {t('clients')}
                       </Nav.Link>
                       <Nav.Link as={Link} to="/marketing" onClick={handleClose} className="nav-link-custom">
                         <Megaphone className="nav-icon" /> {t('marketing')}
                       </Nav.Link>
-                      <Nav.Link as={Link} to="/reports" onClick={handleClose} className="nav-link-custom">
-                        <CurrencyDollar className="nav-icon" /> {t('financial_dashboard') || 'Dashboard Financiero'}
-                      </Nav.Link>
+                      {canViewReports && (
+                        <Nav.Link as={Link} to="/reports" onClick={handleClose} className="nav-link-custom">
+                          <CurrencyDollar className="nav-icon" /> {t('financial_dashboard') || 'Dashboard Financiero'}
+                        </Nav.Link>
+                      )}
                       <Nav.Link as={Link} to="/admin-settings" onClick={handleClose} className="nav-link-custom">
                         <Gear className="nav-icon" /> {t('admin_settings')}
                       </Nav.Link>
