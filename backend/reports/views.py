@@ -10,6 +10,9 @@ from rest_framework.permissions import IsAuthenticated
 from citas.models import Cita, Colaborador
 from .permissions import IsAdminOrSedeAdmin
 
+# MULTI-TENANT: Import helper for profile management
+from usuarios.utils import get_perfil_or_first
+
 
 class FinancialSummaryView(APIView):
     """
@@ -244,13 +247,10 @@ class FinancialSummaryView(APIView):
         # Intentar obtener organización del usuario
         user_org = None
 
-        # 1. Buscar en perfil
-        try:
-            perfil = user.perfil
-            if perfil.organizacion:
-                user_org = perfil.organizacion
-        except AttributeError:
-            pass
+        # 1. Buscar en perfiles (plural) usando helper
+        perfil = get_perfil_or_first(user)
+        if perfil and perfil.organizacion:
+            user_org = perfil.organizacion
 
         # 2. Si no tiene organización en perfil, buscar en Colaborador
         if not user_org:

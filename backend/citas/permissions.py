@@ -2,6 +2,9 @@ from rest_framework.permissions import BasePermission, SAFE_METHODS
 from usuarios.models import PerfilUsuario
 from .models import Colaborador
 
+# MULTI-TENANT: Import helper for profile management
+from usuarios.utils import has_perfil_in_current_org, get_perfil_or_first
+
 class IsSuperUser(BasePermission):
     """
     Permite acceso solo a superusuarios.
@@ -264,18 +267,22 @@ class CanAccessOrganizationData(BasePermission):
             return True
 
         # Otros usuarios deben tener un perfil con organización
-        try:
-            return hasattr(request.user, 'perfil') and request.user.perfil.organizacion is not None
-        except (AttributeError, PerfilUsuario.DoesNotExist):
-            return False
+        return has_perfil_in_current_org(request.user)
 
     def has_object_permission(self, request, view, obj):
         if request.user.is_superuser:
             return True
 
-        try:
-            user_org = request.user.perfil.organizacion
+        # MULTI-TENANT: Obtener perfil usando helper
+        perfil = get_perfil_or_first(request.user)
+        if not perfil:
+            return False
 
+        user_org = perfil.organizacion
+        if not user_org:
+            return False
+
+        try:
             # Verificar que el objeto pertenece a la misma organización
             if hasattr(obj, 'organizacion'):
                 return obj.organizacion == user_org

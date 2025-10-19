@@ -14,6 +14,9 @@ from .models import Cita
 from .serializers import GuestCitaSerializer
 from usuarios.models import MagicLinkToken
 
+# MULTI-TENANT: Import helper for profile management
+from usuarios.utils import get_perfil_or_first
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,9 +64,10 @@ class PublicCitaViewSet(viewsets.ModelViewSet):
                 user_created = False
                 existing_users = User.objects.filter(email=email)
 
-                # Primero, buscar si existe un usuario con perfil en esta organización
+                # MULTI-TENANT: Buscar si existe un usuario con perfil en esta organización
                 for existing_user in existing_users:
-                    if hasattr(existing_user, 'perfil') and existing_user.perfil and existing_user.perfil.organizacion == organizacion:
+                    existing_perfil = existing_user.perfiles.filter(organizacion=organizacion).first()
+                    if existing_perfil:
                         user = existing_user
                         logger.info(f"Usuario existente encontrado: {user.username} ({user.email}) en organización {organizacion.nombre}")
                         break
@@ -90,18 +94,20 @@ class PublicCitaViewSet(viewsets.ModelViewSet):
 
                     if not user_created:
                         # El username ya existía (caso raro) - buscar si tiene perfil en esta org
-                        if hasattr(user, 'perfil') and user.perfil and user.perfil.organizacion == organizacion:
+                        user_perfil = user.perfiles.filter(organizacion=organizacion).first()
+                        if user_perfil:
                             logger.info(f"Usuario con username {username} ya existe en esta organización")
                         else:
                             logger.warning(f"Usuario con username {username} existe pero sin perfil en esta organización")
                     else:
                         logger.info(f"Nuevo usuario creado: {username} ({email})")
 
-                # Manejo del perfil del usuario
-                if user_created or not hasattr(user, 'perfil') or user.perfil is None:
-                    # Usuario nuevo O usuario sin perfil: crear perfil con sede asignada
+                # MULTI-TENANT: Manejo del perfil del usuario
+                if user_created or not user.perfiles.filter(organizacion=organizacion).exists():
+                    # Usuario nuevo O usuario sin perfil en esta org: crear perfil con sede asignada
+                    from usuarios.models import PerfilUsuario
                     perfil = PerfilUsuario.objects.create(
-                        usuario=user,
+                        user=user,
                         organizacion=organizacion,
                         sede=cita.sede,
                         nombre=cita.nombre or 'Invitado',

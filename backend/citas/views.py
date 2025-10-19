@@ -62,17 +62,19 @@ class ColaboradorViewSet(viewsets.ModelViewSet):
             )
 
         # ADMINISTRADOR DE SEDE: solo colaboradores de sus sedes
-        if user.is_authenticated and hasattr(user, 'perfil') and user.perfil.sedes_administradas.exists():
-            org = user.perfil.organizacion
-            queryset = queryset.filter(sede__organizacion=org)
-            if sede_id:
-                # Validar que la sede pertenece a su organización
-                queryset = queryset.filter(sede_id=sede_id)
-            # Excluir colaboradores con bloqueo activo
-            return queryset.exclude(
-                bloqueos__fecha_inicio__lte=now,
-                bloqueos__fecha_fin__gte=now
-            )
+        if user.is_authenticated:
+            perfil = get_perfil_or_first(user)
+            if perfil and perfil.sedes_administradas.exists():
+                org = perfil.organizacion
+                queryset = queryset.filter(sede__organizacion=org)
+                if sede_id:
+                    # Validar que la sede pertenece a su organización
+                    queryset = queryset.filter(sede_id=sede_id)
+                # Excluir colaboradores con bloqueo activo
+                return queryset.exclude(
+                    bloqueos__fecha_inicio__lte=now,
+                    bloqueos__fecha_fin__gte=now
+                )
 
         # COLABORADOR: puede ver colaboradores de su organización (para coordinación)
         if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
@@ -168,21 +170,23 @@ class ServicioViewSet(viewsets.ModelViewSet):
             return queryset
 
         # ADMINISTRADOR DE SEDE: solo servicios de sus sedes
-        if user.is_authenticated and hasattr(user, 'perfil') and user.perfil:
-            from django.db import connection
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
-                    WHERE perfilusuario_id = %s
-                """, [user.perfil.id])
-                sedes_admin_ids = [row[0] for row in cursor.fetchall()]
+        if user.is_authenticated:
+            perfil = get_perfil_or_first(user)
+            if perfil:
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
+                        WHERE perfilusuario_id = %s
+                    """, [perfil.id])
+                    sedes_admin_ids = [row[0] for row in cursor.fetchall()]
 
-            if sedes_admin_ids:
-                queryset = queryset.filter(sede_id__in=sedes_admin_ids)
-                if sede_id:
-                    # Validar que la sede pertenece a las sedes administradas
-                    queryset = queryset.filter(sede_id=sede_id)
-                return queryset
+                if sedes_admin_ids:
+                    queryset = queryset.filter(sede_id__in=sedes_admin_ids)
+                    if sede_id:
+                        # Validar que la sede pertenece a las sedes administradas
+                        queryset = queryset.filter(sede_id=sede_id)
+                    return queryset
 
         # COLABORADOR: servicios de sus sedes asignadas o su organización
         if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
@@ -191,18 +195,19 @@ class ServicioViewSet(viewsets.ModelViewSet):
 
             # Obtener sedes a las que tiene acceso desde su perfil
             sedes_acceso = []
-            if hasattr(user, 'perfil') and user.perfil:
+            perfil = get_perfil_or_first(user)
+            if perfil:
                 # Consulta directa a la tabla intermedia para evitar OrganizacionManager
                 from django.db import connection
                 with connection.cursor() as cursor:
                     cursor.execute("""
                         SELECT sede_id FROM usuarios_perfilusuario_sedes
                         WHERE perfilusuario_id = %s
-                    """, [user.perfil.id])
+                    """, [perfil.id])
                     sedes_acceso = [row[0] for row in cursor.fetchall()]
 
-                if not sedes_acceso and user.perfil.sede:
-                    sedes_acceso = [user.perfil.sede.id]
+                if not sedes_acceso and perfil.sede:
+                    sedes_acceso = [perfil.sede.id]
 
             # Si tiene sedes específicas asignadas, mostrar solo servicios de esas sedes
             if sedes_acceso:
@@ -225,19 +230,20 @@ class ServicioViewSet(viewsets.ModelViewSet):
             # Obtener las sedes a las que tiene acceso el usuario
             sedes_acceso = []
 
-            if hasattr(user, 'perfil') and user.perfil:
+            perfil = get_perfil_or_first(user)
+            if perfil:
                 # Consulta directa a la tabla intermedia para evitar OrganizacionManager
                 from django.db import connection
                 with connection.cursor() as cursor:
                     cursor.execute("""
                         SELECT sede_id FROM usuarios_perfilusuario_sedes
                         WHERE perfilusuario_id = %s
-                    """, [user.perfil.id])
+                    """, [perfil.id])
                     sedes_acceso = [row[0] for row in cursor.fetchall()]
 
                 # Agregar sede principal si no tiene sedes múltiples
-                if not sedes_acceso and user.perfil.sede:
-                    sedes_acceso.append(user.perfil.sede.id)
+                if not sedes_acceso and perfil.sede:
+                    sedes_acceso.append(perfil.sede.id)
 
             # Si se proporciona sede_id, validar que tenga acceso
             if sede_id:
@@ -335,18 +341,20 @@ class CitaViewSet(viewsets.ModelViewSet):
         if user.is_superuser:
             queryset = base_queryset.all()
 
-        # ADMINISTRADOR DE SEDE: solo citas de las sedes que administra
-        elif hasattr(user, 'perfil') and user.perfil.sedes_administradas.exists():
-            queryset = base_queryset.filter(sede__in=user.perfil.sedes_administradas.all())
-
-        # COLABORADOR: solo citas asignadas a él
-        elif Colaborador.all_objects.filter(usuario=user).exists():
-            colaborador = Colaborador.all_objects.get(usuario=user)
-            queryset = base_queryset.filter(colaboradores=colaborador)
-
-        # CLIENTE: solo sus propias citas
         else:
-            queryset = base_queryset.filter(user=user)
+            # ADMINISTRADOR DE SEDE: solo citas de las sedes que administra
+            perfil = get_perfil_or_first(user)
+            if perfil and perfil.sedes_administradas.exists():
+                queryset = base_queryset.filter(sede__in=perfil.sedes_administradas.all())
+
+            # COLABORADOR: solo citas asignadas a él
+            elif Colaborador.all_objects.filter(usuario=user).exists():
+                colaborador = Colaborador.all_objects.get(usuario=user)
+                queryset = base_queryset.filter(colaboradores=colaborador)
+
+            # CLIENTE: solo sus propias citas
+            else:
+                queryset = base_queryset.filter(user=user)
 
         # Aplicar filtros adicionales
         search_term = self.request.query_params.get('search', None)
@@ -387,7 +395,8 @@ class CitaViewSet(viewsets.ModelViewSet):
 
         # Determinar el rol del usuario
         is_superuser = user.is_superuser
-        is_sede_admin = hasattr(user, 'perfil') and user.perfil.sedes_administradas.exists()
+        perfil = get_perfil_or_first(user)
+        is_sede_admin = perfil and perfil.sedes_administradas.exists()
         is_colaborador = Colaborador.all_objects.filter(usuario=user).exists()
 
         # Si se proporciona user_id, validar permisos
@@ -408,14 +417,15 @@ class CitaViewSet(viewsets.ModelViewSet):
                         raise PermissionDenied(_("Solo puedes crear citas para tu sede."))
 
                     # Verificar que el cliente pertenece a la misma organización
-                    if hasattr(client_user, 'perfil'):
-                        if client_user.perfil.organizacion != colaborador.sede.organizacion:
+                    client_perfil = get_perfil_or_first(client_user)
+                    if client_perfil:
+                        if client_perfil.organizacion != colaborador.sede.organizacion:
                             raise PermissionDenied(_("Solo puedes crear citas para clientes de tu organización."))
 
                 # VALIDACIÓN MULTI-TENANT: Administradores de sede solo para sus sedes
                 elif is_sede_admin and not is_superuser:
                     sede_cita = serializer.validated_data.get('sede')
-                    if sede_cita not in user.perfil.sedes_administradas.all():
+                    if perfil and sede_cita not in perfil.sedes_administradas.all():
                         raise PermissionDenied(_("Solo puedes crear citas para las sedes que administras."))
 
                 cita = serializer.save(user=client_user)
@@ -533,7 +543,8 @@ class DashboardSummaryView(APIView):
         is_admin_user = user.is_staff
         if not is_admin_user:
             is_in_admin_group = user.groups.filter(name='SedeAdmin').exists()
-            has_sedes_administradas = hasattr(user, 'perfil') and user.perfil and user.perfil.sedes_administradas.exists()
+            perfil = get_perfil_or_first(user)
+            has_sedes_administradas = perfil and perfil.sedes_administradas.exists()
             is_admin_user = is_in_admin_group or has_sedes_administradas
 
         # Admin/Staff specific stats
@@ -984,17 +995,19 @@ class RecursoViewSet(viewsets.ModelViewSet):
             )
 
         # ADMINISTRADOR DE SEDE: solo recursos de sus sedes
-        if user.is_authenticated and hasattr(user, 'perfil') and user.perfil:
-            from django.db import connection
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
-                    WHERE perfilusuario_id = %s
-                """, [user.perfil.id])
-                sedes_admin_ids = [row[0] for row in cursor.fetchall()]
+        if user.is_authenticated:
+            perfil = get_perfil_or_first(user)
+            if perfil:
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
+                        WHERE perfilusuario_id = %s
+                    """, [perfil.id])
+                    sedes_admin_ids = [row[0] for row in cursor.fetchall()]
 
-            if sedes_admin_ids:
-                queryset = queryset.filter(sede_id__in=sedes_admin_ids)
+                if sedes_admin_ids:
+                    queryset = queryset.filter(sede_id__in=sedes_admin_ids)
                 if sede_id:
                     # Validar que la sede pertenece a las sedes administradas
                     queryset = queryset.filter(sede_id=sede_id)

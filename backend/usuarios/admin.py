@@ -5,6 +5,9 @@ from .models import PerfilUsuario, OnboardingProgress
 from organizacion.models import Sede, Organizacion
 import hashlib
 
+# MULTI-TENANT: Import helper for profile management
+from .utils import get_perfil_or_first
+
 
 @admin.register(PerfilUsuario)
 class PerfilUsuarioAdmin(admin.ModelAdmin):
@@ -59,9 +62,12 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
 
         info = [f"<strong>Otros perfiles para {email}:</strong><ul>"]
         for user in otros_users:
-            if hasattr(user, 'perfil') and user.perfil:
-                org = user.perfil.organizacion.nombre if user.perfil.organizacion else "Sin org"
-                info.append(f"<li>Username: {user.username} - Organización: {org}</li>")
+            # MULTI-TENANT: Obtener todos los perfiles del usuario
+            perfiles = user.perfiles.select_related('organizacion').all()
+            if perfiles.exists():
+                for perfil in perfiles:
+                    org = perfil.organizacion.nombre if perfil.organizacion else "Sin org"
+                    info.append(f"<li>Username: {user.username} - Organización: {org}</li>")
             else:
                 info.append(f"<li>Username: {user.username} - Sin perfil</li>")
         info.append("</ul>")
