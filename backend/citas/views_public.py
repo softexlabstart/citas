@@ -118,28 +118,31 @@ class PublicCitaViewSet(viewsets.ModelViewSet):
                     logger.info(f"Perfil creado para usuario {user.email} con organización {organizacion.nombre} y sede {cita.sede.nombre}")
                 else:
                     # Usuario YA existe con perfil en esta organización
-                    # Agregar sede si no la tiene
-                    if cita.sede not in user.perfil.sedes.all():
-                        user.perfil.sedes.add(cita.sede)
-                        logger.info(f"Sede {cita.sede.nombre} agregada al perfil de {user.email}")
+                    # Obtener el perfil para esta organización específica
+                    perfil_actual = user.perfiles.filter(organizacion=organizacion).first()
+                    if perfil_actual:
+                        # Agregar sede si no la tiene
+                        if cita.sede not in perfil_actual.sedes.all():
+                            perfil_actual.sedes.add(cita.sede)
+                            logger.info(f"Sede {cita.sede.nombre} agregada al perfil de {user.email}")
 
-                    # Actualizar sede principal si no tiene una asignada
-                    if not user.perfil.sede:
-                        user.perfil.sede = cita.sede
-                        user.perfil.save()
-                        logger.info(f"Sede principal {cita.sede.nombre} asignada a {user.email}")
+                        # Actualizar sede principal si no tiene una asignada
+                        if not perfil_actual.sede:
+                            perfil_actual.sede = cita.sede
+                            perfil_actual.save()
+                            logger.info(f"Sede principal {cita.sede.nombre} asignada a {user.email}")
 
-                    # Actualizar información si ha cambiado
-                    updated = False
-                    if cita.nombre and user.perfil.nombre != cita.nombre:
-                        user.perfil.nombre = cita.nombre
-                        updated = True
-                    if cita.telefono_cliente and user.perfil.telefono != cita.telefono_cliente:
-                        user.perfil.telefono = cita.telefono_cliente
-                        updated = True
-                    if updated:
-                        user.perfil.save()
-                        logger.info(f"Información del perfil actualizada para {user.email}")
+                        # Actualizar información si ha cambiado
+                        updated = False
+                        if cita.nombre and perfil_actual.nombre != cita.nombre:
+                            perfil_actual.nombre = cita.nombre
+                            updated = True
+                        if cita.telefono_cliente and perfil_actual.telefono != cita.telefono_cliente:
+                            perfil_actual.telefono = cita.telefono_cliente
+                            updated = True
+                        if updated:
+                            perfil_actual.save()
+                            logger.info(f"Información del perfil actualizada para {user.email}")
 
                 # Asociar el usuario a la cita si no está ya asociado
                 if not cita.user:

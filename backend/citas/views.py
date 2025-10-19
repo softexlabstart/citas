@@ -282,13 +282,14 @@ class BloqueoViewSet(viewsets.ModelViewSet):
             return queryset
 
         # ADMINISTRADOR DE SEDE: solo bloqueos de sus sedes
-        if user.is_authenticated and hasattr(user, 'perfil') and user.perfil:
+        perfil = get_perfil_or_first(user)
+        if perfil:
             from django.db import connection
             with connection.cursor() as cursor:
                 cursor.execute("""
                     SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
                     WHERE perfilusuario_id = %s
-                """, [user.perfil.id])
+                """, [perfil.id])
                 sedes_admin_ids = [row[0] for row in cursor.fetchall()]
 
             if sedes_admin_ids:
@@ -586,14 +587,11 @@ class HorarioViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_staff:
             return super().get_queryset()
-        
-        try:
-            perfil = user.perfil
-            if perfil.sedes_administradas.exists():
-                # Corrected filter: Horario is linked to Sede via Colaborador
-                return super().get_queryset().filter(colaborador__sede__in=perfil.sedes_administradas.all())
-        except PerfilUsuario.DoesNotExist:
-            pass
+
+        perfil = get_perfil_or_first(user)
+        if perfil and perfil.sedes_administradas.exists():
+            # Corrected filter: Horario is linked to Sede via Colaborador
+            return super().get_queryset().filter(colaborador__sede__in=perfil.sedes_administradas.all())
         
         # Default to empty queryset if no permissions match
         return Horario.objects.none()
@@ -624,8 +622,8 @@ class AppointmentReportView(APIView):
         if user.is_superuser:
             base_queryset = Cita.all_objects.all()
         else:
-            try:
-                perfil = user.perfil
+            perfil = get_perfil_or_first(user)
+            if perfil:
                 # Consulta SQL directa para obtener sedes administradas
                 from django.db import connection
                 with connection.cursor() as cursor:
@@ -644,7 +642,8 @@ class AppointmentReportView(APIView):
                 else:
                     # Usuario normal - ver solo sus propias citas
                     base_queryset = Cita.all_objects.filter(user=user)
-            except (AttributeError, PerfilUsuario.DoesNotExist):
+            else:
+                # Sin perfil - ver solo sus propias citas
                 base_queryset = Cita.all_objects.filter(user=user)
 
         queryset = base_queryset.filter(fecha__range=(start_date, end_date))
@@ -666,10 +665,9 @@ class AppointmentReportView(APIView):
             writer.writerow([_('ID'), _('Nombre Cliente'), _('Fecha'), _('Servicios'), _('Sede'), _('Estado'), _('Confirmado'), _('Usuario')])
 
             user_timezone_str = 'UTC'
-            try:
-                user_timezone_str = request.user.perfil.timezone
-            except (AttributeError, PerfilUsuario.DoesNotExist):
-                pass
+            perfil = get_perfil_or_first(request.user)
+            if perfil and perfil.timezone:
+                user_timezone_str = perfil.timezone
             user_timezone = pytz.timezone(user_timezone_str)
 
             servicios_prefetch = Prefetch('servicios', queryset=Servicio.all_objects.all())
@@ -705,8 +703,8 @@ class SedeReportView(APIView):
         if user.is_superuser:
             administered_sedes = Sede.all_objects.all()
         else:
-            try:
-                perfil = user.perfil
+            perfil = get_perfil_or_first(user)
+            if perfil:
                 # Consulta SQL directa para obtener sedes administradas
                 from django.db import connection
                 with connection.cursor() as cursor:
@@ -720,8 +718,6 @@ class SedeReportView(APIView):
                     administered_sedes = Sede.all_objects.filter(id__in=sedes_admin_ids)
                 elif user.is_staff and perfil.organizacion:
                     administered_sedes = Sede.all_objects.filter(organizacion=perfil.organizacion)
-            except (AttributeError, PerfilUsuario.DoesNotExist):
-                pass
 
         if administered_sedes is None:
             raise PermissionDenied(_("You do not have permission to access this report."))
@@ -835,12 +831,9 @@ def admin_report_view(request):
     if request.user.is_staff:
         has_permission = True
     else:
-        try:
-            perfil = request.user.perfil
-            if perfil.sedes_administradas.exists():
-                has_permission = True
-        except PerfilUsuario.DoesNotExist:
-            pass
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.sedes_administradas.exists():
+            has_permission = True
 
     if not has_permission:
         raise PermissionDenied(_("You do not have permission to access this report."))

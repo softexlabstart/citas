@@ -1,5 +1,8 @@
 from rest_framework import permissions
 
+# MULTI-TENANT: Import helper for profile management
+from usuarios.utils import get_perfil_or_first
+
 
 class IsAdminOrSedeAdmin(permissions.BasePermission):
     """
@@ -19,12 +22,9 @@ class IsAdminOrSedeAdmin(permissions.BasePermission):
             return True
 
         # Verificar si es administrador de organización
-        try:
-            perfil = request.user.perfil
-            if perfil.organizacion:
-                return True
-        except AttributeError:
-            pass
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.organizacion:
+            return True
 
         # Verificar si es administrador de sede
         if hasattr(request.user, 'groups'):

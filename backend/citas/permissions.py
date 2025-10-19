@@ -25,10 +25,8 @@ class IsSedeAdmin(BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
 
-        try:
-            return request.user.perfil.sedes_administradas.exists()
-        except (AttributeError, PerfilUsuario.DoesNotExist):
-            return False
+        perfil = get_perfil_or_first(request.user)
+        return perfil and perfil.sedes_administradas.exists()
 
 
 class IsColaborador(BasePermission):
@@ -58,11 +56,9 @@ class IsClient(BasePermission):
         if request.user.is_superuser or request.user.is_staff:
             return False
 
-        try:
-            if request.user.perfil.sedes_administradas.exists():
-                return False
-        except (AttributeError, PerfilUsuario.DoesNotExist):
-            pass
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.sedes_administradas.exists():
+            return False
 
         if Colaborador.all_objects.filter(usuario=request.user).exists():
             return False
@@ -96,18 +92,18 @@ class IsAdminOrSedeAdminOrReadOnly(BasePermission):
         if request.user.is_superuser:
             return True
 
-        try:
+        perfil = get_perfil_or_first(request.user)
+        if perfil:
             # Usar consulta SQL directa para verificar sedes administradas
             from django.db import connection
             with connection.cursor() as cursor:
                 cursor.execute("""
                     SELECT COUNT(*) FROM usuarios_perfilusuario_sedes_administradas
                     WHERE perfilusuario_id = %s
-                """, [request.user.perfil.id])
+                """, [perfil.id])
                 count = cursor.fetchone()[0]
                 return count > 0
-        except (AttributeError, PerfilUsuario.DoesNotExist):
-            return False
+        return False
 
     def has_object_permission(self, request, view, obj):
         # Lectura permitida a todos
@@ -119,30 +115,31 @@ class IsAdminOrSedeAdminOrReadOnly(BasePermission):
             return True
 
         # Verificar que el usuario administra la sede del objeto
-        try:
-            from django.db import connection
-            # Obtener sede_id del objeto (puede ser Servicio, Recurso, Bloqueo, etc.)
-            sede_id = None
-            if hasattr(obj, 'sede_id'):
-                sede_id = obj.sede_id
-            elif hasattr(obj, 'sede'):
-                sede_id = obj.sede.id if hasattr(obj.sede, 'id') else obj.sede
-            elif hasattr(obj, 'colaborador') and obj.colaborador:
-                # Para Bloqueo que tiene colaborador.sede
-                sede_id = obj.colaborador.sede_id if hasattr(obj.colaborador, 'sede_id') else obj.colaborador.sede.id
-
-            if not sede_id:
-                return False
-
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    SELECT COUNT(*) FROM usuarios_perfilusuario_sedes_administradas
-                    WHERE perfilusuario_id = %s AND sede_id = %s
-                """, [request.user.perfil.id, sede_id])
-                count = cursor.fetchone()[0]
-                return count > 0
-        except (AttributeError, PerfilUsuario.DoesNotExist):
+        perfil = get_perfil_or_first(request.user)
+        if not perfil:
             return False
+
+        from django.db import connection
+        # Obtener sede_id del objeto (puede ser Servicio, Recurso, Bloqueo, etc.)
+        sede_id = None
+        if hasattr(obj, 'sede_id'):
+            sede_id = obj.sede_id
+        elif hasattr(obj, 'sede'):
+            sede_id = obj.sede.id if hasattr(obj.sede, 'id') else obj.sede
+        elif hasattr(obj, 'colaborador') and obj.colaborador:
+            # Para Bloqueo que tiene colaborador.sede
+            sede_id = obj.colaborador.sede_id if hasattr(obj.colaborador, 'sede_id') else obj.colaborador.sede.id
+
+        if not sede_id:
+            return False
+
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT COUNT(*) FROM usuarios_perfilusuario_sedes_administradas
+                WHERE perfilusuario_id = %s AND sede_id = %s
+            """, [perfil.id, sede_id])
+            count = cursor.fetchone()[0]
+            return count > 0
 
 
 class IsOwnerOrAdminForCita(BasePermission):
@@ -162,12 +159,9 @@ class IsOwnerOrAdminForCita(BasePermission):
             return True
 
         # Administradores de sede pueden gestionar citas de sus sedes
-        try:
-            perfil = request.user.perfil
-            if perfil.sedes_administradas.exists() and obj.sede in perfil.sedes_administradas.all():
-                return True
-        except (AttributeError, PerfilUsuario.DoesNotExist):
-            pass
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.sedes_administradas.exists() and obj.sede in perfil.sedes_administradas.all():
+            return True
 
         # Colaboradores pueden gestionar citas asignadas a ellos
         try:
@@ -192,10 +186,8 @@ class IsAdminOrSedeAdmin(BasePermission):
         if request.user.is_superuser:
             return True
 
-        try:
-            return request.user.perfil.sedes_administradas.exists()
-        except (AttributeError, PerfilUsuario.DoesNotExist):
-            return False
+        perfil = get_perfil_or_first(request.user)
+        return perfil and perfil.sedes_administradas.exists()
 
 
 class IsColaboradorOrAdmin(BasePermission):
@@ -215,11 +207,9 @@ class IsColaboradorOrAdmin(BasePermission):
             return True
 
         # Administradores de sede tienen acceso
-        try:
-            if request.user.perfil.sedes_administradas.exists():
-                return True
-        except (AttributeError, PerfilUsuario.DoesNotExist):
-            pass
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.sedes_administradas.exists():
+            return True
 
         # Colaboradores tienen acceso
         if Colaborador.all_objects.filter(usuario=request.user).exists():
@@ -234,12 +224,9 @@ class IsColaboradorOrAdmin(BasePermission):
             return True
 
         # Administradores de sede pueden gestionar citas de sus sedes
-        try:
-            perfil = request.user.perfil
-            if perfil.sedes_administradas.exists() and obj.sede in perfil.sedes_administradas.all():
-                return True
-        except (AttributeError, PerfilUsuario.DoesNotExist):
-            pass
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.sedes_administradas.exists() and obj.sede in perfil.sedes_administradas.all():
+            return True
 
         # Colaboradores pueden gestionar citas asignadas a ellos
         try:

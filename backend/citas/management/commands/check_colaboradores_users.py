@@ -2,6 +2,9 @@ from django.core.management.base import BaseCommand
 from citas.models import Colaborador
 from django.contrib.auth.models import User
 
+# MULTI-TENANT: Import helper for profile management
+from usuarios.utils import get_perfil_or_first
+
 
 class Command(BaseCommand):
     help = 'Identifica colaboradores vinculados a usuarios que no deberían ser colaboradores'
@@ -32,12 +35,14 @@ class Command(BaseCommand):
             if user.is_staff or user.is_superuser:
                 status = "✅ OK (es staff/superuser)"
             # Verificar si tiene sedes administradas (admin de sede)
-            elif hasattr(user, 'perfil') and user.perfil.sedes_administradas.exists():
-                status = "✅ OK (es admin de sede)"
-            # Si no es ni staff ni admin de sede, probablemente es un cliente
             else:
-                status = "⚠️ PROBLEMA (parece ser un cliente)"
-                problematic.append(colab)
+                perfil = get_perfil_or_first(user)
+                if perfil and perfil.sedes_administradas.exists():
+                    status = "✅ OK (es admin de sede)"
+                # Si no es ni staff ni admin de sede, probablemente es un cliente
+                else:
+                    status = "⚠️ PROBLEMA (parece ser un cliente)"
+                    problematic.append(colab)
 
             self.stdout.write(
                 f'  • Colaborador: {colab.nombre} (sede: {colab.sede.nombre})\n'
