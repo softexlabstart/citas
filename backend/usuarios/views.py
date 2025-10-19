@@ -23,6 +23,9 @@ from django.conf import settings
 from django.utils import timezone
 import logging
 
+# MULTI-TENANT: Import helpers for profile management
+from .utils import get_user_perfil_for_current_org, get_perfil_or_first
+
 logger = logging.getLogger(__name__)
 
 class ClientEmailListView(generics.ListAPIView):
@@ -246,10 +249,14 @@ class UserDetailView(APIView):
 
     def get(self, request, *args, **kwargs):
         user = request.user
-        # Preload related data for the user's profile
-        user = User.objects.prefetch_related('perfil__sedes_administradas', 'perfil__organizacion').get(pk=user.pk)
+        # MULTI-TENANT: Preload related data for user's profiles (plural)
+        user = User.objects.prefetch_related(
+            'perfiles__sedes_administradas',
+            'perfiles__organizacion',
+            'perfiles__sede'
+        ).get(pk=user.pk)
         # Devuelve solo datos públicos, nunca información sensible
-        data = UserSerializer(user).data
+        data = UserSerializer(user, context={'request': request}).data
         # Elimina campos sensibles si existen
         data.pop('password', None)
         data.pop('last_login', None)
@@ -258,24 +265,32 @@ class UserDetailView(APIView):
 
     def put(self, request, *args, **kwargs):
         user = request.user
-        serializer = UserSerializer(user, data=request.data, partial=False)
+        serializer = UserSerializer(user, data=request.data, partial=False, context={'request': request})
         if serializer.is_valid():
             serializer.save()
-            # Reload user with prefetch to avoid OrganizationManager issues
-            user = User.objects.prefetch_related('perfil__sedes_administradas', 'perfil__organizacion').get(pk=user.pk)
-            response_data = UserSerializer(user).data
+            # MULTI-TENANT: Reload user with prefetch to avoid OrganizationManager issues
+            user = User.objects.prefetch_related(
+                'perfiles__sedes_administradas',
+                'perfiles__organizacion',
+                'perfiles__sede'
+            ).get(pk=user.pk)
+            response_data = UserSerializer(user, context={'request': request}).data
             response_data.pop('password', None)
             return Response(response_data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request, *args, **kwargs):
         user = request.user
-        serializer = UserSerializer(user, data=request.data, partial=True)
+        serializer = UserSerializer(user, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
-            # Reload user with prefetch to avoid OrganizationManager issues
-            user = User.objects.prefetch_related('perfil__sedes_administradas', 'perfil__organizacion').get(pk=user.pk)
-            response_data = UserSerializer(user).data
+            # MULTI-TENANT: Reload user with prefetch to avoid OrganizationManager issues
+            user = User.objects.prefetch_related(
+                'perfiles__sedes_administradas',
+                'perfiles__organizacion',
+                'perfiles__sede'
+            ).get(pk=user.pk)
+            response_data = UserSerializer(user, context={'request': request}).data
             response_data.pop('password', None)
             return Response(response_data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -334,38 +349,36 @@ class ClientViewSet(viewsets.ModelViewSet):
 
         # Base queryset: usuarios que NO son staff, ni admins de sede, ni colaboradores
         # Optimización: usar exclude con lista en lugar de múltiples exclude
+        # MULTI-TENANT: prefetch_related para relación 1:N (perfiles plural)
         base_queryset = User.objects.filter(
             is_staff=False
         ).exclude(
             Q(email__isnull=True) | Q(email__exact='')
         ).exclude(
             groups__name__in=['SedeAdmin', 'Recurso']
-        ).select_related('perfil__organizacion', 'perfil__sede').distinct()
+        ).prefetch_related('perfiles__organizacion', 'perfiles__sede').distinct()
 
         # Filtrar por consentimiento si se especifica
         consent_filter = self.request.query_params.get('consent')
         if consent_filter == 'true':
-            base_queryset = base_queryset.filter(perfil__has_consented_data_processing=True)
+            base_queryset = base_queryset.filter(perfiles__has_consented_data_processing=True)
         elif consent_filter == 'false':
-            base_queryset = base_queryset.filter(perfil__has_consented_data_processing=False)
+            base_queryset = base_queryset.filter(perfiles__has_consented_data_processing=False)
 
         # SUPERUSUARIO: acceso completo
         if user.is_superuser:
             return base_queryset
 
-        # Verificar si el usuario tiene perfil
-        if not hasattr(user, 'perfil') or not user.perfil:
+        # MULTI-TENANT: Obtener perfil del usuario usando helper
+        perfil = get_perfil_or_first(user)
+        if not perfil or not perfil.organizacion:
             return User.objects.none()
 
-        user_org = user.perfil.organizacion
-
-        # Si no tiene organización, no puede ver clientes
-        if not user_org:
-            return User.objects.none()
+        user_org = perfil.organizacion
 
         # REGLA PRINCIPAL: Filtrar por organización
         # Esto cubre tanto administradores de sede como colaboradores
-        queryset = base_queryset.filter(perfil__organizacion=user_org)
+        queryset = base_queryset.filter(perfiles__organizacion=user_org)
 
         # COLABORADOR: filtrado adicional por sede si es necesario
         # Verificar si es colaborador usando ORM en lugar de SQL directo
@@ -376,7 +389,7 @@ class ClientViewSet(viewsets.ModelViewSet):
             # Si es colaborador, también permitir clientes de su sede específica
             # que puedan no tener organización pero sí sede
             queryset = base_queryset.filter(
-                Q(perfil__organizacion=user_org) | Q(perfil__sede=colaborador.sede)
+                Q(perfiles__organizacion=user_org) | Q(perfiles__sede=colaborador.sede)
             )
         except Colaborador.DoesNotExist:
             # No es colaborador, usar filtrado por organización únicamente
@@ -406,16 +419,18 @@ class ClientViewSet(viewsets.ModelViewSet):
         # VALIDACIÓN DE SEGURIDAD MULTI-TENANT
         # Superusuarios tienen acceso completo
         if not user.is_superuser:
-            # Verificar que ambos usuarios tienen perfil
-            if not hasattr(user, 'perfil') or not user.perfil:
+            # MULTI-TENANT: Verificar que ambos usuarios tienen perfil usando helpers
+            user_perfil = get_perfil_or_first(user)
+            if not user_perfil:
                 raise PermissionDenied("Tu cuenta no tiene un perfil asignado.")
 
-            if not hasattr(client, 'perfil') or not client.perfil:
+            client_perfil = get_perfil_or_first(client)
+            if not client_perfil:
                 raise PermissionDenied("El cliente solicitado no tiene un perfil asignado.")
 
             # Verificar que pertenecen a la misma organización
-            user_org = user.perfil.organizacion
-            client_org = client.perfil.organizacion
+            user_org = user_perfil.organizacion
+            client_org = client_perfil.organizacion
 
             if not user_org:
                 raise PermissionDenied("Tu cuenta no está asociada a ninguna organización.")
@@ -510,43 +525,42 @@ class MultiTenantRegistrationView(APIView):
 class OrganizationManagementView(APIView):
     """Vista para gestión de la organización del usuario."""
     permission_classes = [IsAuthenticated]
-    
+
     def get(self, request, *args, **kwargs):
         """Obtener información de la organización del usuario."""
         try:
-            perfil = request.user.perfil
+            # MULTI-TENANT: Usar helper para obtener perfil
+            perfil = get_user_perfil_for_current_org(request.user)
             organizacion = perfil.organizacion
-            
+
             if not organizacion:
                 return Response({
                     'error': 'Usuario no pertenece a ninguna organización'
                 }, status=status.HTTP_404_NOT_FOUND)
-            
+
             # Obtener sedes de la organización
             sedes = organizacion.sedes.all()
-            
+
             return Response({
                 'organizacion': OrganizacionSerializer(organizacion).data,
                 'sedes': SedeDetailSerializer(sedes, many=True).data,
                 'user_role': self._get_user_role(request.user)
             })
-        except PerfilUsuario.DoesNotExist:
+        except PermissionDenied as e:
             return Response({
-                'error': 'Usuario no tiene perfil configurado'
+                'error': str(e)
             }, status=status.HTTP_404_NOT_FOUND)
-    
+
     def _get_user_role(self, user):
         """Determinar el rol del usuario en la organización."""
         if user.is_staff:
             return 'super_admin'
-        
-        try:
-            perfil = user.perfil
-            if perfil.sedes_administradas.exists():
-                return 'sede_admin'
-            return 'member'
-        except PerfilUsuario.DoesNotExist:
-            return 'member'
+
+        # MULTI-TENANT: Usar helper con fallback seguro
+        perfil = get_perfil_or_first(user)
+        if perfil and perfil.sedes_administradas.exists():
+            return 'sede_admin'
+        return 'member'
 
 
 class InvitationView(APIView):
@@ -559,7 +573,8 @@ class InvitationView(APIView):
     def post(self, request, *args, **kwargs):
         """Crear y enviar invitación a un usuario."""
         try:
-            perfil = request.user.perfil
+            # MULTI-TENANT: Usar helper para obtener perfil
+            perfil = get_user_perfil_for_current_org(request.user)
             organizacion = perfil.organizacion
 
             if not organizacion:
@@ -674,10 +689,10 @@ class InvitationView(APIView):
 
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        except PerfilUsuario.DoesNotExist:
+        except PermissionDenied as e:
             return Response({
-                'error': 'Usuario no tiene perfil configurado'
-            }, status=status.HTTP_404_NOT_FOUND)
+                'error': str(e)
+            }, status=status.HTTP_403_FORBIDDEN)
         except Exception as e:
             logger.error(f'Error inesperado en InvitationView: {str(e)}')
             return Response({
@@ -845,42 +860,47 @@ class AcceptInvitationView(APIView):
 class OrganizationMembersView(APIView):
     """Vista para listar miembros de la organización."""
     permission_classes = [IsAuthenticated]
-    
+
     def get(self, request, *args, **kwargs):
         """Listar miembros de la organización del usuario."""
         try:
-            perfil = request.user.perfil
+            # MULTI-TENANT: Usar helper para obtener perfil
+            perfil = get_user_perfil_for_current_org(request.user)
             organizacion = perfil.organizacion
-            
+
             if not organizacion:
                 return Response({
                     'error': 'Usuario no pertenece a ninguna organización'
                 }, status=status.HTTP_404_NOT_FOUND)
-            
-            # Obtener todos los usuarios de la organización
+
+            # MULTI-TENANT: Obtener todos los usuarios de la organización (filtrar por perfiles plural)
             miembros = User.objects.filter(
-                perfil__organizacion=organizacion
-            ).select_related('perfil').prefetch_related('perfil__sedes_administradas')
-            
+                perfiles__organizacion=organizacion
+            ).prefetch_related(
+                'perfiles__sedes_administradas',
+                'perfiles__organizacion',
+                'perfiles__sede'
+            ).distinct()
+
             # Filtrar por sede si se especifica
             sede_id = request.query_params.get('sede_id')
             if sede_id:
                 try:
                     sede = Sede.objects.get(id=sede_id, organizacion=organizacion)
-                    miembros = miembros.filter(perfil__sede=sede)
+                    miembros = miembros.filter(perfiles__sede=sede)
                 except Sede.DoesNotExist:
                     return Response({
                         'error': 'La sede especificada no pertenece a tu organización'
                     }, status=status.HTTP_400_BAD_REQUEST)
-            
+
             return Response({
-                'miembros': UserSerializer(miembros, many=True).data,
+                'miembros': UserSerializer(miembros, many=True, context={'request': request}).data,
                 'total': miembros.count()
             })
 
-        except PerfilUsuario.DoesNotExist:
+        except PermissionDenied as e:
             return Response({
-                'error': 'Usuario no tiene perfil configurado'
+                'error': str(e)
             }, status=status.HTTP_404_NOT_FOUND)
 
 
@@ -922,10 +942,11 @@ class RequestHistoryLinkView(APIView):
                     frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
                     magic_link = f"{frontend_url}/magic-link-auth?token={magic_token.token}"
 
-                    # Obtener info de la organización del usuario
+                    # MULTI-TENANT: Obtener info de la organización del usuario
                     org_name = ""
-                    if hasattr(user, 'perfil') and user.perfil and user.perfil.organizacion:
-                        org_name = f" - {user.perfil.organizacion.nombre}"
+                    perfil = get_perfil_or_first(user)
+                    if perfil and perfil.organizacion:
+                        org_name = f" - {perfil.organizacion.nombre}"
 
                     # Enviar email
                     try:

@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from .models import Colaborador, Servicio, Cita, Horario, Bloqueo
 from django.contrib.admin.models import LogEntry
 from django.urls import path
@@ -8,6 +9,9 @@ from .forms import HorarioAdminForm
 from .reports import generate_excel_report, generate_pdf_report
 from .utils import send_appointment_email
 from organizacion.models import Sede
+
+# MULTI-TENANT: Import helper for profile management
+from usuarios.utils import get_perfil_or_first
 
 @admin.register(Horario)
 class HorarioAdmin(admin.ModelAdmin):
@@ -21,25 +25,23 @@ class HorarioAdmin(admin.ModelAdmin):
         qs = self.model.all_objects.all()
         if request.user.is_superuser:
             return qs
-        try:
-            organizacion = request.user.perfil.organizacion
-            if organizacion:
-                return qs.filter(colaborador__sede__organizacion=organizacion)
-            return qs.none()
-        except AttributeError:
-            return qs.none()
+
+        # MULTI-TENANT: Usar helper para obtener perfil
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.organizacion:
+            return qs.filter(colaborador__sede__organizacion=perfil.organizacion)
+
+        return qs.none()
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "colaborador":
             qs = Colaborador.all_objects.all()
             if not request.user.is_superuser:
-                try:
-                    organizacion = request.user.perfil.organizacion
-                    if organizacion:
-                        qs = qs.filter(sede__organizacion=organizacion)
-                    else:
-                        qs = qs.none()
-                except AttributeError:
+                # MULTI-TENANT: Usar helper para obtener perfil
+                perfil = get_perfil_or_first(request.user)
+                if perfil and perfil.organizacion:
+                    qs = qs.filter(sede__organizacion=perfil.organizacion)
+                else:
                     qs = qs.none()
             kwargs["queryset"] = qs
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
@@ -65,26 +67,24 @@ class ColaboradorAdmin(admin.ModelAdmin):
         qs = self.model.all_objects.all()
         if request.user.is_superuser:
             return qs
-        try:
-            organizacion = request.user.perfil.organizacion
-            if organizacion:
-                return qs.filter(sede__organizacion=organizacion)
-            return qs.none()
-        except AttributeError:
-            return qs.none()
+
+        # MULTI-TENANT: Usar helper para obtener perfil
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.organizacion:
+            return qs.filter(sede__organizacion=perfil.organizacion)
+
+        return qs.none()
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "sede":
             if request.user.is_superuser:
                 kwargs['queryset'] = Sede.all_objects.all()
             else:
-                try:
-                    organizacion = request.user.perfil.organizacion
-                    if organizacion:
-                        kwargs['queryset'] = Sede.all_objects.filter(organizacion=organizacion)
-                    else:
-                        kwargs['queryset'] = Sede.objects.none()
-                except AttributeError:
+                # MULTI-TENANT: Usar helper para obtener perfil
+                perfil = get_perfil_or_first(request.user)
+                if perfil and perfil.organizacion:
+                    kwargs['queryset'] = Sede.all_objects.filter(organizacion=perfil.organizacion)
+                else:
                     kwargs['queryset'] = Sede.objects.none()
 
         # Filtrar usuarios que pueden ser colaboradores (staff, admins de sede)
@@ -98,19 +98,17 @@ class ColaboradorAdmin(admin.ModelAdmin):
 
             # O usuarios que son administradores de sede
             try:
-                qs = qs | User.objects.filter(perfil__sedes_administradas__isnull=False).distinct()
+                qs = qs | User.objects.filter(perfiles__sedes_administradas__isnull=False).distinct()
             except:
                 pass
 
             # Filtrar por organización si no es superuser
             if not request.user.is_superuser:
-                try:
-                    organizacion = request.user.perfil.organizacion
-                    if organizacion:
-                        qs = qs.filter(perfil__organizacion=organizacion)
-                    else:
-                        qs = User.objects.none()
-                except AttributeError:
+                # MULTI-TENANT: Usar helper para obtener perfil
+                perfil = get_perfil_or_first(request.user)
+                if perfil and perfil.organizacion:
+                    qs = qs.filter(perfiles__organizacion=perfil.organizacion)
+                else:
                     qs = User.objects.none()
 
             kwargs['queryset'] = qs
@@ -125,13 +123,11 @@ class ColaboradorAdmin(admin.ModelAdmin):
             if request.user.is_superuser:
                 kwargs["queryset"] = Servicio.all_objects.all()
             else:
-                try:
-                    organizacion = request.user.perfil.organizacion
-                    if organizacion:
-                        kwargs["queryset"] = Servicio.all_objects.filter(sede__organizacion=organizacion)
-                    else:
-                        kwargs["queryset"] = Servicio.objects.none()
-                except (AttributeError, PerfilUsuario.DoesNotExist):
+                # MULTI-TENANT: Usar helper para obtener perfil
+                perfil = get_perfil_or_first(request.user)
+                if perfil and perfil.organizacion:
+                    kwargs["queryset"] = Servicio.all_objects.filter(sede__organizacion=perfil.organizacion)
+                else:
                     kwargs["queryset"] = Servicio.objects.none()
         return super().formfield_for_manytomany(db_field, request, **kwargs)
 
@@ -147,26 +143,24 @@ class ServicioAdmin(admin.ModelAdmin):
         qs = self.model.all_objects.all()
         if request.user.is_superuser:
             return qs
-        try:
-            organizacion = request.user.perfil.organizacion
-            if organizacion:
-                return qs.filter(sede__organizacion=organizacion)
-            return qs.none()
-        except AttributeError:
-            return qs.none()
+
+        # MULTI-TENANT: Usar helper para obtener perfil
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.organizacion:
+            return qs.filter(sede__organizacion=perfil.organizacion)
+
+        return qs.none()
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "sede":
             if request.user.is_superuser:
                 kwargs['queryset'] = Sede.all_objects.all()
             else:
-                try:
-                    organizacion = request.user.perfil.organizacion
-                    if organizacion:
-                        kwargs['queryset'] = Sede.all_objects.filter(organizacion=organizacion)
-                    else:
-                        kwargs['queryset'] = Sede.objects.none()
-                except AttributeError:
+                # MULTI-TENANT: Usar helper para obtener perfil
+                perfil = get_perfil_or_first(request.user)
+                if perfil and perfil.organizacion:
+                    kwargs['queryset'] = Sede.all_objects.filter(organizacion=perfil.organizacion)
+                else:
                     kwargs['queryset'] = Sede.objects.none()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
@@ -183,42 +177,37 @@ class CitaAdmin(admin.ModelAdmin):
         qs = self.model.all_objects.all()
         if request.user.is_superuser:
             return qs
-        try:
-            organizacion = request.user.perfil.organizacion
-            if organizacion:
-                return qs.filter(sede__organizacion=organizacion)
-            return qs.none()
-        except AttributeError:
-            return qs.none()
+
+        # MULTI-TENANT: Usar helper para obtener perfil
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.organizacion:
+            return qs.filter(sede__organizacion=perfil.organizacion)
+
+        return qs.none()
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "sede":
             qs = Sede.all_objects.all()
             if not request.user.is_superuser:
-                try:
-                    organizacion = request.user.perfil.organizacion
-                    if organizacion:
-                        qs = qs.filter(organizacion=organizacion)
-                    else:
-                        qs = qs.none()
-                except AttributeError:
+                # MULTI-TENANT: Usar helper para obtener perfil
+                perfil = get_perfil_or_first(request.user)
+                if perfil and perfil.organizacion:
+                    qs = qs.filter(organizacion=perfil.organizacion)
+                else:
                     qs = qs.none()
             kwargs["queryset"] = qs
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if not request.user.is_superuser:
-            try:
-                organizacion = request.user.perfil.organizacion
-                if organizacion:
-                    if db_field.name == "servicios":
-                        kwargs["queryset"] = Servicio.all_objects.filter(sede__organizacion=organizacion)
-                    if db_field.name == "colaboradores":
-                        kwargs["queryset"] = Colaborador.all_objects.filter(sede__organizacion=organizacion)
-                else:
-                    if db_field.name in ["servicios", "colaboradores"]:
-                        kwargs["queryset"] = db_field.related_model.objects.none()
-            except AttributeError:
+            # MULTI-TENANT: Usar helper para obtener perfil
+            perfil = get_perfil_or_first(request.user)
+            if perfil and perfil.organizacion:
+                if db_field.name == "servicios":
+                    kwargs["queryset"] = Servicio.all_objects.filter(sede__organizacion=perfil.organizacion)
+                if db_field.name == "colaboradores":
+                    kwargs["queryset"] = Colaborador.all_objects.filter(sede__organizacion=perfil.organizacion)
+            else:
                 if db_field.name in ["servicios", "colaboradores"]:
                     kwargs["queryset"] = db_field.related_model.objects.none()
         else:
@@ -313,25 +302,23 @@ class BloqueoAdmin(admin.ModelAdmin):
         qs = self.model.all_objects.all()
         if request.user.is_superuser:
             return qs
-        try:
-            organizacion = request.user.perfil.organizacion
-            if organizacion:
-                return qs.filter(colaborador__sede__organizacion=organizacion)
-            return qs.none()
-        except AttributeError:
-            return qs.none()
+
+        # MULTI-TENANT: Usar helper para obtener perfil
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.organizacion:
+            return qs.filter(colaborador__sede__organizacion=perfil.organizacion)
+
+        return qs.none()
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "colaborador":
             qs = Colaborador.all_objects.all()
             if not request.user.is_superuser:
-                try:
-                    organizacion = request.user.perfil.organizacion
-                    if organizacion:
-                        qs = qs.filter(sede__organizacion=organizacion)
-                    else:
-                        qs = qs.none()
-                except AttributeError:
+                # MULTI-TENANT: Usar helper para obtener perfil
+                perfil = get_perfil_or_first(request.user)
+                if perfil and perfil.organizacion:
+                    qs = qs.filter(sede__organizacion=perfil.organizacion)
+                else:
                     qs = qs.none()
             kwargs["queryset"] = qs
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
@@ -354,14 +341,14 @@ class LogEntryAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
-        try:
-            organizacion = request.user.perfil.organizacion
-            if organizacion:
-                # Filter logs for users of the same organization
-                return qs.filter(user__perfil__organizacion=organizacion)
-            return qs.none()
-        except AttributeError:
-            return qs.none()
+
+        # MULTI-TENANT: Usar helper para obtener perfil
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.organizacion:
+            # Filter logs for users of the same organization
+            return qs.filter(user__perfiles__organizacion=perfil.organizacion)
+
+        return qs.none()
 
     def has_add_permission(self, request):
         return False

@@ -26,6 +26,9 @@ from .utils import send_appointment_email
 from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
 
+# MULTI-TENANT: Import helpers for profile management
+from usuarios.utils import get_perfil_or_first
+
 
 class WelcomeView(APIView):
     """A simple view to confirm the API is running."""

@@ -6,6 +6,9 @@ from organizacion.models import Sede, Organizacion
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+# MULTI-TENANT: Import helpers for profile management
+from .utils import get_perfil_or_first
+
 
 class SedeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -89,9 +92,20 @@ class UserSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         """Override to use read-only serializer for output."""
         representation = super().to_representation(instance)
-        # Use PerfilUsuarioSerializer for output to get all custom fields
-        if hasattr(instance, 'perfil'):
-            representation['perfil'] = PerfilUsuarioSerializer(instance.perfil).data
+
+        # MULTI-TENANT: Obtener perfil usando helper con contexto de request
+        request = self.context.get('request')
+        if request:
+            perfil = get_perfil_or_first(instance)
+        else:
+            # Sin request context, usar primer perfil
+            perfil = instance.perfiles.select_related('organizacion', 'sede').first()
+
+        if perfil:
+            representation['perfil'] = PerfilUsuarioSerializer(perfil).data
+        else:
+            representation['perfil'] = None
+
         return representation
 
     def create(self, validated_data):
@@ -111,12 +125,15 @@ class UserSerializer(serializers.ModelSerializer):
             instance.set_password(validated_data['password'])
         instance.save()
 
-        # Update PerfilUsuario fields
-        # Handle profile with try-except to avoid race conditions
-        try:
-            perfil = instance.perfil
-        except PerfilUsuario.DoesNotExist:
-            perfil = PerfilUsuario.objects.create(user=instance)
+        # MULTI-TENANT: Obtener o crear perfil con contexto
+        from organizacion.thread_locals import get_current_organization
+
+        perfil = get_perfil_or_first(instance)
+
+        if not perfil:
+            # Crear nuevo perfil para la organización actual
+            org = get_current_organization()
+            perfil = PerfilUsuario.objects.create(user=instance, organizacion=org)
 
         for attr, value in perfil_data.items():
             setattr(perfil, attr, value)
@@ -161,23 +178,29 @@ class ClientSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        perfil = getattr(instance, 'perfil', None)
+
+        # MULTI-TENANT: Obtener perfil usando helper
+        perfil = get_perfil_or_first(instance)
+
         if perfil:
             representation['telefono'] = perfil.telefono
             representation['ciudad'] = perfil.ciudad
             representation['barrio'] = perfil.barrio
             representation['genero'] = perfil.genero
             representation['fecha_nacimiento'] = perfil.fecha_nacimiento
+
         return representation
 
     def create(self, validated_data):
         perfil_fields = ['telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento']
         perfil_data = {field: validated_data.pop(field) for field in perfil_fields if field in validated_data}
-        
-        # Get the organization from the user making the request
+
+        # MULTI-TENANT: Obtener organización del request user
         request = self.context.get('request')
-        if request and hasattr(request, 'user') and hasattr(request.user, 'perfil'):
-            perfil_data['organizacion'] = request.user.perfil.organizacion
+        if request and request.user.is_authenticated:
+            user_perfil = get_perfil_or_first(request.user)
+            if user_perfil and user_perfil.organizacion:
+                perfil_data['organizacion'] = user_perfil.organizacion
 
         user = User.objects.create_user(**validated_data)
         PerfilUsuario.objects.create(user=user, **perfil_data)
@@ -196,17 +219,16 @@ class ClientSerializer(serializers.ModelSerializer):
         instance.save()
         logging.error("--- instance.save() [User] finished ---")
 
-        # Now, handle the profile with extreme care.
-        try:
-            perfil = instance.perfil
-            logging.error(f"--- Found existing profile (ID: {perfil.id}) for user {instance.username} ---")
-        except PerfilUsuario.DoesNotExist:
+        # MULTI-TENANT: Obtener o crear perfil con contexto
+        from organizacion.thread_locals import get_current_organization
+
+        perfil = get_perfil_or_first(instance)
+        logging.error(f"--- Found existing profile (ID: {perfil.id}) for user {instance.username} ---" if perfil else "--- No profile found ---")
+
+        if not perfil:
             logging.error(f"--- No profile found for user {instance.username}, creating a new one. ---")
-            # This is the only place a new profile should be created on update.
-            perfil = PerfilUsuario.objects.create(user=instance)
-        except Exception as e:
-            logging.error(f"--- UNEXPECTED ERROR GETTING PROFILE: {e} ---")
-            raise
+            org = get_current_organization()
+            perfil = PerfilUsuario.objects.create(user=instance, organizacion=org)
 
         # Update Perfil fields
         perfil.telefono = validated_data.get('telefono', perfil.telefono)
