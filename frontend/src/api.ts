@@ -512,13 +512,13 @@ export const createPublicBooking = async (bookingData: PublicBookingData) => {
 
 // Funciones para Sistema de Roles (New Role System)
 export const createUserWithRole = (userData: CreateUserPayload) => {
-    return api.post('/api/usuarios/create-user/', userData);
+    return api.post('/api/create-user/', userData);
 };
 
 export const getUserOrganizations = () => {
-    return api.get<UserOrganizationsResponse>('/api/usuarios/my-organizations/');
+    return api.get<UserOrganizationsResponse>('/api/my-organizations/');
 };
 
 export const switchOrganization = (organizationId: number) => {
-    return api.post('/api/usuarios/switch-organization/', { organization_id: organizationId });
+    return api.post('/api/switch-organization/', { organization_id: organizationId });
 };
