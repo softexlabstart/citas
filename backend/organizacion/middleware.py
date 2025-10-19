@@ -37,7 +37,10 @@ class OrganizacionMiddleware:
             logger.debug(f"[OrgMiddleware] User: {request.user.username}, is_staff: {request.user.is_staff}, is_superuser: {request.user.is_superuser}")
             try:
                 # MULTI-TENANT: Check if user has multiple profiles
-                perfiles = request.user.perfiles.select_related('organizacion').all()
+                # CRITICAL: Use PerfilUsuario.all_objects to bypass OrganizacionManager filtering
+                # because at this point no organization is set yet (we're setting it now!)
+                from usuarios.models import PerfilUsuario
+                perfiles = PerfilUsuario.all_objects.filter(user=request.user).select_related('organizacion')
                 perfiles_count = perfiles.count()
 
                 if perfiles_count == 1:
