@@ -33,6 +33,20 @@ api.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+
+        // MULTI-TENANT: Agregar header con el ID de la organización seleccionada
+        const selectedOrganization = localStorage.getItem('selectedOrganization');
+        if (selectedOrganization) {
+            try {
+                const org = JSON.parse(selectedOrganization);
+                if (org && org.id) {
+                    config.headers['X-Organization-ID'] = org.id.toString();
+                }
+            } catch (error) {
+                console.error('Error parsing selectedOrganization:', error);
+            }
+        }
+
         return config;
     },
     (error: any) => {

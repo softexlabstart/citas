@@ -15,13 +15,14 @@ class PerfilUsuario(models.Model):
         ('O', 'Otro'),
     ]
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
+    # IMPORTANTE: Cambiado de OneToOneField a ForeignKey para permitir múltiples perfiles por usuario
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='perfiles')
     organizacion = models.ForeignKey(Organizacion, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
     timezone = models.CharField(max_length=100, choices=TIMEZONE_CHOICES, default='UTC')
     sede = models.ForeignKey(Sede, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios', help_text='Sede principal del usuario')
     sedes = models.ManyToManyField(Sede, related_name='usuarios_multisede', blank=True, help_text='Sedes a las que tiene acceso el usuario')
     sedes_administradas = models.ManyToManyField(Sede, related_name='administradores', blank=True, help_text='Sedes que puede administrar')
-    
+
     # New fields for client data
     telefono = models.CharField(max_length=20, blank=True, null=True, db_index=True)
     ciudad = models.CharField(max_length=100, blank=True, null=True, db_index=True)
@@ -34,8 +35,19 @@ class PerfilUsuario(models.Model):
     objects = OrganizacionManager(organization_filter_path='organizacion')
     all_objects = models.Manager()
 
+    class Meta:
+        # Constraint: Un usuario solo puede tener un perfil por organización
+        unique_together = ('user', 'organizacion')
+        verbose_name = 'Perfil de Usuario'
+        verbose_name_plural = 'Perfiles de Usuario'
+        ordering = ['user__username', 'organizacion__nombre']
+        indexes = [
+            models.Index(fields=['user', 'organizacion']),
+        ]
+
     def __str__(self):
-        return self.user.username
+        org_name = self.organizacion.nombre if self.organizacion else 'Sin organización'
+        return f"{self.user.username} - {org_name}"
 
     @property
     def full_name(self):

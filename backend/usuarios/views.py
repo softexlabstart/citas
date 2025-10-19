@@ -76,23 +76,52 @@ class LoginView(APIView):
         if user:
             login(request, user)
             refresh = RefreshToken.for_user(user)
-            
-            # Manejar el caso donde el perfil no existe
-            try:
-                user_data = UserSerializer(user).data
-            except AttributeError: # O podría ser PerfilUsuario.DoesNotExist dependiendo del serializer
-                # Si no hay perfil, devolvemos los datos básicos del usuario
-                user_data = {
+
+            # MULTI-TENANT: Contar perfiles del usuario
+            perfiles_count = user.perfiles.count()
+
+            # Preparar respuesta base
+            response_data = {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }
+
+            # Si el usuario tiene múltiples perfiles, enviar lista de organizaciones
+            if perfiles_count > 1:
+                organizaciones = []
+                for perfil in user.perfiles.select_related('organizacion').all():
+                    if perfil.organizacion:  # Solo incluir perfiles con organización
+                        organizaciones.append({
+                            'id': perfil.organizacion.id,
+                            'nombre': perfil.organizacion.nombre,
+                            'slug': perfil.organizacion.slug,
+                            'perfil_id': perfil.id
+                        })
+
+                response_data['organizations'] = organizaciones
+                response_data['user'] = {
                     'id': user.id,
                     'username': user.username,
                     'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
                 }
+                logger.info(f'Usuario {user.username} con {perfiles_count} organizaciones inicia sesión')
+            else:
+                # Usuario con una sola organización: flujo normal
+                try:
+                    user_data = UserSerializer(user).data
+                except AttributeError:
+                    # Si no hay perfil, devolver datos básicos
+                    user_data = {
+                        'id': user.id,
+                        'username': user.username,
+                        'email': user.email,
+                    }
 
-            return Response({
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-                'user': user_data
-            })
+                response_data['user'] = user_data
+
+            return Response(response_data)
         return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
 
 class RegisterView(generics.CreateAPIView):
@@ -148,29 +177,38 @@ class RegisterByOrganizacionView(generics.CreateAPIView):
         email = request.data.get('email')
         password = request.data.get('password')
 
-        if not username or not email or not password:
+        if not email:
             return Response({
-                'error': 'Los campos username, email y password son requeridos'
+                'error': 'El campo email es requerido'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        if User.objects.filter(username=username).exists():
-            return Response({
-                'error': 'El nombre de usuario ya existe'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        if User.objects.filter(email=email).exists():
-            return Response({
-                'error': 'El email ya está registrado'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        # Crear usuario
-        user = User.objects.create_user(
-            username=username,
+        # MULTI-TENANT: Buscar usuario existente por email
+        user, created = User.objects.get_or_create(
             email=email,
-            password=password,
-            first_name=request.data.get('first_name', ''),
-            last_name=request.data.get('last_name', '')
+            defaults={
+                'username': username or email.split('@')[0],
+                'first_name': request.data.get('first_name', ''),
+                'last_name': request.data.get('last_name', '')
+            }
         )
+
+        if created:
+            # Usuario nuevo: validar y establecer contraseña
+            if not password:
+                return Response({
+                    'error': 'La contraseña es requerida para usuarios nuevos'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            user.set_password(password)
+            user.save()
+            logger.info(f'Nuevo usuario creado: {user.username} ({user.email}) - Registro directo')
+        else:
+            # Usuario existente: verificar que no tenga ya un perfil en esta org
+            if PerfilUsuario.objects.filter(user=user, organizacion=organizacion).exists():
+                return Response({
+                    'error': 'Ya tienes una cuenta en esta organización. Por favor inicia sesión.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            logger.info(f'Usuario existente {user.username} registrándose en nueva organización: {organizacion.nombre}')
 
         # Crear perfil asociado a la organización
         perfil = PerfilUsuario.objects.create(
@@ -713,33 +751,35 @@ class AcceptInvitationView(APIView):
             first_name = request.data.get('first_name', invitation.first_name)
             last_name = request.data.get('last_name', invitation.last_name)
 
-            if not username or not password:
-                return Response({
-                    'error': 'Los campos username y password son requeridos'
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-            # Verificar que el username no existe
-            if User.objects.filter(username=username).exists():
-                return Response({
-                    'error': 'El nombre de usuario ya está en uso'
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-            # Verificar que el email no existe
-            if User.objects.filter(email=invitation.email).exists():
-                return Response({
-                    'error': 'Ya existe una cuenta con este email'
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-            # Crear usuario
-            user = User.objects.create_user(
-                username=username,
+            # MULTI-TENANT: Buscar usuario existente por email
+            user, created = User.objects.get_or_create(
                 email=invitation.email,
-                password=password,
-                first_name=first_name,
-                last_name=last_name
+                defaults={
+                    'username': username or invitation.email.split('@')[0],
+                    'first_name': first_name,
+                    'last_name': last_name
+                }
             )
 
-            # Crear perfil asociado a la organización
+            if created:
+                # Usuario nuevo: validar y establecer contraseña
+                if not password:
+                    return Response({
+                        'error': 'La contraseña es requerida para usuarios nuevos'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                user.set_password(password)
+                user.save()
+                logger.info(f'Nuevo usuario creado: {user.username} ({user.email})')
+            else:
+                # Usuario existente: solo verificar que no haya perfil en esta org
+                if PerfilUsuario.objects.filter(user=user, organizacion=invitation.organization).exists():
+                    return Response({
+                        'error': 'Ya tienes acceso a esta organización'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                logger.info(f'Usuario existente {user.username} agregado a nueva organización')
+
+            # Crear perfil en la nueva organización (o primera)
             perfil = PerfilUsuario.objects.create(
                 user=user,
                 organizacion=invitation.organization,

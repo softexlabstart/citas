@@ -1,13 +1,18 @@
 from django.urls import resolve
 from .thread_locals import set_current_organization, set_current_user
 from .models import Organizacion
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class OrganizacionMiddleware:
     """
     Middleware that sets the organization for the current request.
-    It tries to determine the organization from the authenticated user first.
-    If the user is not authenticated, it looks for an 'organizacion_slug'
-    in the URL.
+    Priority order:
+    1. HTTP Header X-Organization-ID (for multi-tenant users)
+    2. Authenticated user's profile (single organization)
+    3. URL slug parameter (for public pages)
     """
     def __init__(self, get_response):
         self.get_response = get_response
@@ -18,32 +23,49 @@ class OrganizacionMiddleware:
 
         organizacion = None
 
-        # 1. Try to get organization from the authenticated user
-        if request.user.is_authenticated:
-            print(f"[OrgMiddleware] User: {request.user.username}, is_staff: {request.user.is_staff}, is_superuser: {request.user.is_superuser}")
+        # MULTI-TENANT: Priority 1 - Check HTTP Header X-Organization-ID
+        org_id = request.META.get('HTTP_X_ORGANIZATION_ID')
+        if org_id:
             try:
-                # The related_name in PerfilUsuario is 'perfil'
-                organizacion = request.user.perfil.organizacion
-                print(f"[OrgMiddleware] Org from profile: {organizacion}")
-            except AttributeError as e:
-                # User might not have a profile or organization assigned
-                print(f"[OrgMiddleware] User has no profile or organization: {e}")
-                pass
+                organizacion = Organizacion.objects.get(id=int(org_id))
+                logger.debug(f"[OrgMiddleware] Org from header: {organizacion}")
+            except (ValueError, TypeError, Organizacion.DoesNotExist) as e:
+                logger.warning(f"[OrgMiddleware] Invalid organization ID in header: {org_id} - {e}")
 
-        # 2. If no organization yet, try to get it from the URL
-        # This is for public pages like booking forms.
-        # Assumes you have a URL pattern like: path('<slug:organizacion_slug>/...', ...)
+        # Priority 2 - Get organization from authenticated user's profile
+        if organizacion is None and request.user.is_authenticated:
+            logger.debug(f"[OrgMiddleware] User: {request.user.username}, is_staff: {request.user.is_staff}, is_superuser: {request.user.is_superuser}")
+            try:
+                # MULTI-TENANT: Check if user has multiple profiles
+                perfiles = request.user.perfiles.select_related('organizacion').all()
+                perfiles_count = perfiles.count()
+
+                if perfiles_count == 1:
+                    # Single profile: use that organization
+                    perfil = perfiles.first()
+                    if perfil:
+                        organizacion = perfil.organizacion
+                        logger.debug(f"[OrgMiddleware] Org from single profile: {organizacion}")
+                elif perfiles_count > 1:
+                    # Multiple profiles but no header: log warning
+                    logger.warning(f"[OrgMiddleware] User {request.user.username} has {perfiles_count} profiles but no X-Organization-ID header")
+                else:
+                    logger.debug(f"[OrgMiddleware] User {request.user.username} has no profiles")
+
+            except AttributeError as e:
+                # User might not have perfiles attribute
+                logger.warning(f"[OrgMiddleware] User has no perfiles: {e}")
+
+        # Priority 3 - Get organization from URL slug (public pages)
         if organizacion is None:
             try:
-                # Use resolve to get URL kwargs from the path
                 resolver_match = resolve(request.path_info)
                 if 'organizacion_slug' in resolver_match.kwargs:
                     slug = resolver_match.kwargs['organizacion_slug']
-                    # Use .get() to avoid DoesNotExist exception
                     organizacion = Organizacion.objects.get(nombre__iexact=slug)
-            except Exception:
-                # URL might not match or organization doesn't exist
-                pass
+                    logger.debug(f"[OrgMiddleware] Org from URL slug: {organizacion}")
+            except Exception as e:
+                logger.debug(f"[OrgMiddleware] No org from URL: {e}")
 
         set_current_organization(organizacion)
 

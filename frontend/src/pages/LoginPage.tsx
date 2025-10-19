@@ -20,8 +20,16 @@ const LoginPage: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await login(username, password);
-            navigate('/');
+            // MULTI-TENANT: El login ahora retorna si se necesita seleccionar organización
+            const result = await login(username, password);
+
+            if (result.needsOrgSelection) {
+                // Usuario con múltiples organizaciones: redirigir a selección
+                navigate('/select-organization');
+            } else {
+                // Usuario con una sola organización: flujo normal
+                navigate('/');
+            }
         } catch (error) {
             setError('Credenciales incorrectas. Por favor, inténtalo de nuevo.');
             console.error('Failed to login', error);

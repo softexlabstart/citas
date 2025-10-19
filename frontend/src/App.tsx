@@ -14,6 +14,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import TermsPage from './pages/TermsPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import SelectOrganizationPage from './pages/SelectOrganizationPage'; // MULTI-TENANT
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute'; // Import AdminRoute
 import { AuthProvider } from './contexts/AuthContext';
@@ -60,6 +61,7 @@ const App: React.FC = () => {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/register/:organizacionSlug" element={<RegisterPage />} />
+              <Route path="/select-organization" element={<SelectOrganizationPage />} /> {/* MULTI-TENANT */}
               <Route path="/agendar/:organizacionSlug" element={<PublicBookingPage />} />
               <Route path="/mis-citas" element={<RequestMagicLinkPage />} />
               <Route path="/magic-link-auth" element={<MagicLinkAuthPage />} />
