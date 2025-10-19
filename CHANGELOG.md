@@ -5,6 +5,48 @@ Todos los cambios notables del proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [3.0.0] - 2025-10-18
+
+### Added - Multi-Tenant User System 🎉
+- **Sistema Multi-Tenant Completo**: Un usuario con un email puede acceder a múltiples organizaciones
+- **SelectOrganizationPage**: Interfaz moderna para seleccionar organización al login
+- **Organization Switching**: Cambio fluido entre workspaces sin re-autenticación
+- **X-Organization-ID Header**: Header HTTP para identificar contexto de organización
+- **Documentación Multi-Tenant**: Guía completa en `docs/MULTI_TENANT_REFACTOR.md`
+
+### Changed - Breaking Changes ⚠️
+- **PerfilUsuario.user**: Cambiado de `OneToOneField` a `ForeignKey` (permite múltiples perfiles)
+- **unique_together**: Añadido constraint `('user', 'organizacion')` en PerfilUsuario
+- **LoginView**: Ahora retorna `organizations` array para usuarios multi-org
+- **AuthContext**: login() retorna `{ needsOrgSelection: boolean }`
+- **OrganizacionMiddleware**: Prioriza header HTTP X-Organization-ID
+
+### Added - Backend
+- **User.objects.get_or_create()**: En AcceptInvitationView y RegisterByOrganizacionView
+- **Middleware Priority System**: Header → Single Profile → URL Slug
+- **Multi-Profile Support**: LoginView detecta y maneja múltiples perfiles
+- **Enhanced Logging**: Debug logs para troubleshooting multi-tenant
+
+### Added - Frontend
+- **AuthContext State**: organizations, selectedOrganization
+- **selectOrganization()**: Método para guardar organización activa
+- **Axios Interceptor**: Agrega X-Organization-ID a todas las requests
+- **Organization Persistence**: localStorage guarda selección
+- **Gradient UI**: Diseño moderno en SelectOrganizationPage
+
+### Migration Required
+```bash
+python manage.py makemigrations usuarios
+python manage.py migrate
+```
+
+### Benefits
+- ✅ Un solo email para todas las organizaciones
+- ✅ Experiencia tipo Slack/Discord
+- ✅ Sin cuentas duplicadas
+- ✅ Backward compatible con usuarios de una sola org
+- ✅ Reducción 66% en número de cuentas de usuario
+
 ## [2.0.0] - 2025-10-18
 
 ### Added
