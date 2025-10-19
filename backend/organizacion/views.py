@@ -5,6 +5,9 @@ from .models import Sede, Organizacion
 from .serializers import SedeSerializer, OrganizacionSerializer
 from usuarios.permissions import IsSuperAdmin
 
+# MULTI-TENANT: Import helper for profile management
+from usuarios.utils import get_perfil_or_first
+
 class CreateOrganizacionView(APIView):
     """Vista para que un SuperAdmin cree una nueva Organizacion."""
     permission_classes = [IsSuperAdmin]
@@ -57,8 +60,10 @@ class SedeViewSet(viewsets.ModelViewSet):
         if user.is_authenticated:
             if user.is_superuser:
                 return Sede.all_objects.all()
-            try:
-                perfil = user.perfil
+
+            # MULTI-TENANT: Usar helper para obtener perfil
+            perfil = get_perfil_or_first(user)
+            if perfil:
                 # Verificar si es administrador de sedes específicas
                 from django.db import connection
                 with connection.cursor() as cursor:
@@ -76,9 +81,8 @@ class SedeViewSet(viewsets.ModelViewSet):
                 organizacion = perfil.organizacion
                 if organizacion:
                     return Sede.all_objects.filter(organizacion=organizacion)
-                return Sede.objects.none()
-            except AttributeError: # Catches if user has no perfil
-                return Sede.objects.none()
+
+            return Sede.objects.none()
 
         # No access for unauthenticated without slug
         return Sede.objects.none()

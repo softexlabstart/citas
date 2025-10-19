@@ -105,13 +105,13 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
         qs = self.model.all_objects.all()
         if request.user.is_superuser:
             return qs
-        try:
-            organizacion = request.user.perfil.organizacion
-            if organizacion:
-                return qs.filter(organizacion=organizacion)
-            return qs.none()
-        except (AttributeError, PerfilUsuario.DoesNotExist):
-            return qs.none()
+
+        # MULTI-TENANT: Usar helper
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.organizacion:
+            return qs.filter(organizacion=perfil.organizacion)
+
+        return qs.none()
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if request.user.is_superuser:
@@ -120,20 +120,18 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
             if db_field.name == "organizacion":
                 kwargs["queryset"] = Organizacion.objects.all()
         else:
-            try:
-                organizacion = request.user.perfil.organizacion
-                if organizacion:
-                    if db_field.name == "sede":
-                        kwargs["queryset"] = Sede.all_objects.filter(organizacion=organizacion)
-                    if db_field.name == "organizacion":
-                        kwargs["queryset"] = Organizacion.objects.filter(pk=organizacion.pk)
-                else:
-                    if db_field.name in ["sede", "organizacion"]:
-                        kwargs["queryset"] = Sede.all_objects.none()
-            except (AttributeError, PerfilUsuario.DoesNotExist):
+            # MULTI-TENANT: Usar helper
+            perfil = get_perfil_or_first(request.user)
+            if perfil and perfil.organizacion:
+                organizacion = perfil.organizacion
+                if db_field.name == "sede":
+                    kwargs["queryset"] = Sede.all_objects.filter(organizacion=organizacion)
+                if db_field.name == "organizacion":
+                    kwargs["queryset"] = Organizacion.objects.filter(pk=organizacion.pk)
+            else:
                 if db_field.name in ["sede", "organizacion"]:
                     kwargs["queryset"] = Sede.all_objects.none()
-        
+
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
@@ -141,13 +139,11 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
             if db_field.name in ["sedes", "sedes_administradas"]:
                 kwargs["queryset"] = Sede.all_objects.all()
         else:
-            try:
-                organizacion = request.user.perfil.organizacion
-                if organizacion and db_field.name in ["sedes", "sedes_administradas"]:
-                    kwargs["queryset"] = Sede.all_objects.filter(organizacion=organizacion)
-                else:
-                    kwargs["queryset"] = Sede.all_objects.none()
-            except (AttributeError, PerfilUsuario.DoesNotExist):
+            # MULTI-TENANT: Usar helper
+            perfil = get_perfil_or_first(request.user)
+            if perfil and perfil.organizacion and db_field.name in ["sedes", "sedes_administradas"]:
+                kwargs["queryset"] = Sede.all_objects.filter(organizacion=perfil.organizacion)
+            else:
                 kwargs["queryset"] = Sede.all_objects.none()
 
         return super().formfield_for_manytomany(db_field, request, **kwargs)
