@@ -401,11 +401,11 @@ export const updateDataProcessingOptOut = (optOutStatus: boolean) => api.patch('
 
 // Funciones para Sistema Multi-Tenant (New)
 export const registerWithOrganization = async (data: MultiTenantRegistrationData) => {
-    const response = await api.post('/api/usuarios/register-organization/', data);
+    const response = await api.post('/api/register-organization/', data);
     return response.data;
 };
 
-export const getOrganizationInfo = () => api.get<OrganizationInfo>('/api/usuarios/organization/');
+export const getOrganizationInfo = () => api.get<OrganizationInfo>('/api/organization/');
 
 export const getOrganizationMembers = (sedeId?: number) => {
     const params = new URLSearchParams();
@@ -413,10 +413,10 @@ export const getOrganizationMembers = (sedeId?: number) => {
         params.append('sede_id', String(sedeId));
     }
     const queryString = params.toString();
-    return api.get<OrganizationMembersResponse>(`/api/usuarios/organization/members/${queryString ? `?${queryString}` : ''}`);
+    return api.get<OrganizationMembersResponse>(`/api/organization/members/${queryString ? `?${queryString}` : ''}`);
 };
 
-export const sendInvitation = (invitation: InvitationData) => api.post('/api/usuarios/organization/invite/', invitation);
+export const sendInvitation = (invitation: InvitationData) => api.post('/api/organization/invite/', invitation);
 
 // Funciones para Organizacion
 export const createOrganization = (nombre: string) => api.post('/api/organizacion/organizaciones/', { nombre });
