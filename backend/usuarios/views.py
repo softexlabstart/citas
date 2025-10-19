@@ -529,6 +529,32 @@ class OrganizationManagementView(APIView):
 
     def get(self, request, *args, **kwargs):
         """Obtener información de la organización del usuario."""
+        # SUPERUSUARIO: Puede ver todas las organizaciones
+        if request.user.is_superuser:
+            from organizacion.models import Organizacion
+            organizaciones = Organizacion.objects.all()
+
+            if not organizaciones.exists():
+                return Response({
+                    'error': 'No hay organizaciones creadas en el sistema'
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            # Retornar todas las organizaciones y sedes
+            all_sedes = []
+            org_data = []
+            for org in organizaciones:
+                org_data.append(OrganizacionSerializer(org).data)
+                all_sedes.extend(org.sedes.all())
+
+            return Response({
+                'organizacion': org_data[0] if org_data else None,  # Primera org por compatibilidad
+                'organizaciones': org_data,  # Todas las organizaciones
+                'sedes': SedeDetailSerializer(all_sedes, many=True).data,
+                'user_role': 'superuser',
+                'is_superuser': True
+            })
+
+        # USUARIO NORMAL: Usar perfil de organización
         try:
             # MULTI-TENANT: Usar helper para obtener perfil
             perfil = get_user_perfil_for_current_org(request.user)
