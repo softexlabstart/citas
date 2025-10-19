@@ -79,7 +79,8 @@ class SedeViewSet(viewsets.ModelViewSet):
 
                 # MULTI-TENANT: Usuario regular - verificar campo 'sedes' M2M
                 # Estas son las sedes a las que el usuario tiene acceso explícito
-                sedes_acceso = perfil.sedes.all()
+                # Usar property sedes_acceso que bypasses OrganizacionManager filtering
+                sedes_acceso = perfil.sedes_acceso
                 if sedes_acceso.exists():
                     return sedes_acceso
 

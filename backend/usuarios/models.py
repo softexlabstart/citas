@@ -60,6 +60,25 @@ class PerfilUsuario(models.Model):
             return today.year - self.fecha_nacimiento.year - ((today.month, today.day) < (self.fecha_nacimiento.month, self.fecha_nacimiento.day))
         return None
 
+    @property
+    def sedes_acceso(self):
+        """
+        Retorna las sedes del campo M2M 'sedes' sin filtrado del OrganizacionManager.
+
+        Este property es necesario porque cuando accedemos a perfil.sedes.all(),
+        Django usa el manager por defecto del modelo Sede (OrganizacionManager),
+        que filtra las sedes por la organización del thread-local.
+
+        Esta property obtiene los IDs de las sedes y luego consulta con all_objects
+        para evitar el filtrado, respetando así el patrón del OrganizacionManager
+        en el resto del sistema.
+
+        Returns:
+            QuerySet: Sedes a las que el usuario tiene acceso
+        """
+        sede_ids = self.sedes.values_list('id', flat=True)
+        return Sede.all_objects.filter(id__in=sede_ids)
+
 
 class Usuario(models.Model):
     nombre = models.CharField(max_length=100, db_index=True)
