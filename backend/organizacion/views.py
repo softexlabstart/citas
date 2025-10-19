@@ -77,7 +77,17 @@ class SedeViewSet(viewsets.ModelViewSet):
                     # Usuario administra sedes específicas - mostrar solo esas
                     return Sede.all_objects.filter(id__in=sedes_admin_ids)
 
-                # Si no tiene sedes administradas pero tiene organización, mostrar todas de la organización
+                # MULTI-TENANT: Usuario regular - verificar campo 'sedes' M2M
+                # Estas son las sedes a las que el usuario tiene acceso explícito
+                sedes_acceso = perfil.sedes.all()
+                if sedes_acceso.exists():
+                    return sedes_acceso
+
+                # Si no tiene sedes M2M, mostrar solo su sede principal
+                if perfil.sede:
+                    return Sede.all_objects.filter(id=perfil.sede.id)
+
+                # Fallback: Si tiene organización, mostrar todas las sedes de la organización
                 organizacion = perfil.organizacion
                 if organizacion:
                     return Sede.all_objects.filter(organizacion=organizacion)
