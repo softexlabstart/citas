@@ -47,8 +47,10 @@ export interface InvitationData {
 
 export interface OrganizationInfo {
     organizacion: Organizacion;
+    organizaciones?: Organizacion[]; // Para superusuarios que ven todas las organizaciones
     sedes: SedeDetail[];
-    user_role: 'super_admin' | 'sede_admin' | 'member';
+    user_role: 'super_admin' | 'sede_admin' | 'member' | 'superuser';
+    is_superuser?: boolean;
 }
 
 export interface OrganizationMember {

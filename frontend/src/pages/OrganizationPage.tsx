@@ -27,11 +27,13 @@ const OrganizationPage: React.FC = () => {
     const loadOrganizationData = async () => {
         try {
             setLoading(true);
-            const [orgInfo, membersData] = await Promise.all([
-                getOrganizationInfo(),
-                getOrganizationMembers()
-            ]);
+            // Primero cargar info de organización
+            const orgInfo = await getOrganizationInfo();
             setOrganizationInfo(orgInfo.data);
+
+            // Luego cargar miembros con el ID de la primera organización (para superusuarios)
+            const orgId = orgInfo.data.organizacion?.id || orgInfo.data.organizaciones?.[0]?.id;
+            const membersData = await getOrganizationMembers(orgId);
             setMembers(membersData.data);
         } catch (error: any) {
             setError('Error al cargar la información de la organización');

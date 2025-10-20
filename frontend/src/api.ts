@@ -407,8 +407,11 @@ export const registerWithOrganization = async (data: MultiTenantRegistrationData
 
 export const getOrganizationInfo = () => api.get<OrganizationInfo>('/api/organization/');
 
-export const getOrganizationMembers = (sedeId?: number) => {
+export const getOrganizationMembers = (organizacionId?: number, sedeId?: number) => {
     const params = new URLSearchParams();
+    if (organizacionId) {
+        params.append('organizacion_id', String(organizacionId));
+    }
     if (sedeId) {
         params.append('sede_id', String(sedeId));
     }
