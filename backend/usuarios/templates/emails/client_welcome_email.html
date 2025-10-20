@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenido a {{ organization_name }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #2196F3;
+        }
+        .header h1 {
+            color: #2196F3;
+            margin: 0;
+            font-size: 28px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        .message {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #555;
+        }
+        .organization-name {
+            font-weight: 700;
+            color: #2196F3;
+        }
+        .credentials-box {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 4px;
+        }
+        .credentials-box h3 {
+            margin-top: 0;
+            color: #1976d2;
+            font-size: 18px;
+        }
+        .credential-item {
+            background-color: #ffffff;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            border: 1px solid #bbdefb;
+        }
+        .credential-label {
+            font-weight: 600;
+            color: #1976d2;
+            display: block;
+            margin-bottom: 5px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+        }
+        .credential-value {
+            color: #333;
+            font-weight: 700;
+            word-break: break-all;
+        }
+        .button-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+        .login-button {
+            display: inline-block;
+            padding: 15px 40px;
+            background-color: #2196F3;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 4px 6px rgba(33, 150, 243, 0.3);
+        }
+        .login-button:hover {
+            background-color: #1976d2;
+            box-shadow: 0 6px 8px rgba(33, 150, 243, 0.4);
+        }
+        .warning-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .warning-box p {
+            margin: 0;
+            font-size: 14px;
+            color: #856404;
+        }
+        .info-box {
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info-box p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #0c5460;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 14px;
+            color: #777;
+        }
+        .link-text {
+            font-size: 12px;
+            color: #999;
+            word-break: break-all;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 ¡Bienvenido a {{ organization_name }}!</h1>
+        </div>
+
+        <div class="content">
+            <div class="greeting">
+                Hola {{ full_name }}!
+            </div>
+
+            <div class="message">
+                <p>Tu cuenta de cliente ha sido creada exitosamente en <span class="organization-name">{{ organization_name }}</span>.</p>
+                <p>Ahora puedes acceder a nuestro sistema para agendar citas y gestionar tus servicios.</p>
+            </div>
+
+            <div class="credentials-box">
+                <h3>🔐 Tus Credenciales de Acceso</h3>
+                <p style="margin-bottom: 15px; font-size: 14px;">Usa esta información para iniciar sesión:</p>
+
+                <div class="credential-item">
+                    <span class="credential-label">Usuario:</span>
+                    <span class="credential-value">{{ username }}</span>
+                </div>
+
+                <div class="credential-item">
+                    <span class="credential-label">Contraseña Temporal:</span>
+                    <span class="credential-value">{{ password }}</span>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <p><strong>⚠️ Importante:</strong> Por tu seguridad, te recomendamos cambiar tu contraseña después de iniciar sesión por primera vez.</p>
+            </div>
+
+            <div class="button-container">
+                <a href="{{ login_url }}" class="login-button">
+                    Iniciar Sesión Ahora
+                </a>
+            </div>
+
+            <div class="info-box">
+                <p><strong>📧 Tu correo electrónico:</strong> {{ email }}</p>
+                <p>Usa este correo para recuperar tu contraseña si la olvidas.</p>
+            </div>
+
+            <div class="message">
+                <p><strong>¿Qué puedes hacer en tu cuenta?</strong></p>
+                <ul>
+                    <li>Agendar citas en línea</li>
+                    <li>Ver tu historial de citas</li>
+                    <li>Gestionar tu información personal</li>
+                    <li>Recibir recordatorios de tus citas</li>
+                </ul>
+            </div>
+
+            <div class="link-text">
+                <p>Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
+                <p>{{ login_url }}</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Este es un mensaje automático. Si necesitas ayuda, contáctanos.</p>
+            <p>Si no solicitaste esta cuenta, por favor ignora este mensaje.</p>
+            <p>&copy; {{ current_year }} {{ organization_name }}. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>

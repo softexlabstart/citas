@@ -202,28 +202,36 @@ class ClientSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         import secrets
         import string
+        import logging
+        from django.core.mail import send_mail
+        from django.template.loader import render_to_string
+        from django.conf import settings
+        from datetime import datetime
+
+        logger = logging.getLogger(__name__)
 
         perfil_fields = ['telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento']
         perfil_data = {field: validated_data.pop(field) for field in perfil_fields if field in validated_data}
 
         # MULTI-TENANT: Obtener organización del request user
         request = self.context.get('request')
+        organization_name = "Sistema de Citas"
         if request and request.user.is_authenticated:
             user_perfil = get_perfil_or_first(request.user)
             if user_perfil and user_perfil.organizacion:
                 perfil_data['organizacion'] = user_perfil.organizacion
+                organization_name = user_perfil.organizacion.nombre
 
         # Generar contraseña aleatoria si no se proporciona
+        password_generated = False
         if 'password' not in validated_data or not validated_data.get('password'):
             # Generar contraseña segura de 12 caracteres
             alphabet = string.ascii_letters + string.digits + string.punctuation
             password = ''.join(secrets.choice(alphabet) for i in range(12))
             validated_data['password'] = password
+            password_generated = True
 
-            # TODO: Enviar email con la contraseña al cliente
-            # Por ahora, registrar en logs para que el admin pueda verla
-            import logging
-            logger = logging.getLogger(__name__)
+            # Log para respaldo
             logger.info(f"Cliente creado: {validated_data.get('email')} - Contraseña temporal: {password}")
 
         user = User.objects.create_user(**validated_data)
@@ -231,6 +239,65 @@ class ClientSerializer(serializers.ModelSerializer):
         # Asignar rol 'cliente' al perfil
         perfil_data['role'] = 'cliente'
         PerfilUsuario.objects.create(user=user, **perfil_data)
+
+        # Enviar email de bienvenida con credenciales si se generó contraseña
+        if password_generated and user.email:
+            try:
+                # Construir URL de login
+                if request:
+                    protocol = 'https' if request.is_secure() else 'http'
+                    host = request.get_host()
+                    login_url = f"{protocol}://{host}/login"
+                else:
+                    login_url = "http://localhost/login"  # Fallback
+
+                # Preparar contexto para el template
+                context = {
+                    'full_name': f"{user.first_name} {user.last_name}".strip() or user.username,
+                    'username': user.username,
+                    'email': user.email,
+                    'password': password,
+                    'organization_name': organization_name,
+                    'login_url': login_url,
+                    'current_year': datetime.now().year,
+                }
+
+                # Renderizar email HTML
+                html_message = render_to_string('emails/client_welcome_email.html', context)
+
+                # Mensaje de texto plano como fallback
+                plain_message = f"""
+Hola {context['full_name']}!
+
+Tu cuenta de cliente ha sido creada exitosamente en {organization_name}.
+
+Tus credenciales de acceso:
+Usuario: {user.username}
+Contraseña Temporal: {password}
+
+Inicia sesión aquí: {login_url}
+
+Por tu seguridad, te recomendamos cambiar tu contraseña después de iniciar sesión por primera vez.
+
+Saludos,
+{organization_name}
+                """.strip()
+
+                # Enviar email
+                send_mail(
+                    subject=f'Bienvenido a {organization_name} - Tus Credenciales de Acceso',
+                    message=plain_message,
+                    from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else None,
+                    recipient_list=[user.email],
+                    html_message=html_message,
+                    fail_silently=True,  # No fallar si el email no se puede enviar
+                )
+
+                logger.info(f"Email de bienvenida enviado a: {user.email}")
+
+            except Exception as e:
+                logger.error(f"Error al enviar email de bienvenida a {user.email}: {str(e)}")
+                # No fallar la creación del usuario si el email falla
 
         return user
 
