@@ -193,10 +193,16 @@ class ClientSerializer(serializers.ModelSerializer):
             representation['barrio'] = perfil.barrio
             representation['genero'] = perfil.genero
             representation['fecha_nacimiento'] = perfil.fecha_nacimiento
+            # Calcular edad llamando al método age()
+            representation['age'] = perfil.age() if perfil.fecha_nacimiento else None
+            representation['has_consented_data_processing'] = perfil.has_consented_data_processing
 
         return representation
 
     def create(self, validated_data):
+        import secrets
+        import string
+
         perfil_fields = ['telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento']
         perfil_data = {field: validated_data.pop(field) for field in perfil_fields if field in validated_data}
 
@@ -207,8 +213,25 @@ class ClientSerializer(serializers.ModelSerializer):
             if user_perfil and user_perfil.organizacion:
                 perfil_data['organizacion'] = user_perfil.organizacion
 
+        # Generar contraseña aleatoria si no se proporciona
+        if 'password' not in validated_data or not validated_data.get('password'):
+            # Generar contraseña segura de 12 caracteres
+            alphabet = string.ascii_letters + string.digits + string.punctuation
+            password = ''.join(secrets.choice(alphabet) for i in range(12))
+            validated_data['password'] = password
+
+            # TODO: Enviar email con la contraseña al cliente
+            # Por ahora, registrar en logs para que el admin pueda verla
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Cliente creado: {validated_data.get('email')} - Contraseña temporal: {password}")
+
         user = User.objects.create_user(**validated_data)
+
+        # Asignar rol 'cliente' al perfil
+        perfil_data['role'] = 'cliente'
         PerfilUsuario.objects.create(user=user, **perfil_data)
+
         return user
 
     def update(self, instance, validated_data):
