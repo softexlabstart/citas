@@ -193,8 +193,8 @@ class ClientSerializer(serializers.ModelSerializer):
             representation['barrio'] = perfil.barrio
             representation['genero'] = perfil.genero
             representation['fecha_nacimiento'] = perfil.fecha_nacimiento
-            # Calcular edad llamando al método age()
-            representation['age'] = perfil.age() if perfil.fecha_nacimiento else None
+            # Calcular edad usando la propiedad age (sin paréntesis, es un @property)
+            representation['age'] = perfil.age if perfil.fecha_nacimiento else None
             representation['has_consented_data_processing'] = perfil.has_consented_data_processing
 
         return representation
