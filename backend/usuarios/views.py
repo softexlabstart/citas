@@ -600,20 +600,38 @@ class InvitationView(APIView):
     def post(self, request, *args, **kwargs):
         """Crear y enviar invitación a un usuario."""
         try:
-            # MULTI-TENANT: Usar helper para obtener perfil
-            perfil = get_user_perfil_for_current_org(request.user)
-            organizacion = perfil.organizacion
+            # SUPERUSUARIO: Puede invitar a cualquier organización
+            if request.user.is_superuser:
+                from organizacion.models import Organizacion
 
-            if not organizacion:
-                return Response({
-                    'error': 'Usuario no pertenece a ninguna organización'
-                }, status=status.HTTP_400_BAD_REQUEST)
+                # El superusuario debe especificar la organización
+                org_id = request.data.get('organization_id')
+                if not org_id:
+                    return Response({
+                        'error': 'Los superusuarios deben especificar organization_id al enviar invitaciones'
+                    }, status=status.HTTP_400_BAD_REQUEST)
 
-            # Verificar que el usuario puede invitar (es admin o sede admin)
-            if not (request.user.is_staff or perfil.sedes_administradas.exists()):
-                return Response({
-                    'error': 'No tienes permisos para enviar invitaciones'
-                }, status=status.HTTP_403_FORBIDDEN)
+                try:
+                    organizacion = Organizacion.objects.get(id=org_id)
+                except Organizacion.DoesNotExist:
+                    return Response({
+                        'error': 'Organización no encontrada'
+                    }, status=status.HTTP_404_NOT_FOUND)
+            else:
+                # USUARIO NORMAL: Usar helper para obtener perfil
+                perfil = get_user_perfil_for_current_org(request.user)
+                organizacion = perfil.organizacion
+
+                if not organizacion:
+                    return Response({
+                        'error': 'Usuario no pertenece a ninguna organización'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                # Verificar que el usuario puede invitar (es admin o sede admin)
+                if not (request.user.is_staff or perfil.sedes_administradas.exists()):
+                    return Response({
+                        'error': 'No tienes permisos para enviar invitaciones'
+                    }, status=status.HTTP_403_FORBIDDEN)
 
             serializer = InvitationSerializer(data=request.data)
             if serializer.is_valid():
