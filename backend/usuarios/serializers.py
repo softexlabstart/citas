@@ -98,12 +98,22 @@ class UserSerializer(serializers.ModelSerializer):
         """Override to use read-only serializer for output."""
         representation = super().to_representation(instance)
 
-        # MULTI-TENANT: Obtener perfil usando helper con contexto de request
+        # MULTI-TENANT: Obtener perfil del usuario
+        # Prioridad:
+        # 1. Perfil de la organización actual (si hay contexto)
+        # 2. Primer perfil activo del usuario (fallback)
         request = self.context.get('request')
+        perfil = None
+
         if request:
             perfil = get_perfil_or_first(instance)
-        else:
-            # Sin request context, usar primer perfil
+
+        # Fallback: si no se obtuvo perfil con el contexto, usar el primer perfil activo
+        if not perfil:
+            perfil = instance.perfiles.filter(is_active=True).select_related('organizacion', 'sede').first()
+
+        # Si aún no hay perfil activo, usar cualquier perfil
+        if not perfil:
             perfil = instance.perfiles.select_related('organizacion', 'sede').first()
 
         if perfil:
