@@ -1,22 +1,28 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useRolePermissions } from '../hooks/useRolePermissions';
 
+/**
+ * AdminRoute - Protege rutas que solo deben ser accesibles por:
+ * - Propietarios (owner)
+ * - Administradores (admin)
+ * - Administradores de Sede (sede_admin)
+ */
 const AdminRoute: React.FC = () => {
     const { user } = useAuth();
+    const { isSedeAdminOrHigher } = useRolePermissions();
 
     if (!user) {
-        // Not logged in, redirect to login page
+        // No está autenticado, redirigir al login
         return <Navigate to="/login" />;
     }
 
-    // Excluir explícitamente a colaboradores (grupo Recurso)
-    if (user.groups.includes('Recurso')) {
-        return <Navigate to="/" />;
-    }
+    // Verificar si tiene permisos administrativos
+    const isAuthorized = user.is_superuser || isSedeAdminOrHigher;
 
-    if (!(user.is_staff || user.perfil?.is_sede_admin || user.groups.includes('SedeAdmin'))) {
-        // Solo staff y sede admin pueden acceder a rutas administrativas
+    if (!isAuthorized) {
+        // No tiene permisos administrativos, redirigir al home
         return <Navigate to="/" />;
     }
 
