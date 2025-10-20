@@ -20,7 +20,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const [show, setShow] = useState(false);
   const { t, i18n } = useTranslation();
-  const { canManageUsers, canViewReports, isSedeAdminOrHigher } = useRolePermissions();
+  const { canManageUsers, canViewReports, isSedeAdminOrHigher, isCliente } = useRolePermissions();
 
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
@@ -83,18 +83,30 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <Nav.Link as={Link} to="/" onClick={handleClose} className="nav-link-custom">
                     <HouseDoor className="nav-icon" /> {t('home')}
                   </Nav.Link>
-                  <Nav.Link as={Link} to="/services" onClick={handleClose} className="nav-link-custom">
-                    <Briefcase className="nav-icon" /> {t('services')}
-                  </Nav.Link>
-                  <Nav.Link as={Link} to="/appointments" onClick={handleClose} className="nav-link-custom">
-                    <CalendarCheck className="nav-icon" /> {t('appointments')}
-                  </Nav.Link>
-                  <Nav.Link as={Link} to="/calendar" onClick={handleClose} className="nav-link-custom">
-                    <CalendarWeek className="nav-icon" /> {t('calendar')}
-                  </Nav.Link>
-                  <Nav.Link as={Link} to="/availability" onClick={handleClose} className="nav-link-custom">
-                    <Search className="nav-icon" /> {t('availability')}
-                  </Nav.Link>
+
+                  {/* Opciones para Clientes: solo ver sus citas */}
+                  {isCliente ? (
+                    <Nav.Link as={Link} to="/appointments" onClick={handleClose} className="nav-link-custom">
+                      <CalendarCheck className="nav-icon" /> Mis Citas
+                    </Nav.Link>
+                  ) : (
+                    /* Opciones para Colaboradores y roles superiores */
+                    <>
+                      <Nav.Link as={Link} to="/services" onClick={handleClose} className="nav-link-custom">
+                        <Briefcase className="nav-icon" /> {t('services')}
+                      </Nav.Link>
+                      <Nav.Link as={Link} to="/appointments" onClick={handleClose} className="nav-link-custom">
+                        <CalendarCheck className="nav-icon" /> {t('appointments')}
+                      </Nav.Link>
+                      <Nav.Link as={Link} to="/calendar" onClick={handleClose} className="nav-link-custom">
+                        <CalendarWeek className="nav-icon" /> {t('calendar')}
+                      </Nav.Link>
+                      <Nav.Link as={Link} to="/availability" onClick={handleClose} className="nav-link-custom">
+                        <Search className="nav-icon" /> {t('availability')}
+                      </Nav.Link>
+                    </>
+                  )}
+
                   {user?.is_superuser && (
                     <>
                       <Nav.Link as={Link} to="/organization" onClick={handleClose} className="nav-link-custom">

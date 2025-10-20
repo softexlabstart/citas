@@ -63,6 +63,7 @@ const HomePage: React.FC = () => {
 
   const isColaborador = user.groups.includes('Recurso') || user.groups.includes('Colaborador');
   const isAdmin = !isColaborador && (user.is_staff || user.perfil?.is_sede_admin || (user.perfil?.sedes_administradas && user.perfil.sedes_administradas.length > 0));
+  const isCliente = user.perfil?.role === 'cliente';
 
   if (loading) {
     return <div>{t('loading')}...</div>;
@@ -70,6 +71,29 @@ const HomePage: React.FC = () => {
 
   if (error) {
     return <div className="alert alert-danger">{error}</div>;
+  }
+
+  // Dashboard para Clientes
+  if (isCliente) {
+    return (
+      <Container>
+        <Row>
+          <Col lg={12}>
+            <h2>Bienvenido, {user.first_name || user.username}!</h2>
+            <p className="text-muted">Desde aquí puedes ver y gestionar tus citas.</p>
+            <div className="alert alert-info mt-3">
+              <h5>Panel de Cliente</h5>
+              <p>Utiliza el menú para:</p>
+              <ul>
+                <li>Ver tus citas programadas</li>
+                <li>Agendar nuevas citas</li>
+                <li>Gestionar tu perfil</li>
+              </ul>
+            </div>
+          </Col>
+        </Row>
+      </Container>
+    );
   }
 
   if (isColaborador) {
