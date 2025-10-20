@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Container, Card, Button, Tab, Tabs, Alert } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import Layout from '../components/Layout';
 import CreateUserForm from '../components/CreateUserForm';
 import { useRolePermissions } from '../hooks/useRolePermissions';
 import { Navigate } from 'react-router-dom';
@@ -23,9 +22,8 @@ const UserManagementPage: React.FC = () => {
     };
 
     return (
-        <Layout>
-            <Container className="py-4">
-                <div className="d-flex justify-content-between align-items-center mb-4">
+        <Container className="py-4">
+            <div className="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h2>Gestión de Usuarios</h2>
                         <p className="text-muted mb-0">
@@ -152,8 +150,7 @@ const UserManagementPage: React.FC = () => {
                         </div>
                     </Card.Body>
                 </Card>
-            </Container>
-        </Layout>
+        </Container>
     );
 };
 
