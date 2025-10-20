@@ -96,6 +96,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         """Override to use read-only serializer for output."""
+        import logging
+        logger = logging.getLogger(__name__)
+
         representation = super().to_representation(instance)
 
         # MULTI-TENANT: Obtener perfil del usuario
@@ -105,20 +108,27 @@ class UserSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         perfil = None
 
+        logger.warning(f"[UserSerializer] Serializando usuario: {instance.username}, tiene request: {request is not None}")
+
         if request:
             perfil = get_perfil_or_first(instance)
+            logger.warning(f"[UserSerializer] Perfil desde contexto: {perfil}")
 
         # Fallback: si no se obtuvo perfil con el contexto, usar el primer perfil activo
         if not perfil:
             perfil = instance.perfiles.filter(is_active=True).select_related('organizacion', 'sede').first()
+            logger.warning(f"[UserSerializer] Perfil activo (fallback 1): {perfil}")
 
         # Si aún no hay perfil activo, usar cualquier perfil
         if not perfil:
             perfil = instance.perfiles.select_related('organizacion', 'sede').first()
+            logger.warning(f"[UserSerializer] Cualquier perfil (fallback 2): {perfil}")
 
         if perfil:
+            logger.warning(f"[UserSerializer] Perfil ENCONTRADO: {perfil.role} en {perfil.organizacion.nombre if perfil.organizacion else 'None'}")
             representation['perfil'] = PerfilUsuarioSerializer(perfil).data
         else:
+            logger.error(f"[UserSerializer] NO SE ENCONTRÓ PERFIL para usuario {instance.username}")
             representation['perfil'] = None
 
         return representation
