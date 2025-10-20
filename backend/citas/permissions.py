@@ -281,3 +281,34 @@ class CanAccessOrganizationData(BasePermission):
             return False
         except (AttributeError, PerfilUsuario.DoesNotExist):
             return False
+
+
+class IsOwnerAdminOrSedeAdmin(BasePermission):
+    """
+    Permite acceso a usuarios con roles administrativos en el nuevo sistema de roles.
+
+    Roles permitidos:
+    - Superusuarios (is_superuser)
+    - Propietarios (role='owner')
+    - Administradores (role='admin')
+    - Administradores de Sede (role='sede_admin')
+
+    NO permite:
+    - Colaboradores (role='colaborador')
+    - Clientes (role='cliente')
+    """
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        # Superusuarios siempre tienen acceso
+        if request.user.is_superuser:
+            return True
+
+        # Verificar rol en PerfilUsuario
+        perfil = get_perfil_or_first(request.user)
+        if not perfil:
+            return False
+
+        # Permitir solo roles administrativos
+        return perfil.role in ['owner', 'admin', 'sede_admin']
