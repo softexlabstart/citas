@@ -890,6 +890,36 @@ class OrganizationMembersView(APIView):
 
     def get(self, request, *args, **kwargs):
         """Listar miembros de la organización del usuario."""
+        # SUPERUSUARIO: Puede ver todos los miembros de todas las organizaciones
+        if request.user.is_superuser:
+            from organizacion.models import Organizacion
+
+            # Filtrar por organización si se especifica
+            org_id = request.query_params.get('organizacion_id')
+            if org_id:
+                try:
+                    organizacion = Organizacion.objects.get(id=org_id)
+                    miembros = User.objects.filter(perfiles__organizacion=organizacion)
+                except Organizacion.DoesNotExist:
+                    return Response({
+                        'error': 'Organización no encontrada'
+                    }, status=status.HTTP_404_NOT_FOUND)
+            else:
+                # Todos los miembros de todas las organizaciones
+                miembros = User.objects.filter(perfiles__isnull=False)
+
+            miembros = miembros.prefetch_related(
+                'perfiles__sedes_administradas',
+                'perfiles__organizacion',
+                'perfiles__sede'
+            ).distinct()
+
+            return Response({
+                'miembros': UserSerializer(miembros, many=True, context={'request': request}).data,
+                'total': miembros.count()
+            })
+
+        # USUARIO NORMAL: Usar perfil de organización
         try:
             # MULTI-TENANT: Usar helper para obtener perfil
             perfil = get_user_perfil_for_current_org(request.user)
