@@ -84,11 +84,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <HouseDoor className="nav-icon" /> {t('home')}
                   </Nav.Link>
 
-                  {/* Opciones para Clientes: solo ver sus citas */}
+                  {/* Opciones para Clientes */}
                   {isCliente ? (
-                    <Nav.Link as={Link} to="/appointments" onClick={handleClose} className="nav-link-custom">
-                      <CalendarCheck className="nav-icon" /> Mis Citas
-                    </Nav.Link>
+                    <>
+                      <Nav.Link as={Link} to="/appointments" onClick={handleClose} className="nav-link-custom">
+                        <CalendarCheck className="nav-icon" /> Mis Citas
+                      </Nav.Link>
+                      <Nav.Link as={Link} to="/calendar" onClick={handleClose} className="nav-link-custom">
+                        <CalendarWeek className="nav-icon" /> Calendario
+                      </Nav.Link>
+                      <Nav.Link as={Link} to="/availability" onClick={handleClose} className="nav-link-custom">
+                        <Search className="nav-icon" /> Agendar Cita
+                      </Nav.Link>
+                    </>
                   ) : (
                     /* Opciones para Colaboradores y roles superiores */
                     <>
