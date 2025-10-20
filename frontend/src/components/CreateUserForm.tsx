@@ -122,7 +122,11 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ onSuccess, onCancel }) 
                 onSuccess();
             }
         } else if (result.error) {
-            toast.error('Error al crear usuario: ' + result.error);
+            // Mostrar mensaje de error user-friendly
+            const errorMessage = result.error.includes('permisos')
+                ? result.error // Mensaje de permisos ya es claro
+                : `No se pudo crear el usuario: ${result.error}`;
+            toast.error(errorMessage);
         }
     };
 
@@ -132,7 +136,7 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ onSuccess, onCancel }) 
 
     return (
         <Form onSubmit={handleSubmit}>
-            {error && <Alert variant="danger">Error al crear usuario: {error}</Alert>}
+            {error && <Alert variant="danger">{error}</Alert>}
 
             <Card className="mb-3">
                 <Card.Header className="bg-primary text-white">

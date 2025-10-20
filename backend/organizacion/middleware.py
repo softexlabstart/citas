@@ -50,8 +50,12 @@ class OrganizacionMiddleware:
                         organizacion = perfil.organizacion
                         logger.debug(f"[OrgMiddleware] Org from single profile: {organizacion}")
                 elif perfiles_count > 1:
-                    # Multiple profiles but no header: log warning
-                    logger.warning(f"[OrgMiddleware] User {request.user.username} has {perfiles_count} profiles but no X-Organization-ID header")
+                    # Multiple profiles but no header: use the first active profile as fallback
+                    logger.warning(f"[OrgMiddleware] User {request.user.username} has {perfiles_count} profiles but no X-Organization-ID header. Using first active profile.")
+                    perfil = perfiles.filter(is_active=True).first()
+                    if perfil:
+                        organizacion = perfil.organizacion
+                        logger.debug(f"[OrgMiddleware] Org from first active profile (fallback): {organizacion}")
                 else:
                     logger.debug(f"[OrgMiddleware] User {request.user.username} has no profiles")
 
