@@ -34,7 +34,7 @@ class OrganizacionMiddleware:
 
         # Priority 2 - Get organization from authenticated user's profile
         if organizacion is None and request.user.is_authenticated:
-            logger.debug(f"[OrgMiddleware] User: {request.user.username}, is_staff: {request.user.is_staff}, is_superuser: {request.user.is_superuser}")
+            logger.warning(f"[OrgMiddleware] User: {request.user.username}, is_staff: {request.user.is_staff}, is_superuser: {request.user.is_superuser}")
             try:
                 # MULTI-TENANT: Check if user has multiple profiles
                 # CRITICAL: Use PerfilUsuario.all_objects to bypass OrganizacionManager filtering
@@ -48,7 +48,7 @@ class OrganizacionMiddleware:
                     perfil = perfiles.first()
                     if perfil:
                         organizacion = perfil.organizacion
-                        logger.debug(f"[OrgMiddleware] Org from single profile: {organizacion}")
+                        logger.warning(f"[OrgMiddleware] Org from single profile: {organizacion}")
                 elif perfiles_count > 1:
                     # Multiple profiles but no header: use the first active profile as fallback
                     logger.warning(f"[OrgMiddleware] User {request.user.username} has {perfiles_count} profiles but no X-Organization-ID header. Using first active profile.")
