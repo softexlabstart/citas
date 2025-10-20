@@ -44,7 +44,12 @@ const OrganizationPage: React.FC = () => {
     const handleInviteSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await sendInvitation(inviteData);
+            // Agregar organization_id al payload de invitación
+            const invitationPayload = {
+                ...inviteData,
+                organization_id: organizationInfo?.organizacion.id
+            };
+            await sendInvitation(invitationPayload);
             setShowInviteModal(false);
             setInviteData({
                 email: '',
