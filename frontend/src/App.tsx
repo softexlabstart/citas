@@ -32,6 +32,7 @@ const RecursoDashboard = lazy(() => import('./components/RecursoDashboard'));
 const Clients = lazy(() => import('./components/Clients'));
 const MarketingPage = lazy(() => import('./pages/MarketingPage')); // Import MarketingPage
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage')); // New Role System
+const AcceptInvitationPage = lazy(() => import('./pages/AcceptInvitationPage')); // Accept Invitation
 // If EditProfilePage is a named export:
 const EditProfilePage = lazy(() =>
   import('./pages/EditProfilePage').then(module => ({ default: module.EditProfilePage }))
@@ -70,6 +71,7 @@ const App: React.FC = () => {
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+              <Route path="/accept-invitation/:token" element={<AcceptInvitationPage />} />
 
               {/* Rutas Privadas */}
               <Route element={<PrivateRoute />}>

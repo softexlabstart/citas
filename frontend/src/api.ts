@@ -421,6 +421,12 @@ export const getOrganizationMembers = (organizacionId?: number, sedeId?: number)
 
 export const sendInvitation = (invitation: InvitationData) => api.post('/api/organization/invite/', invitation);
 
+// Funciones para aceptar invitaciones
+export const getInvitationDetails = (token: string) => api.get(`/api/invitations/${token}/`);
+
+export const acceptInvitation = (token: string, data: { username: string; password: string; first_name: string; last_name: string }) =>
+    api.post(`/api/invitations/${token}/`, data);
+
 // Funciones para Organizacion
 export const createOrganization = (nombre: string) => api.post('/api/organizacion/organizaciones/', { nombre });
 
