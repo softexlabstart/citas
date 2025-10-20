@@ -345,18 +345,18 @@ class ClientViewSet(viewsets.ModelViewSet):
         """
         Retorna queryset de clientes con filtrado multi-tenant.
         Optimizado para usar ORM de Django en lugar de SQL directo.
+
+        IMPORTANTE: Solo muestra usuarios con rol 'cliente'.
+        Excluye: owner, admin, sede_admin, colaborador
         """
         user = self.request.user
 
-        # Base queryset: usuarios que NO son staff, ni admins de sede, ni colaboradores
-        # Optimización: usar exclude con lista en lugar de múltiples exclude
+        # Base queryset: SOLO usuarios con rol 'cliente' en su perfil
         # MULTI-TENANT: prefetch_related para relación 1:N (perfiles plural)
         base_queryset = User.objects.filter(
-            is_staff=False
+            perfiles__role='cliente'  # Filtrar solo clientes por el nuevo sistema de roles
         ).exclude(
             Q(email__isnull=True) | Q(email__exact='')
-        ).exclude(
-            groups__name__in=['SedeAdmin', 'Recurso']
         ).prefetch_related('perfiles__organizacion', 'perfiles__sede').distinct()
 
         # Filtrar por consentimiento si se especifica
