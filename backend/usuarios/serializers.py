@@ -374,18 +374,52 @@ class ClientEmailSerializer(serializers.ModelSerializer):
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
+        import logging
+        from organizacion.thread_locals import set_current_organization, get_current_organization
+
+        logger = logging.getLogger(__name__)
         data = super().validate(attrs)
-        # Usar un bloque try-except para manejar usuarios sin perfil
+
+        # CRITICAL FIX: Establecer contexto de organización antes de serializar
+        # Esto permite que OrganizationManager funcione correctamente durante la creación del token
+        org_was_set = False
+        original_org = get_current_organization()
+
         try:
+            # Si no hay organización en contexto, obtener la organización del primer perfil activo del usuario
+            if not original_org:
+                # Usar all_objects solo para LEER y establecer el contexto
+                # Esto es seguro porque solo estamos estableciendo el contexto que el middleware establecería
+                perfil = PerfilUsuario.all_objects.filter(
+                    user=self.user,
+                    is_active=True
+                ).select_related('organizacion').first()
+
+                if perfil and perfil.organizacion:
+                    logger.warning(f"[MyTokenObtainPairSerializer] Estableciendo contexto org={perfil.organizacion.nombre} para user={self.user.username}")
+                    set_current_organization(perfil.organizacion)
+                    org_was_set = True
+                else:
+                    logger.warning(f"[MyTokenObtainPairSerializer] No se encontró perfil activo para user={self.user.username}")
+
+            # Ahora UserSerializer puede usar OrganizationManager correctamente
             user_data = UserSerializer(self.user).data
+
         except ObjectDoesNotExist:
             # Si no hay perfil, serializa solo los datos básicos del usuario
+            logger.warning(f"[MyTokenObtainPairSerializer] ObjectDoesNotExist para user={self.user.username}")
             user_data = {
                 'id': self.user.id,
                 'username': self.user.username,
                 'email': self.user.email,
                 'groups': [group.name for group in self.user.groups.all()]
             }
+        finally:
+            # Restaurar el contexto original de organización
+            if org_was_set:
+                set_current_organization(original_org)
+                logger.warning(f"[MyTokenObtainPairSerializer] Contexto restaurado a org={original_org}")
+
         data.update({'user': user_data})
         return data
 
