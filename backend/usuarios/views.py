@@ -249,6 +249,8 @@ class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
+        from organizacion.thread_locals import set_current_organization, get_current_organization
+
         user = request.user
         # MULTI-TENANT: Preload related data for user's profiles (plural)
         user = User.objects.prefetch_related(
@@ -256,8 +258,34 @@ class UserDetailView(APIView):
             'perfiles__organizacion',
             'perfiles__sede'
         ).get(pk=user.pk)
-        # Devuelve solo datos públicos, nunca información sensible
-        data = UserSerializer(user, context={'request': request}).data
+
+        # CRITICAL FIX: Establecer contexto de organización antes de serializar
+        # Similar al fix en MyTokenObtainPairSerializer
+        org_was_set = False
+        original_org = get_current_organization()
+
+        try:
+            if not original_org:
+                # Obtener organización del primer perfil activo
+                perfil = PerfilUsuario.all_objects.filter(
+                    user=user,
+                    is_active=True
+                ).select_related('organizacion').first()
+
+                if perfil and perfil.organizacion:
+                    logger.info(f"[UserDetailView] Estableciendo contexto org={perfil.organizacion.nombre} para user={user.username}")
+                    set_current_organization(perfil.organizacion)
+                    org_was_set = True
+
+            # Devuelve solo datos públicos, nunca información sensible
+            data = UserSerializer(user, context={'request': request}).data
+
+        finally:
+            # Restaurar contexto original
+            if org_was_set:
+                set_current_organization(original_org)
+                logger.info(f"[UserDetailView] Contexto restaurado a org={original_org}")
+
         # Elimina campos sensibles si existen
         data.pop('password', None)
         data.pop('last_login', None)
