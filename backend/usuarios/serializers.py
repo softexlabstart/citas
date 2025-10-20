@@ -28,7 +28,12 @@ class PerfilUsuarioSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PerfilUsuario
-        fields = ('timezone', 'sede', 'sedes', 'organizacion', 'sedes_administradas', 'is_sede_admin', 'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento', 'has_consented_data_processing', 'data_processing_opt_out')
+        fields = (
+            'timezone', 'sede', 'sedes', 'organizacion', 'sedes_administradas', 'is_sede_admin',
+            'telefono', 'ciudad', 'barrio', 'genero', 'fecha_nacimiento',
+            'has_consented_data_processing', 'data_processing_opt_out',
+            'role', 'additional_roles', 'display_badge'  # NEW: Role system fields
+        )
 
     def get_sedes(self, obj):
         """Get all sedes using direct query to bypass organization filtering."""
