@@ -28,14 +28,29 @@ const Home: React.FC = () => {
     if (!data) {
       return null;
     }
-    const isAdmin = user?.is_staff || user?.perfil?.is_sede_admin || user?.groups.includes('SedeAdmin');
-    if (isAdmin) {
+
+    // NUEVO SISTEMA DE ROLES: Usar user.perfil.role en lugar de groups
+    const userRole = user?.perfil?.role;
+
+    // Superusuario siempre ve el dashboard de admin
+    if (user?.is_superuser) {
       return <AdminDashboard data={data as AdminDashboardSummary} />;
     }
-    if (user?.groups.includes('Recurso')) {
-      return <RecursoDashboard />;
+
+    // Determinar dashboard según el rol
+    switch (userRole) {
+      case 'owner':
+      case 'admin':
+      case 'sede_admin':
+        return <AdminDashboard data={data as AdminDashboardSummary} />;
+
+      case 'colaborador':
+        return <RecursoDashboard />;
+
+      case 'cliente':
+      default:
+        return <UserDashboard data={data as UserDashboardSummary} />;
     }
-    return <UserDashboard data={data as UserDashboardSummary} />;
   };
 
   return (
