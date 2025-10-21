@@ -54,7 +54,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ data }) => {
             <Card className="shadow-sm">
                 <Card.Header as="h5">{t('upcoming_appointments')}</Card.Header>
                 <ListGroup variant="flush">
-                    {data.proximas_citas.length > 0 ? (
+                    {data.proximas_citas && data.proximas_citas.length > 0 ? (
                         data.proximas_citas.map(cita => (
                             <ListGroup.Item key={cita.id} className="d-flex justify-content-between align-items-center">
                                 <div>
