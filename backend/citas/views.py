@@ -977,20 +977,37 @@ class RecursoViewSet(viewsets.ModelViewSet):
         queryset = Colaborador.all_objects.select_related('sede', 'sede__organizacion')
         now = timezone.now()
 
-        # SUPERUSUARIO: puede ver todos los recursos
-        if user.is_authenticated and user.is_superuser:
-            if sede_id:
-                queryset = queryset.filter(sede_id=sede_id)
-            # Excluir recursos con bloqueo activo
-            return queryset.exclude(
+        # Función helper para excluir bloqueos activos
+        def exclude_blocked(qs):
+            return qs.exclude(
                 bloqueos__fecha_inicio__lte=now,
                 bloqueos__fecha_fin__gte=now
             )
 
-        # ADMINISTRADOR DE SEDE: solo recursos de sus sedes
+        # SUPERUSUARIO: puede ver todos los recursos
+        if user.is_authenticated and user.is_superuser:
+            if sede_id:
+                queryset = queryset.filter(sede_id=sede_id)
+            return exclude_blocked(queryset)
+
+        # SISTEMA DE ROLES: usar perfil.role para determinar acceso
         if user.is_authenticated:
             perfil = get_perfil_or_first(user)
-            if perfil:
+            if not perfil:
+                return Colaborador.all_objects.none()
+
+            role = perfil.role
+            org = perfil.organizacion
+
+            # OWNER y ADMIN: ven todos los recursos de su organización
+            if role in ['owner', 'admin']:
+                queryset = queryset.filter(sede__organizacion=org)
+                if sede_id:
+                    queryset = queryset.filter(sede_id=sede_id)
+                return exclude_blocked(queryset)
+
+            # SEDE_ADMIN: solo recursos de sus sedes administradas
+            if role == 'sede_admin':
                 from django.db import connection
                 with connection.cursor() as cursor:
                     cursor.execute("""
@@ -1001,46 +1018,31 @@ class RecursoViewSet(viewsets.ModelViewSet):
 
                 if sedes_admin_ids:
                     queryset = queryset.filter(sede_id__in=sedes_admin_ids)
+                else:
+                    # Si es sede_admin pero no tiene sedes asignadas, no ve nada
+                    return Colaborador.all_objects.none()
+
                 if sede_id:
-                    # Validar que la sede pertenece a las sedes administradas
                     queryset = queryset.filter(sede_id=sede_id)
-                # Excluir recursos con bloqueo activo
-                return queryset.exclude(
-                    bloqueos__fecha_inicio__lte=now,
-                    bloqueos__fecha_fin__gte=now
-                )
+                return exclude_blocked(queryset)
 
-        # COLABORADOR: puede ver recursos de su organización
-        if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
-            colaborador = Colaborador.all_objects.get(usuario=user)
-            org = colaborador.sede.organizacion
-            queryset = queryset.filter(sede__organizacion=org)
-            if sede_id:
-                # Validar que la sede pertenece a su organización
-                queryset = queryset.filter(sede_id=sede_id)
-            # Excluir recursos con bloqueo activo
-            return queryset.exclude(
-                bloqueos__fecha_inicio__lte=now,
-                bloqueos__fecha_fin__gte=now
-            )
+            # COLABORADOR: puede ver recursos de su organización
+            if role == 'colaborador':
+                queryset = queryset.filter(sede__organizacion=org)
+                if sede_id:
+                    queryset = queryset.filter(sede_id=sede_id)
+                return exclude_blocked(queryset)
 
-        # CLIENTE: solo recursos si proporciona sede_id
-        if user.is_authenticated:
-            if sede_id:
-                queryset = queryset.filter(sede_id=sede_id)
-                # Excluir recursos con bloqueo activo
-                return queryset.exclude(
-                    bloqueos__fecha_inicio__lte=now,
-                    bloqueos__fecha_fin__gte=now
-                )
-            return Colaborador.all_objects.none()
+            # CLIENTE: solo recursos si proporciona sede_id
+            if role == 'cliente':
+                if sede_id:
+                    queryset = queryset.filter(sede_id=sede_id, sede__organizacion=org)
+                    return exclude_blocked(queryset)
+                return Colaborador.all_objects.none()
 
         # ANÓNIMO: debe proporcionar sede_id
         if sede_id:
             queryset = queryset.filter(sede_id=sede_id)
-            # Excluir recursos con bloqueo activo
-            return queryset.exclude(
-                bloqueos__fecha_inicio__lte=now,
-                bloqueos__fecha_fin__gte=now
-            )
+            return exclude_blocked(queryset)
+
         return Colaborador.all_objects.none()
