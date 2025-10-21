@@ -96,10 +96,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         """Override to use read-only serializer for output."""
-        import logging
         from organizacion.thread_locals import set_current_organization, get_current_organization
-
-        logger = logging.getLogger(__name__)
 
         representation = super().to_representation(instance)
 
@@ -110,8 +107,6 @@ class UserSerializer(serializers.ModelSerializer):
         perfil = None
 
         try:
-            logger.warning(f"[UserSerializer] Serializando usuario: {instance.username}, org actual: {original_org}")
-
             # Si no hay organización en contexto, establecerla temporalmente
             if not original_org:
                 # Usar all_objects para leer y establecer contexto
@@ -121,42 +116,32 @@ class UserSerializer(serializers.ModelSerializer):
                 ).select_related('organizacion', 'sede').first()
 
                 if perfil and perfil.organizacion:
-                    logger.warning(f"[UserSerializer] Estableciendo contexto org={perfil.organizacion.nombre}")
                     set_current_organization(perfil.organizacion)
                     org_was_set = True
-                else:
-                    logger.warning(f"[UserSerializer] No se encontró perfil activo para establecer contexto")
 
-            # Ahora intentar obtener perfil usando el manager normal (con contexto)
+            # Intentar obtener perfil usando el manager normal (con contexto)
             if not perfil:
                 request = self.context.get('request')
                 if request:
                     perfil = get_perfil_or_first(instance)
-                    logger.warning(f"[UserSerializer] Perfil desde get_perfil_or_first: {perfil}")
 
-            # Fallback: usar el primer perfil activo
-            # CRÍTICO: Siempre usar all_objects si no encontramos perfil
+            # Fallback: usar all_objects si no encontramos perfil
             # El OrganizationManager tiene problemas con el contexto thread-local entre workers
             if not perfil:
-                logger.warning(f"[UserSerializer] No se encontró perfil con manager, usando all_objects directamente")
                 perfil = PerfilUsuario.all_objects.filter(
                     user=instance,
                     is_active=True
                 ).select_related('organizacion', 'sede').first()
-                logger.warning(f"[UserSerializer] Perfil con all_objects: {perfil}")
 
             if perfil:
-                logger.warning(f"[UserSerializer] Perfil ENCONTRADO: {perfil.role} en {perfil.organizacion.nombre if perfil.organizacion else 'None'}")
                 representation['perfil'] = PerfilUsuarioSerializer(perfil).data
             else:
-                logger.error(f"[UserSerializer] NO SE ENCONTRÓ PERFIL para usuario {instance.username}")
                 representation['perfil'] = None
 
         finally:
             # Restaurar contexto original
             if org_was_set:
                 set_current_organization(original_org)
-                logger.warning(f"[UserSerializer] Contexto restaurado a org={original_org}")
 
         return representation
 
@@ -401,10 +386,8 @@ class ClientEmailSerializer(serializers.ModelSerializer):
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        import logging
         from organizacion.thread_locals import set_current_organization, get_current_organization
 
-        logger = logging.getLogger(__name__)
         data = super().validate(attrs)
 
         # CRITICAL FIX: Establecer contexto de organización antes de serializar
@@ -423,18 +406,14 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 ).select_related('organizacion').first()
 
                 if perfil and perfil.organizacion:
-                    logger.warning(f"[MyTokenObtainPairSerializer] Estableciendo contexto org={perfil.organizacion.nombre} para user={self.user.username}")
                     set_current_organization(perfil.organizacion)
                     org_was_set = True
-                else:
-                    logger.warning(f"[MyTokenObtainPairSerializer] No se encontró perfil activo para user={self.user.username}")
 
             # Ahora UserSerializer puede usar OrganizationManager correctamente
             user_data = UserSerializer(self.user).data
 
         except ObjectDoesNotExist:
             # Si no hay perfil, serializa solo los datos básicos del usuario
-            logger.warning(f"[MyTokenObtainPairSerializer] ObjectDoesNotExist para user={self.user.username}")
             user_data = {
                 'id': self.user.id,
                 'username': self.user.username,
@@ -445,7 +424,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             # Restaurar el contexto original de organización
             if org_was_set:
                 set_current_organization(original_org)
-                logger.warning(f"[MyTokenObtainPairSerializer] Contexto restaurado a org={original_org}")
 
         data.update({'user': user_data})
         return data
