@@ -250,7 +250,9 @@ const AdminSettings: React.FC = () => {
                         </Table>
                     </Tab>
                     <Tab eventKey="resources" title={t('manage_resources')}>
-                        <Button className="mb-3" onClick={() => handleOpenModal('resource')}>{t('new_resource')}</Button>
+                        <Alert variant="info" className="mb-3">
+                            <strong>Nota:</strong> Los colaboradores se crean desde <a href="/users">Gestión de Usuarios</a>. Aquí solo puedes editarlos o eliminarlos.
+                        </Alert>
                         <Table striped bordered hover responsive>
                             <thead><tr><th>{t('name')}</th><th>{t('email')}</th><th>{t('description')}</th><th>{t('sede_label')}</th><th>{t('actions')}</th></tr></thead>
                             <tbody>
