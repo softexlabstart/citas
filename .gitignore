@@ -130,3 +130,9 @@ celerybeat.pid
 *.tgz
 .yarn-integrity
 .vercel
+
+# ======================
+# DOCUMENTACION INTERNA
+# ======================
+INTEGRACION_WOMPI_SAAS.md
+PRUEBAS_EXHAUSTIVAS_SISTEMA.md
