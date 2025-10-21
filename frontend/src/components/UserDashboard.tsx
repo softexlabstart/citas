@@ -22,7 +22,8 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ data }) => {
 
     useEffect(() => {
         const fetchClientData = async () => {
-            if (user && user.id) { // Ensure user and user.id exist
+            // Solo cargar datos de cliente si el usuario tiene rol 'cliente'
+            if (user && user.id && user.perfil?.role === 'cliente') {
                 setLoading(true);
                 try {
                     const response = await getClientById(user.id);
@@ -36,10 +37,13 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ data }) => {
                 } finally {
                     setLoading(false);
                 }
+            } else {
+                // No es cliente, no necesita datos de cliente
+                setLoading(false);
             }
         };
         fetchClientData();
-    }, [user, t, getClientById]); // Add getClientById to dependency array
+    }, [user, t]); // Removed getClientById from dependency array
 
     return (
         <>
