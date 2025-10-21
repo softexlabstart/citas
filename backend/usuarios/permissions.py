@@ -86,8 +86,14 @@ class IsOwnerOrAdmin(BasePermission):
             return True
 
         org = get_current_organization()
+
+        # Si no hay organización en contexto, intentar obtenerla del perfil del usuario
         if not org:
-            return False
+            perfil = get_perfil_or_first(request.user)
+            if perfil and perfil.organizacion:
+                org = perfil.organizacion
+            else:
+                return False
 
         return user_has_role(request.user, 'owner', org) or user_has_role(request.user, 'admin', org)
 
