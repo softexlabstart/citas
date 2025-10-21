@@ -10,9 +10,10 @@ const PrivateRoute: React.FC = () => {
         return <Navigate to="/login" />;
     }
 
-    const isRecurso = user.groups.includes('Recurso');
+    // NUEVO SISTEMA DE ROLES: Verificar rol de colaborador en lugar de grupo 'Recurso'
+    const isColaborador = user?.perfil?.role === 'colaborador';
 
-    if (location.pathname === '/recurso-dashboard' && !isRecurso) {
+    if (location.pathname === '/recurso-dashboard' && !isColaborador) {
         return <Navigate to="/" />;
     }
 

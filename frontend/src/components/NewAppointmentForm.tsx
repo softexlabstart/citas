@@ -46,12 +46,13 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
   const [showNextAvailableModal, setShowNextAvailableModal] = useState(false);
 
   useEffect(() => {
-    // Verificar si el usuario es colaborador o admin
+    // NUEVO SISTEMA DE ROLES: Verificar si el usuario es colaborador o admin
     if (user) {
       const isAdmin = user.is_staff || user.is_superuser;
       const isSedeAdmin = user.perfil?.sedes_administradas?.length > 0;
-      // Un usuario es colaborador si tiene grupos asignados o es staff/sede admin
-      const hasSpecialRole = isAdmin || isSedeAdmin || (user.groups && user.groups.length > 0);
+      const isColaborador = user.perfil?.role === 'colaborador';
+      // Un usuario tiene permisos especiales si es admin, sede admin, o colaborador
+      const hasSpecialRole = isAdmin || isSedeAdmin || isColaborador;
 
       if (hasSpecialRole) {
         setIsColaboradorOrAdmin(true);

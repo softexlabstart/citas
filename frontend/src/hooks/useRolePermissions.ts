@@ -119,11 +119,11 @@ export const useDefaultDashboard = (): string => {
     const primaryRole = user?.perfil?.role;
 
     const dashboardMap: Record<RoleType, string> = {
-        owner: '/admin',
-        admin: '/admin',
-        sede_admin: '/admin',
-        colaborador: '/recurso',
-        cliente: '/user',
+        owner: '/',
+        admin: '/',
+        sede_admin: '/',
+        colaborador: '/recurso-dashboard',
+        cliente: '/',
     };
 
     return dashboardMap[primaryRole as RoleType] || '/user';
