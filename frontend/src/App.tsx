@@ -40,7 +40,6 @@ const EditProfilePage = lazy(() =>
 
 // If EditProfilePage is already a default export, you can keep the original line:
 // const EditProfilePage = lazy(() => import('./pages/EditProfilePage'));
-const HomePage = lazy(() => import('./pages/HomePage'));
 
 // Centered spinner component for Suspense fallback
 const CenteredSpinner = () => (
