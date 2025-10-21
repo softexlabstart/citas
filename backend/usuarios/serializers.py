@@ -97,39 +97,60 @@ class UserSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         """Override to use read-only serializer for output."""
         import logging
+        from organizacion.thread_locals import set_current_organization, get_current_organization
+
         logger = logging.getLogger(__name__)
 
         representation = super().to_representation(instance)
 
-        # MULTI-TENANT: Obtener perfil del usuario
-        # Prioridad:
-        # 1. Perfil de la organización actual (si hay contexto)
-        # 2. Primer perfil activo del usuario (fallback)
-        request = self.context.get('request')
+        # CRITICAL FIX: Establecer contexto de organización si no existe
+        # Esto permite que OrganizationManager funcione correctamente
+        org_was_set = False
+        original_org = get_current_organization()
         perfil = None
 
-        logger.warning(f"[UserSerializer] Serializando usuario: {instance.username}, tiene request: {request is not None}")
+        try:
+            logger.warning(f"[UserSerializer] Serializando usuario: {instance.username}, org actual: {original_org}")
 
-        if request:
-            perfil = get_perfil_or_first(instance)
-            logger.warning(f"[UserSerializer] Perfil desde contexto: {perfil}")
+            # Si no hay organización en contexto, establecerla temporalmente
+            if not original_org:
+                # Usar all_objects para leer y establecer contexto
+                perfil = PerfilUsuario.all_objects.filter(
+                    user=instance,
+                    is_active=True
+                ).select_related('organizacion', 'sede').first()
 
-        # Fallback: si no se obtuvo perfil con el contexto, usar el primer perfil activo
-        if not perfil:
-            perfil = instance.perfiles.filter(is_active=True).select_related('organizacion', 'sede').first()
-            logger.warning(f"[UserSerializer] Perfil activo (fallback 1): {perfil}")
+                if perfil and perfil.organizacion:
+                    logger.warning(f"[UserSerializer] Estableciendo contexto org={perfil.organizacion.nombre}")
+                    set_current_organization(perfil.organizacion)
+                    org_was_set = True
+                else:
+                    logger.warning(f"[UserSerializer] No se encontró perfil activo para establecer contexto")
 
-        # Si aún no hay perfil activo, usar cualquier perfil
-        if not perfil:
-            perfil = instance.perfiles.select_related('organizacion', 'sede').first()
-            logger.warning(f"[UserSerializer] Cualquier perfil (fallback 2): {perfil}")
+            # Ahora intentar obtener perfil usando el manager normal (con contexto)
+            if not perfil:
+                request = self.context.get('request')
+                if request:
+                    perfil = get_perfil_or_first(instance)
+                    logger.warning(f"[UserSerializer] Perfil desde get_perfil_or_first: {perfil}")
 
-        if perfil:
-            logger.warning(f"[UserSerializer] Perfil ENCONTRADO: {perfil.role} en {perfil.organizacion.nombre if perfil.organizacion else 'None'}")
-            representation['perfil'] = PerfilUsuarioSerializer(perfil).data
-        else:
-            logger.error(f"[UserSerializer] NO SE ENCONTRÓ PERFIL para usuario {instance.username}")
-            representation['perfil'] = None
+            # Fallback: usar el primer perfil activo
+            if not perfil:
+                perfil = instance.perfiles.filter(is_active=True).select_related('organizacion', 'sede').first()
+                logger.warning(f"[UserSerializer] Perfil activo (fallback): {perfil}")
+
+            if perfil:
+                logger.warning(f"[UserSerializer] Perfil ENCONTRADO: {perfil.role} en {perfil.organizacion.nombre if perfil.organizacion else 'None'}")
+                representation['perfil'] = PerfilUsuarioSerializer(perfil).data
+            else:
+                logger.error(f"[UserSerializer] NO SE ENCONTRÓ PERFIL para usuario {instance.username}")
+                representation['perfil'] = None
+
+        finally:
+            # Restaurar contexto original
+            if org_was_set:
+                set_current_organization(original_org)
+                logger.warning(f"[UserSerializer] Contexto restaurado a org={original_org}")
 
         return representation
 
