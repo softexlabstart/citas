@@ -742,13 +742,27 @@ class CreateUserWithRoleSerializer(serializers.Serializer):
 
         # Si es colaborador, crear registro en Colaborador
         if 'colaborador' in perfil.all_roles:
-            Colaborador.objects.create(
-                usuario=user,
-                nombre=user.get_full_name(),
-                email=user.email,
-                sede=perfil.sede,
-                organizacion=org,
-            )
+            from organizacion.thread_locals import set_current_organization, get_current_organization
+
+            # CRITICAL FIX: Establecer contexto de organización para OrganizationManager
+            org_was_set = False
+            original_org = get_current_organization()
+
+            try:
+                if not original_org:
+                    set_current_organization(org)
+                    org_was_set = True
+
+                # Crear colaborador (sin campo organizacion - se obtiene via sede__organizacion)
+                Colaborador.objects.create(
+                    usuario=user,
+                    nombre=user.get_full_name(),
+                    email=user.email,
+                    sede=perfil.sede,
+                )
+            finally:
+                if org_was_set:
+                    set_current_organization(original_org)
 
         return perfil
 
