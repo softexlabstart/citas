@@ -135,9 +135,15 @@ class UserSerializer(serializers.ModelSerializer):
                     logger.warning(f"[UserSerializer] Perfil desde get_perfil_or_first: {perfil}")
 
             # Fallback: usar el primer perfil activo
+            # CRÍTICO: Siempre usar all_objects si no encontramos perfil
+            # El OrganizationManager tiene problemas con el contexto thread-local entre workers
             if not perfil:
-                perfil = instance.perfiles.filter(is_active=True).select_related('organizacion', 'sede').first()
-                logger.warning(f"[UserSerializer] Perfil activo (fallback): {perfil}")
+                logger.warning(f"[UserSerializer] No se encontró perfil con manager, usando all_objects directamente")
+                perfil = PerfilUsuario.all_objects.filter(
+                    user=instance,
+                    is_active=True
+                ).select_related('organizacion', 'sede').first()
+                logger.warning(f"[UserSerializer] Perfil con all_objects: {perfil}")
 
             if perfil:
                 logger.warning(f"[UserSerializer] Perfil ENCONTRADO: {perfil.role} en {perfil.organizacion.nombre if perfil.organizacion else 'None'}")
