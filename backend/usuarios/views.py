@@ -1171,7 +1171,7 @@ class CreateUserWithRoleView(APIView):
                 'error': 'No tienes permisos para crear usuarios. Solo propietarios y administradores.'
             }, status=status.HTTP_403_FORBIDDEN)
 
-        serializer = CreateUserWithRoleSerializer(data=request.data)
+        serializer = CreateUserWithRoleSerializer(data=request.data, context={'request': request})
 
         if serializer.is_valid():
             try:

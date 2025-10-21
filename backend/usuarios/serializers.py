@@ -697,6 +697,15 @@ class CreateUserWithRoleSerializer(serializers.Serializer):
         from citas.models import Colaborador
 
         org = get_current_organization()
+
+        # Si no hay organización en contexto, obtenerla del request user
+        if not org and hasattr(self, 'context') and 'request' in self.context:
+            request = self.context['request']
+            if request.user.is_authenticated:
+                perfil = get_perfil_or_first(request.user)
+                if perfil and perfil.organizacion:
+                    org = perfil.organizacion
+
         if not org:
             raise serializers.ValidationError("No se pudo determinar la organización")
 
