@@ -110,10 +110,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // CRITICAL FIX: Establecer selectedOrganization automáticamente
             // Esto NO afecta usuarios con múltiples orgs (se maneja arriba en línea 98-104)
             if (response.user.perfil?.organizacion) {
-                const org = {
+                const org: Organization = {
                     id: response.user.perfil.organizacion.id,
                     nombre: response.user.perfil.organizacion.nombre,
-                    slug: response.user.perfil.organizacion.slug
+                    slug: response.user.perfil.organizacion.slug,
+                    perfil_id: response.user.id // ID del perfil del usuario
                 };
                 localStorage.setItem('selectedOrganization', JSON.stringify(org));
                 setSelectedOrganization(org);
