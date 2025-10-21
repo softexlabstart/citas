@@ -106,6 +106,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Usuario con una sola organización (flujo normal)
             localStorage.setItem('user', JSON.stringify(response.user));
             setUser(response.user);
+
+            // CRITICAL FIX: Establecer selectedOrganization automáticamente
+            // Esto NO afecta usuarios con múltiples orgs (se maneja arriba en línea 98-104)
+            if (response.user.perfil?.organizacion) {
+                const org = {
+                    id: response.user.perfil.organizacion.id,
+                    nombre: response.user.perfil.organizacion.nombre,
+                    slug: response.user.perfil.organizacion.slug
+                };
+                localStorage.setItem('selectedOrganization', JSON.stringify(org));
+                setSelectedOrganization(org);
+            }
+
             return { needsOrgSelection: false };
         }
     };
