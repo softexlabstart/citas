@@ -75,7 +75,7 @@ const App: React.FC = () => {
 
               {/* Rutas Privadas */}
               <Route element={<PrivateRoute />}>
-                <Route path="/" element={<HomePage />} />
+                <Route path="/" element={<Home />} />
                 <Route path="/appointments" element={<Appointments />} />
                 <Route path="/calendar" element={<AppointmentsCalendar />} />
                 <Route path="/availability" element={<Disponibilidad />} />
