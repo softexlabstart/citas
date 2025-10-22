@@ -366,6 +366,10 @@ class CitaViewSet(viewsets.ModelViewSet):
         if estado:
             queryset = queryset.filter(estado=estado)
 
+        sede_id = self.request.query_params.get('sede_id')
+        if sede_id:
+            queryset = queryset.filter(sede_id=sede_id)
+
         return queryset.order_by('fecha')
 
     def create(self, request, *args, **kwargs):

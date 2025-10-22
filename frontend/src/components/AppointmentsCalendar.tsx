@@ -5,10 +5,12 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Container, Spinner, Alert, Modal, Button, Badge, Row, Col, Form, ListGroup } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useApi } from '../hooks/useApi';
-import { getAllAppointments, getBloqueos, Bloqueo, getRecursos } from '../api';
+import { getAllAppointments, getBloqueos, Bloqueo, getRecursos, getSedes } from '../api';
 import { Appointment } from '../interfaces/Appointment';
 import { Recurso } from '../interfaces/Recurso';
+import { Sede } from '../interfaces/Sede';
 import { statusConfig } from '../constants/appointmentStatus';
+import { useAuth } from '../hooks/useAuth';
 
 const localizer = momentLocalizer(moment);
 
@@ -20,12 +22,15 @@ interface CalendarEvent extends Event {
 
 const AppointmentsCalendar: React.FC = () => {
     const { t } = useTranslation();
-    const { data: appointments, loading: loadingAppointments, error: errorAppointments, request: fetchAppointments } = useApi<Appointment[], [string, string]>(getAllAppointments);
+    const { user } = useAuth();
+    const { data: appointments, loading: loadingAppointments, error: errorAppointments, request: fetchAppointments } = useApi<Appointment[], [string, string, string | undefined]>(getAllAppointments);
     const { data: bloqueos, loading: loadingBloqueos, error: errorBloqueos, request: fetchBloqueos } = useApi<Bloqueo[], [string | undefined, string, string]>(getBloqueos);
     const { data: recursos, loading: loadingRecursos, request: fetchRecursos } = useApi<Recurso[], [string | undefined]>(getRecursos);
+    const { data: sedes, request: fetchSedes } = useApi<Sede[], []>(getSedes);
     const [showModal, setShowModal] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
     const [selectedResourceId, setSelectedResourceId] = useState<string>('');
+    const [selectedSedeId, setSelectedSedeId] = useState<string>('');
     const [dateRange, setDateRange] = useState<{ start: Date, end: Date } | null>(null);
     const [showMoreModal, setShowMoreModal] = useState(false);
     const [moreModalEvents, setMoreModalEvents] = useState<CalendarEvent[]>([]);
@@ -39,16 +44,17 @@ const AppointmentsCalendar: React.FC = () => {
             end: moment(today).endOf('month').toDate(),
         });
         fetchRecursos(undefined);
+        fetchSedes();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Fetch data whenever the date range changes
+    // Fetch data whenever the date range or sede filter changes
     useEffect(() => {
         if (dateRange) {
-            fetchAppointments(dateRange.start.toISOString(), dateRange.end.toISOString());
+            fetchAppointments(dateRange.start.toISOString(), dateRange.end.toISOString(), selectedSedeId || undefined);
             fetchBloqueos(undefined, dateRange.start.toISOString(), dateRange.end.toISOString());
         }
-    }, [dateRange, fetchAppointments, fetchBloqueos]);
+    }, [dateRange, selectedSedeId, fetchAppointments, fetchBloqueos]);
 
     const events: CalendarEvent[] = useMemo(() => {
         const filteredAppointments = appointments?.filter(app => !selectedResourceId || app.colaboradores.some(r => r.id === Number(selectedResourceId))) || [];
@@ -129,9 +135,20 @@ const AppointmentsCalendar: React.FC = () => {
     return (
         <Container className="mt-5 bg-white p-4 rounded shadow-sm">
             <Row className="align-items-center mb-4">
-                <Col md={8}>
+                <Col md={4}>
                     <h2>{t('appointments_calendar')}</h2>
                 </Col>
+                {(user?.perfil?.role === 'owner' || user?.perfil?.role === 'admin' || user?.perfil?.role === 'sede_admin') && (
+                    <Col md={4}>
+                        <Form.Group>
+                            <Form.Label>{t('filter_by_sede')}</Form.Label>
+                            <Form.Control as="select" value={selectedSedeId} onChange={(e) => setSelectedSedeId(e.target.value)}>
+                                <option value="">{t('all_sedes')}</option>
+                                {sedes?.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                            </Form.Control>
+                        </Form.Group>
+                    </Col>
+                )}
                 <Col md={4}>
                     <Form.Group>
                         <Form.Label>{t('filtrar por colaborador')}</Form.Label>

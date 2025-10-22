@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Table, Button, Form, Badge, Spinner, Modal, Alert, Pagination, InputGroup, Dropdown } from 'react-bootstrap';
+import { Container, Row, Col, Table, Button, Form, Badge, Spinner, Modal, Alert, Pagination, Dropdown } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { Appointment } from '../interfaces/Appointment';
-import { getAppointments, confirmAppointment, deleteAppointment, updateAppointment, PaginatedResponse, CreateAppointmentPayload } from '../api';
+import { getAppointments, confirmAppointment, deleteAppointment, updateAppointment, PaginatedResponse, CreateAppointmentPayload, getSedes } from '../api';
+import { Sede } from '../interfaces/Sede';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import NewAppointmentModal from './NewAppointmentModal';
@@ -17,7 +18,8 @@ interface PrefillState {
 }
 
 const Appointments: React.FC = () => {
-  const [filterStatus, setFilterStatus] = useState(''); 
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterSede, setFilterSede] = useState('');
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [showConfirmCancelModal, setShowConfirmCancelModal] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -33,19 +35,28 @@ const Appointments: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { data: paginatedData, loading, error, request: fetchAppointmentsApi } = useApi<PaginatedResponse<Appointment>, [string | undefined, number, string | undefined]>(getAppointments);
+  const { data: paginatedData, loading, error, request: fetchAppointmentsApi } = useApi<PaginatedResponse<Appointment>, [string | undefined, number, string | undefined, string | undefined]>(getAppointments);
+  const { data: sedes, request: fetchSedes } = useApi<Sede[], []>(getSedes);
   // Hooks for mutations
   const { loading: isConfirming, request: confirmApi } = useApi(confirmAppointment);
   const { loading: isDeleting, request: deleteApi } = useApi(deleteAppointment);
   const { loading: isUpdating, request: updateApi } = useApi(updateAppointment);
   const isProcessing = isConfirming || isDeleting || isUpdating;
 
+  // Cargar sedes al montar el componente
   useEffect(() => {
     if (user) {
-      fetchAppointmentsApi(filterStatus || undefined, currentPage, debouncedSearchTerm || undefined);
+      fetchSedes();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, filterStatus, currentPage, debouncedSearchTerm]);
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchAppointmentsApi(filterStatus || undefined, currentPage, debouncedSearchTerm || undefined, filterSede || undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, filterStatus, currentPage, debouncedSearchTerm, filterSede]);
 
   useEffect(() => {
     const prefillState = location.state as PrefillState | null;
@@ -60,7 +71,7 @@ const Appointments: React.FC = () => {
     setProcessingId(id);
     const { success } = await confirmApi(id);
     if (success) {
-      fetchAppointmentsApi(filterStatus || undefined, currentPage, debouncedSearchTerm || undefined);
+      fetchAppointmentsApi(filterStatus || undefined, currentPage, debouncedSearchTerm || undefined, filterSede || undefined);
       toast.success(t('appointment_confirmed_successfully'));
     } else {
       toast.error(t('error_confirming_appointment'));
@@ -83,7 +94,7 @@ const Appointments: React.FC = () => {
     setProcessingId(deletingId);
     const { success } = await deleteApi(deletingId);
     if (success) {
-      fetchAppointmentsApi(filterStatus || undefined, currentPage, debouncedSearchTerm || undefined);
+      fetchAppointmentsApi(filterStatus || undefined, currentPage, debouncedSearchTerm || undefined, filterSede || undefined);
       toast.success(t('appointment_cancelled_successfully'));
     } else {
       toast.error(t('error_cancelling_appointment'));
@@ -99,7 +110,7 @@ const Appointments: React.FC = () => {
     setProcessingId(reschedulingAppointment.id);
     const { success } = await updateApi(reschedulingAppointment.id, { fecha: newDate });
     if (success) {
-      fetchAppointmentsApi(filterStatus || undefined, currentPage, debouncedSearchTerm || undefined);
+      fetchAppointmentsApi(filterStatus || undefined, currentPage, debouncedSearchTerm || undefined, filterSede || undefined);
       setShowRescheduleModal(false);
       setReschedulingAppointment(null);
       toast.success(t('appointment_rescheduled_successfully'));
@@ -111,9 +122,10 @@ const Appointments: React.FC = () => {
 
   const handleAppointmentAdded = () => {
     setFilterStatus(''); // Reset filter to show the new appointment
+    setFilterSede(''); // Reset sede filter
     setSearchTerm(''); // Reset search term
     if (currentPage === 1) {
-      fetchAppointmentsApi(undefined, 1, undefined);
+      fetchAppointmentsApi(undefined, 1, undefined, undefined);
     } else {
       setCurrentPage(1);
     }
@@ -175,10 +187,10 @@ const Appointments: React.FC = () => {
       </Row>
 
           <Row className="mt-4">
-            <Col> 
+            <Col>
               <h3>{t('scheduled_appointments')}</h3>
               <Row>
-                <Col md={8}>
+                <Col md={6}>
                   <Form.Group className="mb-3">
                     <Form.Label>{t('search_by_client_name')}</Form.Label>
                     <Form.Control
@@ -192,7 +204,29 @@ const Appointments: React.FC = () => {
                     />
                   </Form.Group>
                 </Col>
-                <Col md={4}>
+                {(user?.perfil?.role === 'owner' || user?.perfil?.role === 'admin' || user?.perfil?.role === 'sede_admin') && (
+                  <Col md={3}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>{t('filter_by_sede')}</Form.Label>
+                      <Form.Control
+                        as="select"
+                        value={filterSede}
+                        onChange={(e) => {
+                          setFilterSede(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                      >
+                        <option value="">{t('all_sedes')}</option>
+                        {sedes?.map((sede) => (
+                          <option key={sede.id} value={sede.id}>
+                            {sede.nombre}
+                          </option>
+                        ))}
+                      </Form.Control>
+                    </Form.Group>
+                  </Col>
+                )}
+                <Col md={user?.perfil?.role === 'owner' || user?.perfil?.role === 'admin' || user?.perfil?.role === 'sede_admin' ? 3 : 6}>
                   <Form.Group className="mb-3">
                     <Form.Label>{t('filter_by_status')}</Form.Label>
                     <Form.Control

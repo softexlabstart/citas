@@ -129,7 +129,7 @@ export const setupInterceptors = (logout: (message?: string) => void) => {
 };
 
 // Funciones para Citas
-export const getAppointments = (status?: string, page?: number, search?: string) => {
+export const getAppointments = (status?: string, page?: number, search?: string, sedeId?: string) => {
   let url = '/api/citas/citas/';
   const params = new URLSearchParams();
   if (status) {
@@ -141,15 +141,19 @@ export const getAppointments = (status?: string, page?: number, search?: string)
   if (search) {
     params.append('search', search);
   }
+  if (sedeId) {
+    params.append('sede_id', sedeId);
+  }
   const queryString = params.toString();
   if (queryString) url += `?${queryString}`;
   return api.get<PaginatedResponse<Appointment>>(url);
 };
 
-export const getAllAppointments = (startDate?: string, endDate?: string) => {
+export const getAllAppointments = (startDate?: string, endDate?: string, sedeId?: string) => {
   const params = new URLSearchParams();
   if (startDate) params.append('start_date', startDate);
   if (endDate) params.append('end_date', endDate);
+  if (sedeId) params.append('sede_id', sedeId);
   const queryString = params.toString();
   const url = `/api/citas/citas/all/${queryString ? `?${queryString}` : ''}`;
   return api.get<Appointment[]>(url);

@@ -5,6 +5,8 @@
   "manage_appointments": "Gestionar Citas",
   "scheduled_appointments": "Citas Programadas",
   "filter_by_status": "Filtrar por Estado",
+  "filter_by_sede": "Filtrar por Sede",
+  "all_sedes": "Todas las Sedes",
   "all": "Todas",
   "pending": "Pendiente",
   "confirmed": "Confirmada",

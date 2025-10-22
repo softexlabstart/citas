@@ -5,6 +5,8 @@
   "manage_appointments": "Manage Appointments",
   "scheduled_appointments": "Scheduled Appointments",
   "filter_by_status": "Filter by Status",
+  "filter_by_sede": "Filter by Location",
+  "all_sedes": "All Locations",
   "all": "All",
   "pending": "Pending",
   "confirmed": "Confirmed",
