@@ -111,7 +111,14 @@ DATABASES = {
         'HOST': config('DB_HOST', default='localhost'),
         'PORT': config('DB_PORT', default='5432'),
         # Persistent connections for better performance with sync workers
-        'CONN_MAX_AGE': 60,
+        # Aumentado de 60s a 600s (10 minutos) para reducir overhead de reconexiones
+        'CONN_MAX_AGE': 600,
+        # Health checks para validar que las conexiones estén activas
+        'CONN_HEALTH_CHECKS': True,
+        'OPTIONS': {
+            'connect_timeout': 10,
+            'options': '-c default_transaction_isolation=read_committed',
+        }
     }
 }
 
@@ -123,9 +130,22 @@ CACHES = {
         "LOCATION": "redis://127.0.0.1:6379/1",  # Using DB 1 for caching
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            # Pool de conexiones para mejor manejo de concurrencia
+            "CONNECTION_POOL_KWARGS": {
+                "max_connections": 50,  # Máximo 50 conexiones simultáneas
+                "retry_on_timeout": True,  # Reintentar si hay timeout
+            },
+            # Timeouts para evitar bloqueos
+            "SOCKET_CONNECT_TIMEOUT": 5,  # 5 segundos para conectar
+            "SOCKET_TIMEOUT": 5,  # 5 segundos para operaciones
         }
     }
 }
+
+# Session configuration - usar Redis en lugar de base de datos
+# Mejora la concurrencia y reduce queries a PostgreSQL
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

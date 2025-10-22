@@ -24,9 +24,9 @@ worker_class = 'sync'  # Default, works well with Django
 # worker_connections = 1000
 
 # Worker timeout
-# 30 seconds is reasonable for most requests
-# Increase if you have long-running requests
-timeout = 30
+# 60 seconds para soportar operaciones más largas como reportes
+# Aumentado de 30s para evitar timeouts en exportaciones CSV y queries complejas
+timeout = 60
 graceful_timeout = 30
 keepalive = 2
 
