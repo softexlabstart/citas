@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'usuarios',
     'rest_framework',
     'citas',
+    
     'corsheaders',
     'rest_framework_simplejwt',
     'organizacion',
@@ -117,7 +118,7 @@ DATABASES = {
         'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'connect_timeout': 10,
-            'options': '-c default_transaction_isolation=read_committed',
+            'options': "-c default_transaction_isolation='read committed'",
         }
     }
 }
