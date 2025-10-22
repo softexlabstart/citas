@@ -118,7 +118,8 @@ DATABASES = {
         'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'connect_timeout': 10,
-            'options': '-c default_transaction_isolation=read committed',
+            'options': '-c default_transaction_isolation="read committed"',
+
         }
     }
 }
