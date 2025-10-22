@@ -122,10 +122,21 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ onSuccess, onCancel }) 
                 onSuccess();
             }
         } else if (result.error) {
-            // Mostrar mensaje de error user-friendly
-            const errorMessage = result.error.includes('permisos')
-                ? result.error // Mensaje de permisos ya es claro
-                : `No se pudo crear el usuario: ${result.error}`;
+            // Extraer mensaje de error específico del backend
+            let errorMessage = 'No se pudo crear el usuario';
+
+            if (typeof result.error === 'string') {
+                if (result.error.includes('permisos')) {
+                    errorMessage = result.error;
+                } else if (result.error.includes('Ya existe un usuario con este email')) {
+                    errorMessage = result.error;
+                } else if (result.error.includes('email')) {
+                    errorMessage = 'Este correo electrónico ya está registrado en la organización';
+                } else {
+                    errorMessage = result.error;
+                }
+            }
+
             toast.error(errorMessage);
         }
     };
