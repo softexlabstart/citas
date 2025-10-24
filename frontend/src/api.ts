@@ -1,4 +1,4 @@
-import axios from 'axios';
+                                                import axios from 'axios';
 import { Appointment } from './interfaces/Appointment';
 import { Horario } from './interfaces/Horario';
 import { RegisterUser } from './interfaces/User';
@@ -17,6 +17,7 @@ import { CreateUserPayload, UserOrganizationsResponse } from './interfaces/Role'
 export interface PaginatedResponse<T> {
     count: number;
     next: string | null;
+    
     previous: string | null;
     results: T[];
 }
@@ -217,15 +218,6 @@ export const getDisponibilidad = (fecha: string, recursoId: number, sedeId: stri
         servicio_ids: servicioIds.join(','),
     });
     return api.get(`/api/citas/disponibilidad/?${params.toString()}`);
-};
-
-// Funciones para Colaboradores (nuevo sistema de roles)
-export const getColaboradores = (sedeId?: string) => {
-    let url = '/api/citas/colaboradores/';
-    if (sedeId) {
-        url += `?sede_id=${sedeId}`;
-    }
-    return api.get<Recurso[]>(url);
 };
 
 // Funciones para Bloqueos (New)
