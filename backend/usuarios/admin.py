@@ -165,13 +165,15 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
         # Sincronizar con Colaborador si tiene rol de colaborador
-        if 'colaborador' in obj.all_roles:
+        if 'colaborador' in obj.all_roles and obj.sede:
             from citas.models import Colaborador
 
             # Crear o actualizar colaborador
+            # NOTA: Colaborador no tiene campo 'organizacion', solo 'sede'
+            # La organización se obtiene a través de sede.organizacion
             colaborador, created = Colaborador.all_objects.get_or_create(
                 usuario=obj.user,
-                organizacion=obj.organizacion,
+                sede__organizacion=obj.organizacion,  # Filtrar por organización a través de sede
                 defaults={
                     'nombre': obj.user.get_full_name() or obj.user.username,
                     'email': obj.user.email,
