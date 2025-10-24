@@ -3,7 +3,7 @@ import { Row, Col, Form, Button, Card, Spinner, Alert, Table } from 'react-boots
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import { useApi } from '../hooks/useApi';
-import { getServicios, getRecursos, getAppointmentsReport, downloadAppointmentsReportCSV } from '../api';
+import { getServicios, getColaboradores, getAppointmentsReport, downloadAppointmentsReportCSV } from '../api';
 import { Service } from '../interfaces/Service';
 import { Recurso } from '../interfaces/Recurso';
 import { statusConfig } from '../constants/appointmentStatus';
@@ -45,11 +45,11 @@ const AppointmentsReport: React.FC = () => {
 
     // API hooks
     const { data: servicios, loading: loadingServicios, request: fetchServicios } = useApi<Service[], [string | undefined]>(getServicios);
-    const { data: recursos, loading: loadingRecursos, request: fetchRecursos } = useApi<Recurso[], [string | undefined]>(getRecursos);
+    const { data: recursos, loading: loadingRecursos, request: fetchRecursos } = useApi<Recurso[], [string | undefined]>(getColaboradores);
     const { data: reportData, loading: loadingReport, error: reportError, request: fetchReport } = useApi<ReportData, [string, string, string[] | undefined, string | undefined]>(getAppointmentsReport);
 
     useEffect(() => {
-        console.log('[AppointmentsReport] Fetching servicios and recursos...');
+        console.log('[AppointmentsReport] Fetching servicios and colaboradores...');
         fetchServicios(undefined);
         fetchRecursos(undefined);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -57,7 +57,7 @@ const AppointmentsReport: React.FC = () => {
 
     useEffect(() => {
         console.log('[AppointmentsReport] Servicios loaded:', servicios);
-        console.log('[AppointmentsReport] Recursos loaded:', recursos);
+        console.log('[AppointmentsReport] Colaboradores loaded:', recursos);
     }, [servicios, recursos]);
 
     const handleGenerateReport = () => {
