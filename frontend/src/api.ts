@@ -77,6 +77,14 @@ export const setupInterceptors = (logout: (message?: string) => void) => {
 
             // Si el error es 401 y no hemos intentado refrescar aún
             if (error.response && error.response.status === 401 && !originalRequest._retry) {
+                // NO intentar refresh en endpoints de autenticación
+                if (originalRequest.url?.includes('/token/refresh') || originalRequest.url?.includes('/login')) {
+                    isRefreshing = false;
+                    processQueue(error, null);
+                    logout('Tu sesión ha expirado. Por favor, inicia sesión de nuevo.');
+                    return Promise.reject(error);
+                }
+
                 if (isRefreshing) {
                     // Si ya estamos refrescando, poner en cola esta petición
                     return new Promise((resolve, reject) => {
@@ -95,6 +103,8 @@ export const setupInterceptors = (logout: (message?: string) => void) => {
                 const refreshToken = localStorage.getItem('refreshToken');
 
                 if (!refreshToken) {
+                    isRefreshing = false;
+                    processQueue(error, null);
                     logout('Tu sesión ha expirado. Por favor, inicia sesión de nuevo.');
                     return Promise.reject(error);
                 }
@@ -118,6 +128,9 @@ export const setupInterceptors = (logout: (message?: string) => void) => {
                 } catch (refreshError) {
                     processQueue(refreshError, null);
                     isRefreshing = false;
+                    // Limpiar tokens antes de logout
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('refreshToken');
                     logout('Tu sesión ha expirado. Por favor, inicia sesión de nuevo.');
                     return Promise.reject(refreshError);
                 }

@@ -34,26 +34,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const logout = useCallback((message?: string) => {
         // Prevent multiple logout calls
-        if (!user || logoutInProgressRef.current) {
+        if (logoutInProgressRef.current) {
             return;
         }
         logoutInProgressRef.current = true;
+
+        // Limpiar inmediatamente el localStorage
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
         localStorage.removeItem('organizations');
         localStorage.removeItem('selectedOrganization');
+
+        // Limpiar estado
         setUser(null);
         setOrganizations(null);
         setSelectedOrganization(null);
+
+        // Mostrar mensaje si existe
         if (message) {
             toast.info(message);
         }
-        // Reset flag after a short delay to allow cleanup
+
+        // Redirigir a login inmediatamente
+        window.location.href = '/login';
+
+        // Reset flag después de redirigir
         setTimeout(() => {
             logoutInProgressRef.current = false;
         }, 1000);
-    }, [user]);
+    }, []);
 
     const handleIdle = useCallback(() => {
         if (user) {
