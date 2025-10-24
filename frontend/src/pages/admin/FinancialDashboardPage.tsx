@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Spinner, Alert, Form, Button } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { getFinancialSummary, FinancialSummary, getRecursos } from '../../api';
+import { getFinancialSummary, FinancialSummary, getColaboradores } from '../../api';
 import { Recurso } from '../../interfaces/Recurso';
 import {
     BarChart,
@@ -37,7 +37,7 @@ const FinancialDashboardPage: React.FC = () => {
         const loadInitialData = async () => {
             // Cargar colaboradores
             try {
-                const response = await getRecursos();
+                const response = await getColaboradores();
                 setColaboradores(response.data);
             } catch (err) {
                 console.error('Error loading colaboradores:', err);

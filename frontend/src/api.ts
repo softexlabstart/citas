@@ -198,7 +198,7 @@ export const addServicio = (servicio: Partial<Service>) => api.post<Service>('/a
 export const updateServicio = (id: number, servicio: Partial<Service>) => api.patch<Service>(`/api/citas/servicios/${id}/`, servicio);
 export const deleteServicio = (id: number) => api.delete(`/api/citas/servicios/${id}/`);
 
-// Funciones para Recursos
+// Funciones para Recursos (deprecated - usar Colaboradores)
 export const getRecursos = (sedeId?: string) => {
     let url = '/api/citas/recursos/';
     if (sedeId) {
@@ -217,6 +217,15 @@ export const getDisponibilidad = (fecha: string, recursoId: number, sedeId: stri
         servicio_ids: servicioIds.join(','),
     });
     return api.get(`/api/citas/disponibilidad/?${params.toString()}`);
+};
+
+// Funciones para Colaboradores (nuevo sistema de roles)
+export const getColaboradores = (sedeId?: string) => {
+    let url = '/api/citas/colaboradores/';
+    if (sedeId) {
+        url += `?sede_id=${sedeId}`;
+    }
+    return api.get<Recurso[]>(url);
 };
 
 // Funciones para Bloqueos (New)
