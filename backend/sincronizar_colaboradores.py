@@ -5,7 +5,7 @@ Ejecutar con: python manage.py shell < sincronizar_colaboradores.py
 
 from usuarios.models import PerfilUsuario
 from citas.models import Colaborador
-from organizacion.middleware import set_tenant_from_organization
+from organizacion.models import _organization
 
 print("\n" + "="*80)
 print("SINCRONIZACIÓN: Crear registros de Colaborador para usuarios con rol colaborador")
@@ -38,7 +38,7 @@ for perfil in perfiles_colaborador:
         continue
 
     # Establecer el contexto de la organización para el OrganizationManager
-    set_tenant_from_organization(perfil.organizacion)
+    _organization.value = perfil.organizacion
 
     try:
         # Intentar obtener o crear el Colaborador
@@ -66,6 +66,9 @@ for perfil in perfiles_colaborador:
     except Exception as e:
         print(f"   ❌ ERROR al crear/actualizar: {str(e)}")
         errores += 1
+    finally:
+        # Limpiar el contexto
+        _organization.value = None
 
 print("\n" + "="*80)
 print("RESUMEN:")
