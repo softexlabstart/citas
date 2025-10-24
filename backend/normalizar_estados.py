@@ -37,12 +37,9 @@ print(f"RESUMEN: Total de citas actualizadas: {total_actualizados}")
 print("="*80)
 
 # Mostrar estadísticas de estados actuales
-print("\n📊 Estados actuales en la base de datos:")
-estados_actuales = Cita.all_objects.values('estado').annotate(
-    cantidad=Count('id')
-).order_by('-cantidad')
-
 from django.db.models import Count
+
+print("\n📊 Estados actuales en la base de datos:")
 estados_actuales = Cita.all_objects.values('estado').annotate(
     cantidad=Count('id')
 ).order_by('-cantidad')
