@@ -63,7 +63,7 @@ def check_appointment_availability(sede, servicios, colaboradores, fecha, cita_i
         day_end = day_start + timedelta(days=1)
 
         potential_conflicts = Cita.all_objects.filter(
-            colaboradores=colaborador,
+            colaboradores__id=colaborador.id,
             sede=sede,
             estado__in=['Pendiente', 'Confirmada'],
             fecha__gte=day_start,
@@ -184,7 +184,7 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
     # Use _base_manager to bypass OrganizacionManager and see ALL real appointments
     # Use Prefetch with _base_manager for many-to-many relations
     citas_del_dia = list(Cita._base_manager.filter(
-        colaboradores=colaborador, fecha__date=fecha, estado__in=['Pendiente', 'Confirmada']
+        colaboradores__id=colaborador.id, fecha__date=fecha, estado__in=['Pendiente', 'Confirmada']
     ).distinct().prefetch_related(
         Prefetch('servicios', queryset=Servicio._base_manager.all())
     ).order_by('fecha'))

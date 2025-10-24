@@ -351,7 +351,8 @@ class CitaViewSet(viewsets.ModelViewSet):
             # COLABORADOR: solo citas asignadas a él
             elif Colaborador.all_objects.filter(usuario=user).exists():
                 colaborador = Colaborador.all_objects.get(usuario=user)
-                queryset = base_queryset.filter(colaboradores=colaborador)
+                # Usar __id para evitar conflictos con OrganizacionManager en ManyToMany
+                queryset = base_queryset.filter(colaboradores__id=colaborador.id)
 
             # CLIENTE: solo sus propias citas
             else:
@@ -895,7 +896,8 @@ class ColaboradorCitaViewSet(viewsets.ReadOnlyModelViewSet):
         try:
             colaborador = Colaborador.all_objects.get(usuario=user)
             servicios_prefetch = Prefetch('servicios', queryset=Servicio.all_objects.all())
-            return Cita.all_objects.filter(colaboradores=colaborador).prefetch_related(servicios_prefetch).order_by('fecha')
+            # Usar __id para evitar conflictos con OrganizacionManager en ManyToMany
+            return Cita.all_objects.filter(colaboradores__id=colaborador.id).prefetch_related(servicios_prefetch).order_by('fecha')
         except Colaborador.DoesNotExist:
             return Cita.objects.none()
 
@@ -934,7 +936,8 @@ class RecursoCitaViewSet(viewsets.ReadOnlyModelViewSet):
         try:
             recurso = Colaborador.all_objects.get(usuario=user)
             servicios_prefetch = Prefetch('servicios', queryset=Servicio.all_objects.all())
-            return Cita.all_objects.filter(colaboradores=recurso).prefetch_related(servicios_prefetch).order_by('fecha')
+            # Usar __id para evitar conflictos con OrganizacionManager en ManyToMany
+            return Cita.all_objects.filter(colaboradores__id=recurso.id).prefetch_related(servicios_prefetch).order_by('fecha')
         except Colaborador.DoesNotExist:
             # Log a warning or return an empty queryset gracefully
             print(f"WARNING: No Colaborador instance found for user: {user.username}")
