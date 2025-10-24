@@ -5,7 +5,7 @@ Ejecutar con: python manage.py shell < sincronizar_colaboradores.py
 
 from usuarios.models import PerfilUsuario
 from citas.models import Colaborador
-from organizacion.models import _organization
+from organizacion.thread_locals import set_current_organization
 
 print("\n" + "="*80)
 print("SINCRONIZACIÓN: Crear registros de Colaborador para usuarios con rol colaborador")
@@ -38,7 +38,7 @@ for perfil in perfiles_colaborador:
         continue
 
     # Establecer el contexto de la organización para el OrganizationManager
-    _organization.value = perfil.organizacion
+    set_current_organization(perfil.organizacion)
 
     try:
         # Intentar obtener o crear el Colaborador
@@ -68,7 +68,7 @@ for perfil in perfiles_colaborador:
         errores += 1
     finally:
         # Limpiar el contexto
-        _organization.value = None
+        set_current_organization(None)
 
 print("\n" + "="*80)
 print("RESUMEN:")
