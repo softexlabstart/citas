@@ -167,29 +167,43 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
         # Sincronizar con Colaborador si tiene rol de colaborador
         if 'colaborador' in obj.all_roles and obj.sede:
             from citas.models import Colaborador
+            from organizacion.thread_locals import set_current_organization
 
-            # Crear o actualizar colaborador
-            # NOTA: Colaborador no tiene campo 'organizacion', solo 'sede'
-            # La organización se obtiene a través de sede.organizacion
-            colaborador, created = Colaborador.all_objects.get_or_create(
-                usuario=obj.user,
-                sede__organizacion=obj.organizacion,  # Filtrar por organización a través de sede
-                defaults={
-                    'nombre': obj.user.get_full_name() or obj.user.username,
-                    'email': obj.user.email,
-                    'sede': obj.sede,
-                }
-            )
+            # Establecer contexto de organización para OrganizationManager
+            set_current_organization(obj.organizacion)
 
-            # Si ya existe, actualizar sede si cambió
-            if not created and obj.sede and colaborador.sede != obj.sede:
-                colaborador.sede = obj.sede
-                colaborador.save()
-                self.message_user(
-                    request,
-                    f"Se actualizó la sede del colaborador a '{obj.sede.nombre}'",
-                    messages.INFO
+            try:
+                # Crear o actualizar colaborador
+                # NOTA: Colaborador no tiene campo 'organizacion', solo 'sede'
+                # La organización se obtiene a través de sede.organizacion
+                colaborador, created = Colaborador.all_objects.get_or_create(
+                    usuario=obj.user,
+                    defaults={
+                        'nombre': obj.user.get_full_name() or obj.user.username,
+                        'email': obj.user.email,
+                        'sede': obj.sede,
+                    }
                 )
+
+                if created:
+                    self.message_user(
+                        request,
+                        f"Se creó el registro de Colaborador para {obj.user.username}",
+                        messages.SUCCESS
+                    )
+                else:
+                    # Si ya existe, actualizar sede si cambió
+                    if obj.sede and colaborador.sede != obj.sede:
+                        colaborador.sede = obj.sede
+                        colaborador.save()
+                        self.message_user(
+                            request,
+                            f"Se actualizó la sede del colaborador a '{obj.sede.nombre}'",
+                            messages.INFO
+                        )
+            finally:
+                # Limpiar contexto
+                set_current_organization(None)
 
     def get_queryset(self, request):
         qs = self.model.all_objects.all()
