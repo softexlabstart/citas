@@ -57,11 +57,11 @@ class FinancialSummaryView(APIView):
 
         # 4. OPTIMIZACIÓN: Calcular todas las métricas principales en UNA SOLA QUERY
         metrics = queryset.aggregate(
-            # Ingresos realizados (citas con estado 'Asistio')
+            # Ingresos realizados (citas con estado 'Asistio' o 'Asistió')
             ingresos_realizados=Coalesce(
                 Sum(
                     'servicios__precio',
-                    filter=Q(estado='Asistio')
+                    filter=Q(estado__in=['Asistio', 'Asistió'])
                 ),
                 Value(0),
                 output_field=DecimalField()
@@ -77,11 +77,11 @@ class FinancialSummaryView(APIView):
                 output_field=DecimalField()
             ),
 
-            # Ingresos perdidos (citas No Asistio)
+            # Ingresos perdidos (citas No Asistio o No Asistió)
             ingresos_perdidos=Coalesce(
                 Sum(
                     'servicios__precio',
-                    filter=Q(estado='No Asistio')
+                    filter=Q(estado__in=['No Asistio', 'No Asistió'])
                 ),
                 Value(0),
                 output_field=DecimalField()
@@ -99,16 +99,16 @@ class FinancialSummaryView(APIView):
 
             # Conteo de citas por estado
             total_citas=Count('id'),
-            citas_asistio=Count('id', filter=Q(estado='Asistio')),
+            citas_asistio=Count('id', filter=Q(estado__in=['Asistio', 'Asistió'])),
             citas_pendiente=Count('id', filter=Q(estado='Pendiente')),
             citas_confirmada=Count('id', filter=Q(estado='Confirmada')),
-            citas_no_asistio=Count('id', filter=Q(estado='No Asistio')),
+            citas_no_asistio=Count('id', filter=Q(estado__in=['No Asistio', 'No Asistió'])),
             citas_cancelada=Count('id', filter=Q(estado='Cancelada')),
         )
 
         # 5. Calcular ingresos por servicio (solo citas asistidas)
         ingresos_por_servicio = queryset.filter(
-            estado='Asistio'
+            estado__in=['Asistio', 'Asistió']
         ).values(
             'servicios__nombre'
         ).annotate(
