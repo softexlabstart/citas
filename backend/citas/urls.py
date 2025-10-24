@@ -5,7 +5,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (ServicioViewSet, CitaViewSet, HorarioViewSet,
                     AppointmentReportView, DisponibilidadView, RecursoViewSet,
                     SedeReportView, BloqueoViewSet, DashboardSummaryView,
-                    NextAvailabilityView, RecursoCitaViewSet)
+                    NextAvailabilityView, RecursoCitaViewSet, ColaboradorViewSet)
 from .views_public import PublicCitaViewSet
 
 router = DefaultRouter()
@@ -13,6 +13,7 @@ router.register(r'servicios', ServicioViewSet, basename='servicio')
 router.register(r'citas', CitaViewSet)
 router.register(r'horarios', HorarioViewSet)
 router.register(r'recursos', RecursoViewSet, basename='recurso')
+router.register(r'colaboradores', ColaboradorViewSet, basename='colaborador')
 router.register(r'bloqueos', BloqueoViewSet)
 router.register(r'recurso-citas', RecursoCitaViewSet, basename='recurso-cita')
 
