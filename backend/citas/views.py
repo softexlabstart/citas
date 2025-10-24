@@ -531,6 +531,37 @@ class CitaViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['post'])
+    def marcar_asistencia(self, request, pk=None):
+        """
+        Permite a un colaborador marcar la asistencia de una cita.
+        Solo disponible para colaboradores asignados a la cita.
+        """
+        cita = self.get_object()
+
+        # Verificar que la cita no esté cancelada
+        if cita.estado == 'Cancelada':
+            raise PermissionDenied(_('No se puede cambiar el estado de una cita cancelada.'))
+
+        asistio = request.data.get('asistio')
+        comentario = request.data.get('comentario')
+
+        if asistio is None:
+            return Response({'error': 'El campo "asistio" es requerido'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Actualizar el estado según la asistencia
+        if asistio:
+            cita.estado = 'Asistio'
+        else:
+            cita.estado = 'No Asistio'
+
+        # Agregar comentario si se proporciona
+        if comentario:
+            cita.comentario = comentario
+
+        cita.save()
+        return Response(CitaSerializer(cita).data)
+
 class DashboardSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 

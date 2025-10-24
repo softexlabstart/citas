@@ -388,9 +388,9 @@ export const addHorario = (horario: Horario) => api.post('/api/citas/horarios/',
 export const updateHorario = (id: number, horario: Horario) => api.patch(`/api/citas/horarios/${id}/`, horario);
 export const deleteHorario = (id: number) => api.delete(`/api/citas/horarios/${id}/`);
 
-// Funciones para Recurso Dashboard
+// Funciones para Recurso Dashboard (migradas al sistema nuevo de roles)
 export const getRecursoAppointments = () => api.get<Appointment[]>('/api/citas/recurso-citas/');
-export const marcarAsistencia = (id: number, asistio: boolean, comentario?: string) => api.post(`/api/citas/recurso-citas/${id}/marcar_asistencia/`, { asistio, comentario });
+export const marcarAsistencia = (id: number, asistio: boolean, comentario?: string) => api.post(`/api/citas/citas/${id}/marcar_asistencia/`, { asistio, comentario });
 
 // Funciones para Clientes
 export const getClients = (consentFilter?: string) => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getRecursoAppointments, marcarAsistencia } from '../api';
+import { getAppointments, marcarAsistencia } from '../api';
 import { Appointment } from '../interfaces/Appointment';
 import { Table, Button, Badge, Modal, Form } from 'react-bootstrap';
 
@@ -12,8 +12,11 @@ const RecursoDashboard = () => {
     useEffect(() => {
         const fetchAppointments = async () => {
             try {
-                const response = await getRecursoAppointments();
-                setAppointments(response.data);
+                // Usar el endpoint nuevo del sistema de roles
+                const response = await getAppointments();
+                // getAppointments retorna datos paginados, extraer los resultados
+                const appointmentsData = response.data.results || response.data;
+                setAppointments(appointmentsData);
             } catch (error) {
                 console.error('Error fetching appointments:', error);
             }
