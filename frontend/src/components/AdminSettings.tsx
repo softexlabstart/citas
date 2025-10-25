@@ -36,7 +36,17 @@ const AdminSettings: React.FC = () => {
     // Authorization check
     useEffect(() => {
         if (user === null) return; // Wait until user state is resolved
-        if (!user || (!user.is_staff && !user.perfil?.is_sede_admin)) {
+
+        // Permitir acceso a: owner, admin, is_staff, is_sede_admin
+        const hasAccess = user && (
+            user.is_staff ||
+            user.is_superuser ||
+            user.perfil?.is_sede_admin ||
+            user.perfil?.role === 'owner' ||
+            user.perfil?.role === 'admin'
+        );
+
+        if (!hasAccess) {
             toast.error("No tienes permiso para acceder a esta página.");
             navigate('/');
         }
@@ -66,9 +76,9 @@ const AdminSettings: React.FC = () => {
     // Fetch servicios y recursos cuando hay sedes disponibles
     useEffect(() => {
         if (sedes && sedes.length > 0) {
-            // Si el usuario es superuser, puede ver todos sin filtro
-            if (user?.is_superuser) {
-                // Para superuser, obtener todo sin filtro
+            // Superuser, Owner y Admin pueden ver todo sin filtro
+            if (user?.is_superuser || user?.perfil?.role === 'owner' || user?.perfil?.role === 'admin') {
+                // Para superuser/owner/admin, obtener todo sin filtro
                 fetchServicios(undefined);
                 fetchRecursos(undefined);
             } else if (user?.perfil?.is_sede_admin) {
@@ -145,7 +155,7 @@ const AdminSettings: React.FC = () => {
             if (modalType === 'service') {
                 await (editingItem ? updateServicio(editingItem.id, payload) : addServicio(payload));
                 // Refrescar con el sede_id correcto según el tipo de usuario
-                if (user?.is_superuser) {
+                if (user?.is_superuser || user?.perfil?.role === 'owner' || user?.perfil?.role === 'admin') {
                     fetchServicios(undefined);
                 } else {
                     fetchServicios(selectedSedeId);
@@ -153,7 +163,7 @@ const AdminSettings: React.FC = () => {
             } else if (modalType === 'resource') {
                 await (editingItem ? updateRecurso(editingItem.id, payload) : addRecurso(payload));
                 // Refrescar con el sede_id correcto según el tipo de usuario
-                if (user?.is_superuser) {
+                if (user?.is_superuser || user?.perfil?.role === 'owner' || user?.perfil?.role === 'admin') {
                     fetchRecursos(undefined);
                 } else {
                     fetchRecursos(selectedSedeId);
@@ -183,7 +193,7 @@ const AdminSettings: React.FC = () => {
             if (deletingItemInfo.type === 'service') {
                 await deleteServicio(deletingItemInfo.id);
                 // Refrescar con el sede_id correcto según el tipo de usuario
-                if (user?.is_superuser) {
+                if (user?.is_superuser || user?.perfil?.role === 'owner' || user?.perfil?.role === 'admin') {
                     fetchServicios(undefined);
                 } else {
                     fetchServicios(selectedSedeId);
@@ -191,7 +201,7 @@ const AdminSettings: React.FC = () => {
             } else if (deletingItemInfo.type === 'resource') {
                 await deleteRecurso(deletingItemInfo.id);
                 // Refrescar con el sede_id correcto según el tipo de usuario
-                if (user?.is_superuser) {
+                if (user?.is_superuser || user?.perfil?.role === 'owner' || user?.perfil?.role === 'admin') {
                     fetchRecursos(undefined);
                 } else {
                     fetchRecursos(selectedSedeId);
@@ -206,7 +216,16 @@ const AdminSettings: React.FC = () => {
         setDeletingItemInfo(null);
     };
 
-    if (!user || (!user.is_staff && !user.perfil?.is_sede_admin)) {
+    // Verificar acceso (mismo chequeo que en el useEffect)
+    const hasAccess = user && (
+        user.is_staff ||
+        user.is_superuser ||
+        user.perfil?.is_sede_admin ||
+        user.perfil?.role === 'owner' ||
+        user.perfil?.role === 'admin'
+    );
+
+    if (!hasAccess) {
         return <Container className="mt-5"><Alert variant="danger">Acceso denegado. No tienes permiso para ver esta página.</Alert></Container>;
     }
 
@@ -225,8 +244,8 @@ const AdminSettings: React.FC = () => {
             <Container className="mt-5">
                 <h2>{t('admin_settings')}</h2>
 
-                {/* Selector de Sede para admin de sede */}
-                {!user?.is_superuser && user?.perfil?.is_sede_admin && sedes && sedes.length > 1 && (
+                {/* Selector de Sede para admin de sede (no mostrar para owner/admin que ven todo) */}
+                {!user?.is_superuser && user?.perfil?.role !== 'owner' && user?.perfil?.role !== 'admin' && user?.perfil?.is_sede_admin && sedes && sedes.length > 1 && (
                     <Form.Group className="mb-3" style={{ maxWidth: '300px' }}>
                         <Form.Label>Filtrar por Sede:</Form.Label>
                         <Form.Select value={selectedSedeId || ''} onChange={handleSedeChange}>
