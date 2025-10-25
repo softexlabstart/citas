@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('usuarios', '0007_invitation_onboardingprogress_passwordresettoken_and_more'),
+        ('usuarios', '0001_initial'),
     ]
 
     operations = [
