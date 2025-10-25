@@ -125,19 +125,38 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ onSuccess, onCancel }) 
             // Extraer mensaje de error específico del backend
             let errorMessage = 'No se pudo crear el usuario';
 
-            if (typeof result.error === 'string') {
-                if (result.error.includes('permisos')) {
-                    errorMessage = result.error;
-                } else if (result.error.includes('Ya existe un usuario con este email')) {
-                    errorMessage = result.error;
-                } else if (result.error.includes('email')) {
-                    errorMessage = 'Este correo electrónico ya está registrado en la organización';
-                } else {
-                    errorMessage = result.error;
+            // Manejar errores de validación del backend (formato: {campo: ["mensaje"]})
+            if (typeof result.error === 'object' && result.error !== null) {
+                // Extraer mensajes de errores de validación
+                const errorObj = result.error as Record<string, string[]>;
+                const errorMessages: string[] = [];
+
+                for (const [field, messages] of Object.entries(errorObj)) {
+                    if (Array.isArray(messages)) {
+                        errorMessages.push(...messages);
+                    } else if (typeof messages === 'string') {
+                        errorMessages.push(messages);
+                    }
                 }
+
+                if (errorMessages.length > 0) {
+                    errorMessage = errorMessages.join('. ');
+                }
+            } else if (typeof result.error === 'string') {
+                errorMessage = result.error;
             }
 
-            toast.error(errorMessage);
+            // Personalizar mensajes comunes
+            if (errorMessage.includes('Ya existe un usuario con este email')) {
+                // El mensaje del backend ya es claro, usarlo directamente
+                toast.error(errorMessage);
+            } else if (errorMessage.toLowerCase().includes('permisos')) {
+                toast.error(`⛔ ${errorMessage}`);
+            } else if (errorMessage.toLowerCase().includes('email')) {
+                toast.error(`📧 ${errorMessage}`);
+            } else {
+                toast.error(`❌ ${errorMessage}`);
+            }
         }
     };
 
