@@ -2,7 +2,7 @@ app_name = 'usuarios'
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    LoginView, RegisterView, RegisterByOrganizacionView, TimezoneView,
+    LoginView, LogoutView, RegisterView, RegisterByOrganizacionView, TimezoneView,
     UserDetailView, ClientViewSet, ClientEmailListView, PersonalDataView,
     DeleteAccountView, MultiTenantRegistrationView, OrganizationManagementView,
     InvitationView, AcceptInvitationView, OrganizationMembersView,
@@ -19,6 +19,7 @@ router.register(r'onboarding/progress', OnboardingProgressViewSet, basename='onb
 urlpatterns = [
     path('', include(router.urls)),
     path('login/', LoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),  # SEGURIDAD: JWT blacklist logout
     path('register/', RegisterView.as_view(), name='register'),
     path('register/<slug:organizacion_slug>/', RegisterByOrganizacionView.as_view(), name='register_by_organization'),
     path('register-organization/', MultiTenantRegistrationView.as_view(), name='register_organization'),

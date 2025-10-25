@@ -69,6 +69,53 @@ class ClientEmailListView(generics.ListAPIView):
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
+
+class LogoutView(APIView):
+    """
+    SEGURIDAD: Endpoint de logout que blacklistea el refresh token.
+
+    Esto previene que tokens robados puedan ser usados después del logout.
+
+    POST /api/logout/
+    Body: {"refresh": "refresh_token_aqui"}
+
+    Returns:
+        200: Logout exitoso, token blacklisteado
+        400: Token inválido o ya blacklisteado
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            from rest_framework_simplejwt.tokens import RefreshToken
+
+            refresh_token = request.data.get("refresh")
+
+            if not refresh_token:
+                return Response(
+                    {"error": "Se requiere el refresh token"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Blacklistear el token
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
+            logger.info(f"[SECURITY] User {request.user.username} logged out successfully")
+
+            return Response(
+                {"message": "Logout exitoso"},
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            logger.warning(f"[SECURITY] Logout failed for user {request.user.username}: {str(e)}")
+            return Response(
+                {"error": "Token inválido o expirado"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
 class TimezoneView(APIView):
     permission_classes = [AllowAny]
 

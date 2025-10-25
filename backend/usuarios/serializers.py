@@ -380,10 +380,49 @@ class ClientEmailSerializer(serializers.ModelSerializer):
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def _get_client_ip(self, request):
+        """Obtiene la IP real del cliente, considerando proxies."""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0].strip()
+        else:
+            ip = request.META.get('REMOTE_ADDR', '0.0.0.0')
+        return ip
+
     def validate(self, attrs):
         from organizacion.thread_locals import set_current_organization, get_current_organization
+        from usuarios.models import FailedLoginAttempt
 
-        data = super().validate(attrs)
+        # SEGURIDAD: Obtener IP y User-Agent del request
+        request = self.context.get('request')
+        ip_address = self._get_client_ip(request) if request else '0.0.0.0'
+        user_agent = request.META.get('HTTP_USER_AGENT', '')[:255] if request else ''
+
+        # SEGURIDAD: Verificar si la cuenta está bloqueada por intentos fallidos
+        email = attrs.get('username', '')  # JWT usa 'username' pero puede ser email
+        is_blocked, attempts_count, time_remaining = FailedLoginAttempt.is_blocked(email)
+
+        if is_blocked:
+            minutes = int(time_remaining.total_seconds() / 60)
+            raise serializers.ValidationError(
+                f"Cuenta bloqueada temporalmente por múltiples intentos fallidos. "
+                f"Intenta nuevamente en {minutes} minutos."
+            )
+
+        try:
+            data = super().validate(attrs)
+        except Exception as e:
+            # SEGURIDAD: Registrar intento fallido
+            FailedLoginAttempt.record_failed_attempt(
+                email=email,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+            # Re-lanzar la excepción original
+            raise e
+
+        # SEGURIDAD: Login exitoso - limpiar intentos fallidos
+        FailedLoginAttempt.clear_attempts(email)
 
         # CRITICAL FIX: Establecer contexto de organización antes de serializar
         # Esto permite que OrganizationManager funcione correctamente durante la creación del token

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib import messages
-from .models import PerfilUsuario, OnboardingProgress
+from .models import PerfilUsuario, OnboardingProgress, FailedLoginAttempt
 from organizacion.models import Sede, Organizacion
 import hashlib
 
@@ -268,7 +268,7 @@ class OnboardingProgressAdmin(admin.ModelAdmin):
     list_filter = ('is_completed', 'is_dismissed', 'created_at')
     search_fields = ('user__username', 'user__email')
     readonly_fields = ('completion_percentage', 'pending_steps', 'created_at', 'updated_at', 'completed_at')
-    
+
     fieldsets = (
         ('Usuario', {
             'fields': ('user',)
@@ -276,7 +276,7 @@ class OnboardingProgressAdmin(admin.ModelAdmin):
         ('Progreso', {
             'fields': (
                 'has_created_service',
-                'has_added_collaborator', 
+                'has_added_collaborator',
                 'has_viewed_public_link',
                 'has_completed_profile',
                 'completion_percentage',
@@ -291,4 +291,53 @@ class OnboardingProgressAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+@admin.register(FailedLoginAttempt)
+class FailedLoginAttemptAdmin(admin.ModelAdmin):
+    """
+    SEGURIDAD: Admin para monitorear intentos de login fallidos.
+    Solo lectura para preservar evidencia de seguridad.
+    """
+    list_display = ('email', 'ip_address', 'attempted_at', 'user_agent_short')
+    list_filter = ('attempted_at',)
+    search_fields = ('email', 'ip_address')
+    readonly_fields = ('email', 'ip_address', 'attempted_at', 'user_agent')
+    date_hierarchy = 'attempted_at'
+    ordering = ('-attempted_at',)
+
+    # Solo lectura - no permitir edición de logs de seguridad
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Solo superusuarios pueden borrar logs antiguos
+        return request.user.is_superuser
+
+    def user_agent_short(self, obj):
+        """Muestra versión corta del user agent"""
+        if obj.user_agent:
+            return obj.user_agent[:50] + '...' if len(obj.user_agent) > 50 else obj.user_agent
+        return '-'
+    user_agent_short.short_description = 'User Agent'
+
+    actions = ['clear_old_attempts']
+
+    def clear_old_attempts(self, request, queryset):
+        """Limpia intentos de más de 30 días"""
+        from datetime import timedelta
+        from django.utils import timezone
+
+        cutoff = timezone.now() - timedelta(days=30)
+        count = FailedLoginAttempt.objects.filter(attempted_at__lt=cutoff).delete()[0]
+
+        self.message_user(
+            request,
+            f"Se eliminaron {count} intentos fallidos de más de 30 días.",
+            messages.SUCCESS
+        )
+    clear_old_attempts.short_description = "🧹 Limpiar intentos antiguos (>30 días)"
 

@@ -51,9 +51,10 @@ INSTALLED_APPS = [
     'usuarios',
     'rest_framework',
     'citas',
-    
+
     'corsheaders',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',  # SEGURIDAD: JWT blacklist para logout
     'organizacion',
     'marketing',
     'guide',

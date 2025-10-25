@@ -576,3 +576,129 @@ class Invitation(models.Model):
     def __str__(self):
         status = 'Aceptada' if self.is_accepted else 'Pendiente'
         return f"Invitación a {self.email} - {self.organization.nombre} ({status})"
+
+
+class FailedLoginAttempt(models.Model):
+    """
+    SEGURIDAD: Rastrea intentos de login fallidos para prevenir ataques de fuerza bruta.
+
+    Este modelo registra:
+    - Intentos fallidos por email/username
+    - IP de origen del intento
+    - Timestamp de cada intento
+
+    Se usa para:
+    1. Bloquear temporalmente después de X intentos
+    2. Detectar patrones de ataque
+    3. Alertar sobre actividad sospechosa
+    """
+    email = models.EmailField(db_index=True)
+    ip_address = models.GenericIPAddressField()
+    attempted_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    user_agent = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        ordering = ['-attempted_at']
+        indexes = [
+            models.Index(fields=['email', '-attempted_at']),
+            models.Index(fields=['ip_address', '-attempted_at']),
+        ]
+
+    def __str__(self):
+        return f"Failed login: {self.email} from {self.ip_address} at {self.attempted_at}"
+
+    @staticmethod
+    def is_blocked(email, max_attempts=5, lockout_duration_minutes=15):
+        """
+        Verifica si un email está bloqueado por demasiados intentos fallidos.
+
+        Args:
+            email: Email a verificar
+            max_attempts: Número máximo de intentos permitidos (default: 5)
+            lockout_duration_minutes: Minutos de bloqueo (default: 15)
+
+        Returns:
+            tuple: (is_blocked: bool, attempts_count: int, time_remaining: timedelta)
+        """
+        from django.utils import timezone
+
+        cutoff_time = timezone.now() - timedelta(minutes=lockout_duration_minutes)
+
+        recent_attempts = FailedLoginAttempt.objects.filter(
+            email=email.lower(),
+            attempted_at__gte=cutoff_time
+        ).count()
+
+        is_blocked = recent_attempts >= max_attempts
+
+        if is_blocked:
+            # Calcular tiempo restante de bloqueo
+            oldest_attempt = FailedLoginAttempt.objects.filter(
+                email=email.lower(),
+                attempted_at__gte=cutoff_time
+            ).order_by('attempted_at').first()
+
+            if oldest_attempt:
+                unlock_time = oldest_attempt.attempted_at + timedelta(minutes=lockout_duration_minutes)
+                time_remaining = unlock_time - timezone.now()
+            else:
+                time_remaining = timedelta(0)
+        else:
+            time_remaining = timedelta(0)
+
+        return is_blocked, recent_attempts, time_remaining
+
+    @staticmethod
+    def record_failed_attempt(email, ip_address, user_agent=None):
+        """
+        Registra un intento de login fallido.
+
+        Args:
+            email: Email del intento
+            ip_address: IP de origen
+            user_agent: User agent del navegador
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        FailedLoginAttempt.objects.create(
+            email=email.lower(),
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+
+        # Loggear para análisis de seguridad
+        is_blocked, attempts, _ = FailedLoginAttempt.is_blocked(email)
+
+        if is_blocked:
+            logger.warning(
+                f"[SECURITY] Account locked - {email} from {ip_address} - "
+                f"{attempts} failed attempts"
+            )
+        else:
+            logger.info(
+                f"[SECURITY] Failed login attempt {attempts}/5 - {email} from {ip_address}"
+            )
+
+    @staticmethod
+    def clear_attempts(email):
+        """
+        Limpia los intentos fallidos después de un login exitoso.
+
+        Args:
+            email: Email del usuario
+        """
+        FailedLoginAttempt.objects.filter(email=email.lower()).delete()
+
+    @staticmethod
+    def cleanup_old_records(days=30):
+        """
+        Limpia registros antiguos (ejecutar periódicamente via cron/celery).
+
+        Args:
+            days: Días de antigüedad para eliminar (default: 30)
+        """
+        from django.utils import timezone
+        cutoff = timezone.now() - timedelta(days=days)
+        deleted_count = FailedLoginAttempt.objects.filter(attempted_at__lt=cutoff).delete()[0]
+        return deleted_count
