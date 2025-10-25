@@ -741,19 +741,23 @@ class SedeReportView(APIView):
         else:
             perfil = get_perfil_or_first(user)
             if perfil:
-                # Consulta SQL directa para obtener sedes administradas
-                from django.db import connection
-                with connection.cursor() as cursor:
-                    cursor.execute("""
-                        SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
-                        WHERE perfilusuario_id = %s
-                    """, [perfil.id])
-                    sedes_admin_ids = [row[0] for row in cursor.fetchall()]
-
-                if sedes_admin_ids:
-                    administered_sedes = Sede.all_objects.filter(id__in=sedes_admin_ids)
-                elif user.is_staff and perfil.organizacion:
+                # OWNER y ADMIN: pueden ver todas las sedes de su organización
+                if perfil.role in ['owner', 'admin'] and perfil.organizacion:
                     administered_sedes = Sede.all_objects.filter(organizacion=perfil.organizacion)
+                else:
+                    # SEDE_ADMIN: solo sedes que administra
+                    from django.db import connection
+                    with connection.cursor() as cursor:
+                        cursor.execute("""
+                            SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
+                            WHERE perfilusuario_id = %s
+                        """, [perfil.id])
+                        sedes_admin_ids = [row[0] for row in cursor.fetchall()]
+
+                    if sedes_admin_ids:
+                        administered_sedes = Sede.all_objects.filter(id__in=sedes_admin_ids)
+                    elif user.is_staff and perfil.organizacion:
+                        administered_sedes = Sede.all_objects.filter(organizacion=perfil.organizacion)
 
         if administered_sedes is None:
             raise PermissionDenied(_("You do not have permission to access this report."))
