@@ -1,6 +1,8 @@
 """
 Vistas públicas para el sistema de citas.
 Permiten a usuarios no autenticados agendar citas como invitados.
+
+SEGURIDAD: Implementa rate limiting para prevenir spam y ataques DoS.
 """
 from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny
@@ -17,6 +19,9 @@ from usuarios.models import MagicLinkToken
 # MULTI-TENANT: Import helper for profile management
 from usuarios.utils import get_perfil_or_first
 
+# SECURITY: Import custom throttles
+from core.throttling import PublicBookingIPThrottle, PublicBookingEmailThrottle
+
 logger = logging.getLogger(__name__)
 
 
@@ -24,6 +29,11 @@ class PublicCitaViewSet(viewsets.ModelViewSet):
     """
     Endpoint público para que invitados puedan agendar citas.
     No requiere autenticación.
+
+    SEGURIDAD - Rate Limiting:
+    - Por IP: Máximo 5 citas por hora (previene spam desde una IP)
+    - Por Email: Máximo 3 citas por día (previene abuso de un mismo email)
+    - Previene: spam, DoS, flooding de emails, saturación de BD
 
     POST /api/citas/public-booking/
     {
@@ -41,6 +51,9 @@ class PublicCitaViewSet(viewsets.ModelViewSet):
     serializer_class = GuestCitaSerializer
     permission_classes = [AllowAny]
     http_method_names = ['post']  # Solo permitir POST (crear citas)
+
+    # SECURITY: Rate limiting para prevenir spam y ataques DoS
+    throttle_classes = [PublicBookingIPThrottle, PublicBookingEmailThrottle]
 
     def create(self, request, *args, **kwargs):
         """

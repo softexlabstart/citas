@@ -249,6 +249,10 @@ REST_FRAMEWORK = {
         'anon': '100/hour',  # Anonymous users: 100 requests per hour
         'user': '1000/hour',  # Authenticated users: 1000 requests per hour
         'staff': '5000/hour',  # Staff users: 5000 requests per hour
+        # SECURITY: Throttles específicos para endpoints públicos
+        'public_booking_ip': '5/hour',  # Máximo 5 citas por hora por IP
+        'public_booking_email': '3/day',  # Máximo 3 citas por día por email
+        'magic_link': '3/hour',  # Máximo 3 magic links por hora por email
     },
 }
 

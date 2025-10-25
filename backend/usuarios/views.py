@@ -1017,8 +1017,16 @@ class RequestHistoryLinkView(APIView):
     """
     Vista para solicitar un Magic Link de acceso al historial de citas.
     Permite a cualquier usuario (incluidos invitados) solicitar acceso mediante email.
+
+    SEGURIDAD - Rate Limiting:
+    - Máximo 3 requests por hora por email
+    - Previene: enumeración de emails, flooding, fuerza bruta
     """
     permission_classes = [AllowAny]
+
+    # SECURITY: Rate limiting para prevenir enumeración y flooding
+    from core.throttling import MagicLinkThrottle
+    throttle_classes = [MagicLinkThrottle]
 
     def post(self, request, *args, **kwargs):
         email = request.data.get('email')
