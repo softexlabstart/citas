@@ -25,16 +25,37 @@ class OrganizacionMiddleware:
 
         # MULTI-TENANT: Priority 1 - Check HTTP Header X-Organization-ID
         org_id = request.META.get('HTTP_X_ORGANIZATION_ID')
-        if org_id:
+        if org_id and request.user.is_authenticated:
             try:
-                organizacion = Organizacion.objects.get(id=int(org_id))
-                logger.debug(f"[OrgMiddleware] Org from header: {organizacion}")
+                requested_org = Organizacion.objects.get(id=int(org_id))
+
+                # SECURITY: Validate that user has permission to access this organization
+                # Check if user has an active profile in the requested organization
+                from usuarios.models import PerfilUsuario
+                has_access = PerfilUsuario.all_objects.filter(
+                    user=request.user,
+                    organizacion=requested_org,
+                    is_active=True
+                ).exists()
+
+                if has_access or request.user.is_superuser:
+                    organizacion = requested_org
+                    logger.debug(f"[OrgMiddleware] Org from header (validated): {organizacion}")
+                else:
+                    # User attempting to access unauthorized organization
+                    logger.warning(
+                        f"[SECURITY] User {request.user.username} attempted to access "
+                        f"unauthorized organization {requested_org.id} ({requested_org.nombre}) "
+                        f"via X-Organization-ID header. Access denied."
+                    )
+                    # Do not set organization - fall through to next priority
+
             except (ValueError, TypeError, Organizacion.DoesNotExist) as e:
                 logger.warning(f"[OrgMiddleware] Invalid organization ID in header: {org_id} - {e}")
 
         # Priority 2 - Get organization from authenticated user's profile
         if organizacion is None and request.user.is_authenticated:
-            logger.warning(f"[OrgMiddleware] User: {request.user.username}, is_staff: {request.user.is_staff}, is_superuser: {request.user.is_superuser}")
+            logger.debug(f"[OrgMiddleware] User: {request.user.username}, is_staff: {request.user.is_staff}, is_superuser: {request.user.is_superuser}")
             try:
                 # MULTI-TENANT: Check if user has multiple profiles
                 # CRITICAL: Use PerfilUsuario.all_objects to bypass OrganizacionManager filtering
@@ -48,10 +69,10 @@ class OrganizacionMiddleware:
                     perfil = perfiles.first()
                     if perfil:
                         organizacion = perfil.organizacion
-                        logger.warning(f"[OrgMiddleware] Org from single profile: {organizacion}")
+                        logger.debug(f"[OrgMiddleware] Org from single profile: {organizacion}")
                 elif perfiles_count > 1:
                     # Multiple profiles but no header: use the first active profile as fallback
-                    logger.warning(f"[OrgMiddleware] User {request.user.username} has {perfiles_count} profiles but no X-Organization-ID header. Using first active profile.")
+                    logger.info(f"[OrgMiddleware] User {request.user.username} has {perfiles_count} profiles but no X-Organization-ID header. Using first active profile.")
                     perfil = perfiles.filter(is_active=True).first()
                     if perfil:
                         organizacion = perfil.organizacion

@@ -263,8 +263,8 @@ class ClientSerializer(serializers.ModelSerializer):
             validated_data['password'] = password
             password_generated = True
 
-            # Log para respaldo
-            logger.info(f"Cliente creado: {validated_data.get('email')} - Contraseña temporal: {password}")
+            # Log de creación de usuario (sin exponer credenciales)
+            logger.info(f"Cliente creado con contraseña autogenerada: {validated_data.get('email')}")
 
         user = User.objects.create_user(**validated_data)
 
