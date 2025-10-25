@@ -363,11 +363,26 @@ class ClientViewSet(viewsets.ModelViewSet):
         ).prefetch_related('perfiles__organizacion', 'perfiles__sede').distinct()
 
         # Filtrar por consentimiento si se especifica
+        # LÓGICA: Un usuario tiene consentimiento si:
+        # 1. has_consented_data_processing=True (aceptó checkbox al registrarse), O
+        # 2. data_processing_opt_out=False (NO se opone al procesamiento)
+        # Un usuario NO tiene consentimiento si:
+        # 1. data_processing_opt_out=True (se opone al procesamiento), Y
+        # 2. has_consented_data_processing=False (nunca aceptó)
         consent_filter = self.request.query_params.get('consent')
         if consent_filter is not None and consent_filter != 'all':
-            # Convertir string a booleano
-            consent_bool = consent_filter.lower() == 'true'
-            base_queryset = base_queryset.filter(perfiles__has_consented_data_processing=consent_bool)
+            if consent_filter.lower() == 'true':
+                # Con consentimiento: ha aceptado O NO se opone
+                base_queryset = base_queryset.filter(
+                    Q(perfiles__has_consented_data_processing=True) |
+                    Q(perfiles__data_processing_opt_out=False)
+                )
+            else:
+                # Sin consentimiento: se opone Y nunca aceptó
+                base_queryset = base_queryset.filter(
+                    perfiles__data_processing_opt_out=True,
+                    perfiles__has_consented_data_processing=False
+                )
 
         # SUPERUSUARIO: acceso completo
         if user.is_superuser:
