@@ -178,10 +178,18 @@ class ServicioViewSet(viewsets.ModelViewSet):
                 return queryset.filter(sede_id=sede_id)
             return queryset
 
-        # ADMINISTRADOR DE SEDE: solo servicios de sus sedes
+        # OWNER y ADMIN: pueden ver todos los servicios de su organización
         if user.is_authenticated:
             perfil = get_perfil_or_first(user)
             if perfil:
+                # OWNER/ADMIN: todos los servicios de su organización
+                if perfil.role in ['owner', 'admin'] and perfil.organizacion:
+                    queryset = queryset.filter(sede__organizacion=perfil.organizacion)
+                    if sede_id:
+                        queryset = queryset.filter(sede_id=sede_id)
+                    return queryset
+
+                # SEDE_ADMIN: solo servicios de sus sedes administradas
                 from django.db import connection
                 with connection.cursor() as cursor:
                     cursor.execute("""
