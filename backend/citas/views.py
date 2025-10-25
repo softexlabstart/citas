@@ -61,20 +61,29 @@ class ColaboradorViewSet(viewsets.ModelViewSet):
                 bloqueos__fecha_fin__gte=now
             )
 
-        # ADMINISTRADOR DE SEDE: solo colaboradores de sus sedes
+        # OWNER y ADMIN: pueden ver todos los colaboradores de su organización
         if user.is_authenticated:
             perfil = get_perfil_or_first(user)
-            if perfil and perfil.sedes_administradas.exists():
-                org = perfil.organizacion
-                queryset = queryset.filter(sede__organizacion=org)
-                if sede_id:
-                    # Validar que la sede pertenece a su organización
-                    queryset = queryset.filter(sede_id=sede_id)
-                # Excluir colaboradores con bloqueo activo
-                return queryset.exclude(
-                    bloqueos__fecha_inicio__lte=now,
-                    bloqueos__fecha_fin__gte=now
-                )
+            if perfil:
+                # OWNER/ADMIN: todos los colaboradores de su organización
+                if perfil.role in ['owner', 'admin'] and perfil.organizacion:
+                    queryset = queryset.filter(sede__organizacion=perfil.organizacion)
+                    if sede_id:
+                        queryset = queryset.filter(sede_id=sede_id)
+                    return queryset.exclude(
+                        bloqueos__fecha_inicio__lte=now,
+                        bloqueos__fecha_fin__gte=now
+                    )
+                # SEDE_ADMIN: solo colaboradores de sus sedes administradas
+                elif perfil.sedes_administradas.exists():
+                    org = perfil.organizacion
+                    queryset = queryset.filter(sede__organizacion=org)
+                    if sede_id:
+                        queryset = queryset.filter(sede_id=sede_id)
+                    return queryset.exclude(
+                        bloqueos__fecha_inicio__lte=now,
+                        bloqueos__fecha_fin__gte=now
+                    )
 
         # COLABORADOR: puede ver colaboradores de su organización (para coordinación)
         if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
