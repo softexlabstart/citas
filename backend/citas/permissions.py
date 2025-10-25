@@ -128,13 +128,9 @@ class IsAdminOrSedeAdminOrReadOnly(BasePermission):
         if not sede_id:
             return False
 
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT COUNT(*) FROM usuarios_perfilusuario_sedes_administradas
-                WHERE perfilusuario_id = %s AND sede_id = %s
-            """, [perfil.id, sede_id])
-            count = cursor.fetchone()[0]
-            return count > 0
+        # SECURITY: Usar Django ORM en lugar de SQL raw
+        # Las relaciones ManyToMany no pasan por OrganizationManager
+        return perfil.sedes_administradas.filter(id=sede_id).exists()
 
 
 class IsOwnerOrAdminForCita(BasePermission):

@@ -211,14 +211,9 @@ class ServicioViewSet(viewsets.ModelViewSet):
             sedes_acceso = []
             perfil = get_perfil_or_first(user)
             if perfil:
-                # Consulta directa a la tabla intermedia para evitar OrganizacionManager
-                from django.db import connection
-                with connection.cursor() as cursor:
-                    cursor.execute("""
-                        SELECT sede_id FROM usuarios_perfilusuario_sedes
-                        WHERE perfilusuario_id = %s
-                    """, [perfil.id])
-                    sedes_acceso = [row[0] for row in cursor.fetchall()]
+                # SECURITY: Usar Django ORM en lugar de SQL raw
+                # Las relaciones ManyToMany no pasan por OrganizationManager
+                sedes_acceso = list(perfil.sedes.values_list('id', flat=True))
 
                 if not sedes_acceso and perfil.sede:
                     sedes_acceso = [perfil.sede.id]
@@ -246,14 +241,9 @@ class ServicioViewSet(viewsets.ModelViewSet):
 
             perfil = get_perfil_or_first(user)
             if perfil:
-                # Consulta directa a la tabla intermedia para evitar OrganizacionManager
-                from django.db import connection
-                with connection.cursor() as cursor:
-                    cursor.execute("""
-                        SELECT sede_id FROM usuarios_perfilusuario_sedes
-                        WHERE perfilusuario_id = %s
-                    """, [perfil.id])
-                    sedes_acceso = [row[0] for row in cursor.fetchall()]
+                # SECURITY: Usar Django ORM en lugar de SQL raw
+                # Las relaciones ManyToMany no pasan por OrganizationManager
+                sedes_acceso = list(perfil.sedes.values_list('id', flat=True))
 
                 # Agregar sede principal si no tiene sedes múltiples
                 if not sedes_acceso and perfil.sede:
@@ -298,13 +288,9 @@ class BloqueoViewSet(viewsets.ModelViewSet):
         # ADMINISTRADOR DE SEDE: solo bloqueos de sus sedes
         perfil = get_perfil_or_first(user)
         if perfil:
-            from django.db import connection
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
-                    WHERE perfilusuario_id = %s
-                """, [perfil.id])
-                sedes_admin_ids = [row[0] for row in cursor.fetchall()]
+            # SECURITY: Usar Django ORM en lugar de SQL raw
+            # Las relaciones ManyToMany no pasan por OrganizationManager
+            sedes_admin_ids = list(perfil.sedes_administradas.values_list('id', flat=True))
 
             if sedes_admin_ids:
                 queryset = queryset.filter(colaborador__sede_id__in=sedes_admin_ids)
@@ -679,13 +665,9 @@ class AppointmentReportView(APIView):
                     base_queryset = Cita.all_objects.filter(sede__organizacion=perfil.organizacion)
                 else:
                     # SEDE_ADMIN: solo citas de sedes administradas
-                    from django.db import connection
-                    with connection.cursor() as cursor:
-                        cursor.execute("""
-                            SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
-                            WHERE perfilusuario_id = %s
-                        """, [perfil.id])
-                        sedes_admin_ids = [row[0] for row in cursor.fetchall()]
+                    # SECURITY: Usar Django ORM en lugar de SQL raw
+                    # Las relaciones ManyToMany no pasan por OrganizationManager
+                    sedes_admin_ids = list(perfil.sedes_administradas.values_list('id', flat=True))
 
                     if sedes_admin_ids:
                         base_queryset = Cita.all_objects.filter(sede_id__in=sedes_admin_ids)
@@ -762,13 +744,9 @@ class SedeReportView(APIView):
                     administered_sedes = Sede.all_objects.filter(organizacion=perfil.organizacion)
                 else:
                     # SEDE_ADMIN: solo sedes que administra
-                    from django.db import connection
-                    with connection.cursor() as cursor:
-                        cursor.execute("""
-                            SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
-                            WHERE perfilusuario_id = %s
-                        """, [perfil.id])
-                        sedes_admin_ids = [row[0] for row in cursor.fetchall()]
+                    # SECURITY: Usar Django ORM en lugar de SQL raw
+                    # Las relaciones ManyToMany no pasan por OrganizationManager
+                    sedes_admin_ids = list(perfil.sedes_administradas.values_list('id', flat=True))
 
                     if sedes_admin_ids:
                         administered_sedes = Sede.all_objects.filter(id__in=sedes_admin_ids)
@@ -1066,13 +1044,9 @@ class RecursoViewSet(viewsets.ModelViewSet):
 
             # SEDE_ADMIN: solo recursos de sus sedes administradas
             if role == 'sede_admin':
-                from django.db import connection
-                with connection.cursor() as cursor:
-                    cursor.execute("""
-                        SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
-                        WHERE perfilusuario_id = %s
-                    """, [perfil.id])
-                    sedes_admin_ids = [row[0] for row in cursor.fetchall()]
+                # SECURITY: Usar Django ORM en lugar de SQL raw
+                # Las relaciones ManyToMany no pasan por OrganizationManager
+                sedes_admin_ids = list(perfil.sedes_administradas.values_list('id', flat=True))
 
                 if sedes_admin_ids:
                     queryset = queryset.filter(sede_id__in=sedes_admin_ids)

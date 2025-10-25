@@ -41,17 +41,10 @@ class PerfilUsuarioSerializer(serializers.ModelSerializer):
         """Get all sedes using direct query to bypass organization filtering."""
         if not obj:
             return []
-        # Query the through table directly to bypass OrganizacionManager
-        from django.db import connection
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT s.id, s.nombre
-                FROM organizacion_sede s
-                INNER JOIN usuarios_perfilusuario_sedes ups ON s.id = ups.sede_id
-                WHERE ups.perfilusuario_id = %s
-            """, [obj.id])
-            rows = cursor.fetchall()
-            return [{'id': row[0], 'nombre': row[1]} for row in rows]
+        # SECURITY: Usar Django ORM en lugar de SQL raw
+        # Las relaciones ManyToMany no pasan por OrganizationManager
+        # Usamos values() para obtener solo id y nombre
+        return list(obj.sedes.values('id', 'nombre'))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
