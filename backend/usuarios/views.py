@@ -27,6 +27,9 @@ import logging
 # MULTI-TENANT: Import helpers for profile management
 from .utils import get_user_perfil_for_current_org, get_perfil_or_first
 
+# SECURITY: Import throttles
+from core.throttling import MagicLinkThrottle
+
 logger = logging.getLogger(__name__)
 
 class ClientEmailListView(generics.ListAPIView):
@@ -1025,7 +1028,6 @@ class RequestHistoryLinkView(APIView):
     permission_classes = [AllowAny]
 
     # SECURITY: Rate limiting para prevenir enumeración y flooding
-    from core.throttling import MagicLinkThrottle
     throttle_classes = [MagicLinkThrottle]
 
     def post(self, request, *args, **kwargs):
