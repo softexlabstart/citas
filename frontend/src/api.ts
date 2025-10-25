@@ -220,6 +220,15 @@ export const getDisponibilidad = (fecha: string, recursoId: number, sedeId: stri
     return api.get(`/api/citas/disponibilidad/?${params.toString()}`);
 };
 
+// Funciones para Colaboradores (nuevo sistema de roles)
+export const getColaboradores = (sedeId?: string) => {
+    let url = '/api/citas/colaboradores/';
+    if (sedeId) {
+        url += `?sede_id=${sedeId}`;
+    }
+    return api.get<Recurso[]>(url);
+};
+
 // Funciones para Bloqueos (New)
 export interface Bloqueo {
     id: number;
