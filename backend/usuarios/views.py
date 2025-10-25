@@ -364,10 +364,10 @@ class ClientViewSet(viewsets.ModelViewSet):
 
         # Filtrar por consentimiento si se especifica
         consent_filter = self.request.query_params.get('consent')
-        if consent_filter == 'true':
-            base_queryset = base_queryset.filter(perfiles__has_consented_data_processing=True)
-        elif consent_filter == 'false':
-            base_queryset = base_queryset.filter(perfiles__has_consented_data_processing=False)
+        if consent_filter is not None and consent_filter != 'all':
+            # Convertir string a booleano
+            consent_bool = consent_filter.lower() == 'true'
+            base_queryset = base_queryset.filter(perfiles__has_consented_data_processing=consent_bool)
 
         # SUPERUSUARIO: acceso completo
         if user.is_superuser:
