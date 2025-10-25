@@ -4,9 +4,12 @@ from rest_framework.response import Response
 from .models import Sede, Organizacion
 from .serializers import SedeSerializer, OrganizacionSerializer
 from usuarios.permissions import IsSuperAdmin
+import logging
 
 # MULTI-TENANT: Import helper for profile management
 from usuarios.utils import get_perfil_or_first
+
+logger = logging.getLogger(__name__)
 
 class CreateOrganizacionView(APIView):
     """Vista para que un SuperAdmin cree una nueva Organizacion."""
@@ -33,8 +36,10 @@ class OrganizacionPublicView(APIView):
                 'slug': organizacion.slug
             })
         except Organizacion.DoesNotExist:
+            # SECURITY: Log para debugging, mensaje genérico al cliente
+            logger.info(f"Intento de acceso a organización con slug inexistente: {slug}")
             return Response({
-                'error': 'Organización no encontrada'
+                'error': 'No se encontró la información solicitada'
             }, status=status.HTTP_404_NOT_FOUND)
 
 class SedeViewSet(viewsets.ModelViewSet):

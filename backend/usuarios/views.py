@@ -172,8 +172,12 @@ class RegisterByOrganizacionView(generics.CreateAPIView):
         try:
             organizacion = Organizacion.objects.get(slug=organizacion_slug)
         except Organizacion.DoesNotExist:
+            # SECURITY: Log detallado para debugging, mensaje genérico al cliente
+            logger.warning(
+                f"[SEGURIDAD] Intento de registro con slug inválido: {organizacion_slug}"
+            )
             return Response({
-                'error': 'Organización no encontrada. Verifica el enlace de registro.'
+                'error': 'El enlace de registro no es válido'
             }, status=status.HTTP_404_NOT_FOUND)
 
         # Validar datos del usuario
@@ -209,8 +213,12 @@ class RegisterByOrganizacionView(generics.CreateAPIView):
         else:
             # Usuario existente: verificar que no tenga ya un perfil en esta org
             if PerfilUsuario.objects.filter(user=user, organizacion=organizacion).exists():
+                # SECURITY: Log detallado para debugging
+                logger.info(
+                    f"Usuario existente {user.username} intentó re-registrarse en {organizacion.nombre}"
+                )
                 return Response({
-                    'error': 'Ya tienes una cuenta en esta organización. Por favor inicia sesión.'
+                    'error': 'Ya tienes una cuenta registrada. Por favor inicia sesión.'
                 }, status=status.HTTP_400_BAD_REQUEST)
             logger.info(f'Usuario existente {user.username} registrándose en nueva organización: {organizacion.nombre}')
 
@@ -632,8 +640,12 @@ class InvitationView(APIView):
                 try:
                     organizacion = Organizacion.objects.get(id=org_id)
                 except Organizacion.DoesNotExist:
+                    # SECURITY: Log para debugging, mensaje genérico al cliente
+                    logger.warning(
+                        f"[SEGURIDAD] Superusuario {request.user.username} intentó invitar a org_id={org_id} inexistente"
+                    )
                     return Response({
-                        'error': 'Organización no encontrada'
+                        'error': 'No se pudo procesar la invitación'
                     }, status=status.HTTP_404_NOT_FOUND)
             else:
                 # USUARIO NORMAL: Usar helper para obtener perfil
@@ -937,8 +949,12 @@ class OrganizationMembersView(APIView):
                     organizacion = Organizacion.objects.get(id=org_id)
                     miembros = User.objects.filter(perfiles__organizacion=organizacion)
                 except Organizacion.DoesNotExist:
+                    # SECURITY: Log para debugging, mensaje genérico al cliente
+                    logger.warning(
+                        f"[SEGURIDAD] Superusuario {request.user.username} intentó acceder a org_id={org_id} inexistente"
+                    )
                     return Response({
-                        'error': 'Organización no encontrada'
+                        'error': 'No se pudo obtener la información solicitada'
                     }, status=status.HTTP_404_NOT_FOUND)
             else:
                 # Todos los miembros de todas las organizaciones

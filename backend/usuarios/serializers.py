@@ -9,6 +9,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 # MULTI-TENANT: Import helpers for profile management
 from .utils import get_perfil_or_first
 
+logger = logging.getLogger(__name__)
+
 
 class SedeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -663,8 +665,13 @@ class CreateUserWithRoleSerializer(serializers.Serializer):
             ).first()
 
             if existing_perfil:
+                # SECURITY: Log detallado para debugging, mensaje genérico al cliente
+                logger.warning(
+                    f"[SEGURIDAD] Intento de registro duplicado - Email: {value}, "
+                    f"Organización: {org.nombre} (ID: {org.id})"
+                )
                 raise serializers.ValidationError(
-                    f"Ya existe un usuario con este email en la organización {org.nombre}"
+                    "El correo electrónico ya está registrado"
                 )
 
         return value.lower()
