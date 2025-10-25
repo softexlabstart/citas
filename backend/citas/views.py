@@ -677,24 +677,26 @@ class AppointmentReportView(APIView):
         else:
             perfil = get_perfil_or_first(user)
             if perfil:
-                # Consulta SQL directa para obtener sedes administradas
-                from django.db import connection
-                with connection.cursor() as cursor:
-                    cursor.execute("""
-                        SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
-                        WHERE perfilusuario_id = %s
-                    """, [perfil.id])
-                    sedes_admin_ids = [row[0] for row in cursor.fetchall()]
-
-                if sedes_admin_ids:
-                    # Usuario administra sedes específicas
-                    base_queryset = Cita.all_objects.filter(sede_id__in=sedes_admin_ids)
-                elif user.is_staff and perfil.organizacion:
-                    # Usuario staff sin sedes administradas específicas - ver toda la organización
+                # OWNER y ADMIN: pueden ver todas las citas de su organización
+                if perfil.role in ['owner', 'admin'] and perfil.organizacion:
                     base_queryset = Cita.all_objects.filter(sede__organizacion=perfil.organizacion)
                 else:
-                    # Usuario normal - ver solo sus propias citas
-                    base_queryset = Cita.all_objects.filter(user=user)
+                    # SEDE_ADMIN: solo citas de sedes administradas
+                    from django.db import connection
+                    with connection.cursor() as cursor:
+                        cursor.execute("""
+                            SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
+                            WHERE perfilusuario_id = %s
+                        """, [perfil.id])
+                        sedes_admin_ids = [row[0] for row in cursor.fetchall()]
+
+                    if sedes_admin_ids:
+                        base_queryset = Cita.all_objects.filter(sede_id__in=sedes_admin_ids)
+                    elif user.is_staff and perfil.organizacion:
+                        base_queryset = Cita.all_objects.filter(sede__organizacion=perfil.organizacion)
+                    else:
+                        # Usuario normal - ver solo sus propias citas
+                        base_queryset = Cita.all_objects.filter(user=user)
             else:
                 # Sin perfil - ver solo sus propias citas
                 base_queryset = Cita.all_objects.filter(user=user)
