@@ -94,15 +94,10 @@ class IsAdminOrSedeAdminOrReadOnly(BasePermission):
 
         perfil = get_perfil_or_first(request.user)
         if perfil:
-            # Usar consulta SQL directa para verificar sedes administradas
-            from django.db import connection
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    SELECT COUNT(*) FROM usuarios_perfilusuario_sedes_administradas
-                    WHERE perfilusuario_id = %s
-                """, [perfil.id])
-                count = cursor.fetchone()[0]
-                return count > 0
+            # SECURITY: Usar Django ORM en lugar de SQL raw (PRUEBA GRADUAL)
+            # Reemplazado: cursor.execute("SELECT COUNT(*) FROM usuarios_perfilusuario_sedes_administradas...")
+            # Las relaciones ManyToMany no pasan por OrganizationManager
+            return perfil.sedes_administradas.exists()
         return False
 
     def has_object_permission(self, request, view, obj):

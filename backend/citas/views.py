@@ -190,13 +190,10 @@ class ServicioViewSet(viewsets.ModelViewSet):
                     return queryset
 
                 # SEDE_ADMIN: solo servicios de sus sedes administradas
-                from django.db import connection
-                with connection.cursor() as cursor:
-                    cursor.execute("""
-                        SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas
-                        WHERE perfilusuario_id = %s
-                    """, [perfil.id])
-                    sedes_admin_ids = [row[0] for row in cursor.fetchall()]
+                # SECURITY: Usar Django ORM en lugar de SQL raw (PRUEBA GRADUAL)
+                # Reemplazado: cursor.execute("SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas...")
+                # Las relaciones ManyToMany no pasan por OrganizationManager
+                sedes_admin_ids = list(perfil.sedes_administradas.values_list('id', flat=True))
 
                 if sedes_admin_ids:
                     queryset = queryset.filter(sede_id__in=sedes_admin_ids)
