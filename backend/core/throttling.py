@@ -29,7 +29,7 @@ class PublicBookingIPThrottle(AnonRateThrottle):
     def throttle_failure(self):
         """Log intentos de throttle para análisis de seguridad"""
         logger.warning(
-            f"[SECURITY] Public booking throttle limit exceeded from IP: {self.get_ident()}"
+            "[SECURITY] Public booking IP throttle limit exceeded"
         )
         return super().throttle_failure()
 
