@@ -8,7 +8,6 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('organizacion', '0006_organizacion_slug'),
         ('usuarios', '0008_add_failed_login_attempt_model'),
     ]
 
