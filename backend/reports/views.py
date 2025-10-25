@@ -97,13 +97,13 @@ class FinancialSummaryView(APIView):
                 output_field=DecimalField()
             ),
 
-            # Conteo de citas por estado
-            total_citas=Count('id'),
-            citas_asistio=Count('id', filter=Q(estado__in=['Asistio', 'Asistió'])),
-            citas_pendiente=Count('id', filter=Q(estado='Pendiente')),
-            citas_confirmada=Count('id', filter=Q(estado='Confirmada')),
-            citas_no_asistio=Count('id', filter=Q(estado__in=['No Asistio', 'No Asistió'])),
-            citas_cancelada=Count('id', filter=Q(estado='Cancelada')),
+            # Conteo de citas por estado (distinct para evitar duplicados por ManyToMany)
+            total_citas=Count('id', distinct=True),
+            citas_asistio=Count('id', filter=Q(estado__in=['Asistio', 'Asistió']), distinct=True),
+            citas_pendiente=Count('id', filter=Q(estado='Pendiente'), distinct=True),
+            citas_confirmada=Count('id', filter=Q(estado='Confirmada'), distinct=True),
+            citas_no_asistio=Count('id', filter=Q(estado__in=['No Asistio', 'No Asistió']), distinct=True),
+            citas_cancelada=Count('id', filter=Q(estado='Cancelada'), distinct=True),
         )
 
         # 5. Calcular ingresos por servicio (solo citas asistidas)
