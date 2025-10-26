@@ -99,9 +99,14 @@ class LogoutView(APIView):
 
             # Blacklistear el token
             token = RefreshToken(refresh_token)
+            jti = str(token.get('jti', ''))
             token.blacklist()
 
-            logger.info(f"[SECURITY] User {request.user.username} logged out successfully")
+            # SEGURIDAD: Eliminar token activo de la tabla de sesiones
+            from usuarios.models import ActiveJWTToken
+            ActiveJWTToken.objects.filter(jti=jti).delete()
+
+            logger.info(f"[SECURITY] User {request.user.username} logged out successfully, session removed")
 
             return Response(
                 {"message": "Logout exitoso"},

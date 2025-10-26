@@ -702,3 +702,51 @@ class FailedLoginAttempt(models.Model):
         cutoff = timezone.now() - timedelta(days=days)
         deleted_count = FailedLoginAttempt.objects.filter(attempted_at__lt=cutoff).delete()[0]
         return deleted_count
+
+
+class ActiveJWTToken(models.Model):
+    """
+    SECURITY: Track active JWT tokens for session management.
+    Allows limiting number of concurrent sessions per user and token rotation.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='active_tokens')
+    jti = models.CharField(max_length=255, unique=True, db_index=True)  # JWT ID from token
+    token = models.TextField()  # Encrypted refresh token
+    device_info = models.CharField(max_length=255, blank=True, null=True)  # User agent
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    last_used = models.DateTimeField(auto_now=True)
+    expires_at = models.DateTimeField()
+
+    class Meta:
+        verbose_name = 'Active JWT Token'
+        verbose_name_plural = 'Active JWT Tokens'
+        ordering = ['-last_used']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.device_info or 'Unknown Device'}"
+
+    @staticmethod
+    def get_active_sessions_count(user):
+        """Get number of active sessions for a user."""
+        from django.utils import timezone
+        return ActiveJWTToken.objects.filter(
+            user=user,
+            expires_at__gt=timezone.now()
+        ).count()
+
+    @staticmethod
+    def revoke_oldest_session(user):
+        """Revoke the oldest session if max sessions exceeded."""
+        oldest_session = ActiveJWTToken.objects.filter(user=user).order_by('created_at').first()
+        if oldest_session:
+            oldest_session.delete()
+            return True
+        return False
+
+    @staticmethod
+    def cleanup_expired_tokens():
+        """Remove expired tokens from database."""
+        from django.utils import timezone
+        deleted_count = ActiveJWTToken.objects.filter(expires_at__lt=timezone.now()).delete()[0]
+        return deleted_count

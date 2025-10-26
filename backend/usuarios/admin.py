@@ -1,12 +1,15 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib import messages
-from .models import PerfilUsuario, OnboardingProgress, FailedLoginAttempt
+from .models import PerfilUsuario, OnboardingProgress, FailedLoginAttempt, ActiveJWTToken
 from organizacion.models import Sede, Organizacion
 import hashlib
+import logging
 
 # MULTI-TENANT: Import helper for profile management
 from .utils import get_perfil_or_first
+
+logger = logging.getLogger(__name__)
 
 
 @admin.register(PerfilUsuario)
@@ -340,4 +343,56 @@ class FailedLoginAttemptAdmin(admin.ModelAdmin):
             messages.SUCCESS
         )
     clear_old_attempts.short_description = "🧹 Limpiar intentos antiguos (>30 días)"
+
+
+@admin.register(ActiveJWTToken)
+class ActiveJWTTokenAdmin(admin.ModelAdmin):
+    """
+    Admin interface for monitoring active JWT sessions.
+    """
+    list_display = ('user', 'device_info', 'ip_address', 'created_at', 'last_used', 'expires_at', 'is_expired')
+    list_filter = ('created_at', 'last_used', 'expires_at')
+    search_fields = ('user__username', 'user__email', 'ip_address', 'device_info')
+    readonly_fields = ('user', 'jti', 'token', 'device_info', 'ip_address', 'created_at', 'last_used', 'expires_at')
+    ordering = ('-last_used',)
+
+    def is_expired(self, obj):
+        from django.utils import timezone
+        return obj.expires_at < timezone.now()
+    is_expired.boolean = True
+    is_expired.short_description = 'Expirado'
+
+    def has_add_permission(self, request):
+        # No permitir creación manual
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # No permitir edición
+        return False
+
+    actions = ['revoke_sessions']
+
+    def revoke_sessions(self, request, queryset):
+        """Acción personalizada para revocar sesiones seleccionadas."""
+        from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+
+        count = 0
+        for session in queryset:
+            try:
+                # Buscar el token en OutstandingToken y blacklistearlo
+                outstanding = OutstandingToken.objects.filter(jti=session.jti).first()
+                if outstanding:
+                    BlacklistedToken.objects.get_or_create(token=outstanding)
+                # Eliminar la sesión
+                session.delete()
+                count += 1
+            except Exception as e:
+                logger.error(f"Error revoking session {session.id}: {e}")
+
+        self.message_user(
+            request,
+            f"Se revocaron exitosamente {count} sesiones.",
+            messages.SUCCESS
+        )
+    revoke_sessions.short_description = "🚫 Revocar sesiones seleccionadas"
 

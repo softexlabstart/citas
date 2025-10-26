@@ -5,6 +5,7 @@ from .models import PerfilUsuario
 from organizacion.models import Sede, Organizacion
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 
 # MULTI-TENANT: Import helpers for profile management
 from .utils import get_perfil_or_first
@@ -429,6 +430,20 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         # SEGURIDAD: Login exitoso - limpiar intentos fallidos
         FailedLoginAttempt.clear_attempts(email)
 
+        # SEGURIDAD: Gestión de sesiones JWT - Limitar sesiones activas
+        from usuarios.models import ActiveJWTToken
+        from django.utils import timezone
+        from datetime import timedelta
+
+        MAX_ACTIVE_SESSIONS = 5  # Máximo 5 dispositivos/sesiones simultáneas por usuario
+
+        # Verificar número de sesiones activas
+        active_sessions = ActiveJWTToken.get_active_sessions_count(self.user)
+        if active_sessions >= MAX_ACTIVE_SESSIONS:
+            # Revocar la sesión más antigua
+            ActiveJWTToken.revoke_oldest_session(self.user)
+            logger.info(f"[SECURITY] Max sessions reached for user {self.user.username}, oldest session revoked")
+
         # CRITICAL FIX: Establecer contexto de organización antes de serializar
         # Esto permite que OrganizationManager funcione correctamente durante la creación del token
         org_was_set = False
@@ -465,6 +480,21 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 set_current_organization(original_org)
 
         data.update({'user': user_data})
+
+        # SEGURIDAD: Registrar token activo para gestión de sesiones
+        refresh = RefreshToken(data['refresh'])
+        jti = str(refresh.get('jti', ''))  # Get JWT ID
+
+        ActiveJWTToken.objects.create(
+            user=self.user,
+            jti=jti,
+            token=data['refresh'],  # Store refresh token
+            device_info=user_agent,
+            ip_address=ip_address,
+            expires_at=timezone.now() + timedelta(days=7)  # Refresh token expiration
+        )
+        logger.info(f"[SECURITY] New session created for user {self.user.username} from IP {ip_address}")
+
         return data
 
 
