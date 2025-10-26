@@ -68,6 +68,7 @@ class CitaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cita
         fields = ['id', 'nombre', 'fecha', 'servicios', 'servicios_ids', 'confirmado', 'user', 'estado', 'colaboradores', 'colaboradores_ids', 'sede', 'sede_id', 'comentario']
+        read_only_fields = ['id', 'user', 'confirmado', 'estado']  # SECURITY: Status changes only via dedicated actions
 
     def validate_servicios_ids(self, value):
         """
@@ -152,6 +153,7 @@ class GuestCitaSerializer(serializers.ModelSerializer):
             'servicios', 'servicios_ids', 'confirmado', 'estado',
             'colaboradores', 'colaboradores_ids', 'sede', 'sede_id', 'comentario'
         ]
+        read_only_fields = ['id', 'confirmado', 'estado']  # SECURITY: Guests cannot confirm or change status
 
     def validate(self, data):
         # Validar que se proporcione email_cliente para reservas de invitados

@@ -28,6 +28,9 @@ from django.utils.decorators import method_decorator
 
 # MULTI-TENANT: Import helpers for profile management
 from usuarios.utils import get_perfil_or_first
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class WelcomeView(APIView):
@@ -441,14 +444,57 @@ class CitaViewSet(viewsets.ModelViewSet):
             # Usuarios regulares crean citas para sí mismos
             cita = serializer.save(user=user)
 
+    def _check_cita_permission(self, cita, action='modify'):
+        """
+        SECURITY: Validate that user has permission to perform action on this cita.
+        Prevents IDOR attacks where users access other organizations' appointments.
+        """
+        user = self.request.user
+
+        # Superuser can do anything
+        if user.is_superuser:
+            return
+
+        # Get user's profile and organization
+        perfil = get_perfil_or_first(user)
+        if not perfil or not perfil.organizacion:
+            raise PermissionDenied(_("No tiene acceso a esta cita."))
+
+        # Check that cita belongs to user's organization
+        if cita.sede and cita.sede.organizacion != perfil.organizacion:
+            logger.warning(f"[SECURITY] User {user.username} attempted to {action} cita {cita.id} from different organization")
+            raise PermissionDenied(_("No tiene acceso a esta cita."))
+
+        # Additional role-based checks
+        # Admin de sede: can modify citas in their sedes
+        if perfil.sedes_administradas.exists():
+            if cita.sede not in perfil.sedes_administradas.all():
+                raise PermissionDenied(_("No tiene acceso a esta cita."))
+            return
+
+        # Colaborador: can only modify citas they are assigned to
+        try:
+            colaborador = Colaborador.all_objects.get(usuario=user)
+            if colaborador not in cita.colaboradores.all():
+                raise PermissionDenied(_("Solo puede modificar citas asignadas a usted."))
+            return
+        except Colaborador.DoesNotExist:
+            pass
+
+        # Cliente: can only modify their own citas
+        if cita.user != user:
+            raise PermissionDenied(_("Solo puede modificar sus propias citas."))
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
+        self._check_cita_permission(instance, 'update')  # SECURITY: Validate permission
         if instance.estado == 'Cancelada':
             raise PermissionDenied(_("No se puede modificar una cita cancelada."))
         return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
         original_instance = self.get_object()
+        self._check_cita_permission(original_instance, 'update')  # SECURITY: Validate permission
         old_fecha = original_instance.fecha
 
         if original_instance.estado == 'Cancelada':
@@ -469,6 +515,7 @@ class CitaViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
+        self._check_cita_permission(instance, 'cancel')  # SECURITY: Validate permission
 
         # Store date before changing status, for the email
         original_fecha = instance.fecha
@@ -490,6 +537,7 @@ class CitaViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def confirmar(self, request, pk=None):
         cita = self.get_object()
+        self._check_cita_permission(cita, 'confirm')  # SECURITY: Validate permission
 
         if cita.estado == 'Confirmada':
             return Response({'status': 'cita ya estaba confirmada'})
@@ -538,6 +586,7 @@ class CitaViewSet(viewsets.ModelViewSet):
         Solo disponible para colaboradores asignados a la cita.
         """
         cita = self.get_object()
+        self._check_cita_permission(cita, 'mark_attendance')  # SECURITY: Validate permission
 
         # Verificar que la cita no esté cancelada
         if cita.estado == 'Cancelada':

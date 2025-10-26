@@ -36,6 +36,10 @@ class PerfilUsuarioSerializer(serializers.ModelSerializer):
             'has_consented_data_processing', 'data_processing_opt_out',
             'role', 'additional_roles', 'display_badge'  # NEW: Role system fields
         )
+        read_only_fields = (
+            'organizacion', 'sedes', 'sedes_administradas', 'is_sede_admin',
+            'role', 'additional_roles', 'display_badge'  # SECURITY: Roles can only be changed via dedicated endpoints
+        )
 
     def get_sedes(self, obj):
         """Get all sedes using direct query to bypass organization filtering."""
@@ -85,6 +89,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser', 'password', 'perfil', 'groups')
+        read_only_fields = ('id', 'is_staff', 'is_superuser')  # SECURITY: Prevent privilege escalation via mass assignment
 
     def get_groups(self, obj):
         return [group.name for group in obj.groups.all()]
