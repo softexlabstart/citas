@@ -85,6 +85,18 @@ class CitaSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("No se pueden agendar citas en fechas pasadas.")
         return value
 
+    def validate_nombre(self, value):
+        """SECURITY: Validate nombre field to prevent XSS attacks."""
+        from core.validators import validate_no_html_tags
+        return validate_no_html_tags(value)
+
+    def validate_comentario(self, value):
+        """SECURITY: Validate comentario field to prevent XSS attacks."""
+        from core.validators import validate_no_html_tags
+        if value:
+            return validate_no_html_tags(value)
+        return value
+
     def validate(self, data):
         if self.instance and self.instance.estado == 'Cancelada':
             raise serializers.ValidationError("No se puede modificar una cita cancelada.")

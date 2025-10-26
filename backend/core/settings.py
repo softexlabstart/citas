@@ -321,6 +321,11 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True  # Cookies de sesión solo por HTTPS
     CSRF_COOKIE_SECURE = True  # Cookies CSRF solo por HTTPS
 
+    # SECURITY: CSRF Protection enhancements
+    CSRF_COOKIE_HTTPONLY = True  # Previene acceso a cookie CSRF desde JavaScript
+    CSRF_USE_SESSIONS = False  # Usa cookie en lugar de sesión (más seguro con API)
+    CSRF_COOKIE_SAMESITE = 'Strict'  # Previene CSRF cross-site
+
     # Security Headers
     SECURE_BROWSER_XSS_FILTER = True  # Activa el filtro XSS del navegador
     SECURE_CONTENT_TYPE_NOSNIFF = True  # Previene MIME type sniffing
