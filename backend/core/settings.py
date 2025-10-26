@@ -261,6 +261,8 @@ REST_FRAMEWORK = {
         'public_booking_email': '3/day',  # Máximo 3 citas por día por email
         'magic_link': '3/hour',  # Máximo 3 magic links por hora por email
     },
+    # SECURITY: Custom exception handler to prevent information disclosure
+    'EXCEPTION_HANDLER': 'core.exception_handlers.custom_exception_handler',
 }
 
 # JWT Configuration - Sincronizado con el idle timer del frontend (15 minutos)

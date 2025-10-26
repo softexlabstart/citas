@@ -750,3 +750,75 @@ class ActiveJWTToken(models.Model):
         from django.utils import timezone
         deleted_count = ActiveJWTToken.objects.filter(expires_at__lt=timezone.now()).delete()[0]
         return deleted_count
+
+
+class AuditLog(models.Model):
+    """
+    SECURITY: Audit log for critical actions.
+    Tracks who did what, when, and from where for compliance and security monitoring.
+    """
+    ACTION_CHOICES = [
+        ('CREATE', 'Create'),
+        ('UPDATE', 'Update'),
+        ('DELETE', 'Delete'),
+        ('LOGIN', 'Login'),
+        ('LOGOUT', 'Logout'),
+        ('PERMISSION_DENIED', 'Permission Denied'),
+        ('PASSWORD_CHANGE', 'Password Change'),
+        ('ROLE_CHANGE', 'Role Change'),
+        ('EXPORT_DATA', 'Export Data'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs')
+    action = models.CharField(max_length=50, choices=ACTION_CHOICES, db_index=True)
+    model_name = models.CharField(max_length=100, blank=True, null=True)  # e.g., 'Cita', 'User'
+    object_id = models.CharField(max_length=255, blank=True, null=True)  # ID of the affected object
+    changes = models.JSONField(blank=True, null=True)  # Before/after values
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    user_agent = models.CharField(max_length=255, blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    success = models.BooleanField(default=True)  # False if action was denied
+    notes = models.TextField(blank=True, null=True)  # Additional context
+
+    class Meta:
+        verbose_name = 'Audit Log'
+        verbose_name_plural = 'Audit Logs'
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['-timestamp', 'user']),
+            models.Index(fields=['action', '-timestamp']),
+            models.Index(fields=['model_name', 'object_id']),
+        ]
+
+    def __str__(self):
+        user_name = self.user.username if self.user else 'Anonymous'
+        return f"{user_name} - {self.action} - {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
+
+    @staticmethod
+    def log_action(user, action, model_name=None, object_id=None, changes=None,
+                   ip_address=None, user_agent=None, success=True, notes=None):
+        """
+        Helper method to create audit log entries.
+
+        Usage:
+            AuditLog.log_action(
+                user=request.user,
+                action='CREATE',
+                model_name='Cita',
+                object_id=cita.id,
+                changes={'status': 'Pendiente'},
+                ip_address=get_client_ip(request),
+                success=True
+            )
+        """
+        return AuditLog.objects.create(
+            user=user,
+            action=action,
+            model_name=model_name,
+            object_id=str(object_id) if object_id else None,
+            changes=changes,
+            ip_address=ip_address,
+            user_agent=user_agent[:255] if user_agent else None,
+            success=success,
+            notes=notes
+        )

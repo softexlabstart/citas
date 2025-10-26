@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib import messages
-from .models import PerfilUsuario, OnboardingProgress, FailedLoginAttempt, ActiveJWTToken
+from .models import PerfilUsuario, OnboardingProgress, FailedLoginAttempt, ActiveJWTToken, AuditLog
 from organizacion.models import Sede, Organizacion
 import hashlib
 import logging
@@ -395,4 +395,30 @@ class ActiveJWTTokenAdmin(admin.ModelAdmin):
             messages.SUCCESS
         )
     revoke_sessions.short_description = "🚫 Revocar sesiones seleccionadas"
+
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    """
+    Admin interface for viewing audit logs.
+    Read-only to prevent tampering with audit trail.
+    """
+    list_display = ('timestamp', 'user', 'action', 'model_name', 'object_id', 'success', 'ip_address')
+    list_filter = ('action', 'success', 'timestamp', 'model_name')
+    search_fields = ('user__username', 'user__email', 'model_name', 'object_id', 'notes', 'ip_address')
+    readonly_fields = ('user', 'action', 'model_name', 'object_id', 'changes', 'ip_address', 'user_agent', 'timestamp', 'success', 'notes')
+    ordering = ('-timestamp',)
+    date_hierarchy = 'timestamp'
+
+    def has_add_permission(self, request):
+        # No permitir creación manual de audit logs
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # No permitir edición de audit logs
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Solo superusuarios pueden eliminar logs (para limpieza de datos antiguos)
+        return request.user.is_superuser
 
