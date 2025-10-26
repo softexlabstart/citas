@@ -67,9 +67,6 @@ class OrganizacionMiddleware:
 
         # MULTI-TENANT: Priority 1 - Check HTTP Header X-Organization-ID
         org_id = request.META.get('HTTP_X_ORGANIZATION_ID')
-        print(f"[OrgMiddleware] Path: {request.path}, User: {user.username if user else 'Anonymous'}, X-Org-ID header: {org_id}")
-        logger.info(f"[OrgMiddleware] Path: {request.path}, User: {user.username if user else 'Anonymous'}, X-Org-ID header: {org_id}")
-
         if org_id and user:
             try:
                 requested_org = Organizacion.objects.get(id=int(org_id))
@@ -141,8 +138,6 @@ class OrganizacionMiddleware:
                 logger.debug(f"[OrgMiddleware] No org from URL: {e}")
 
         set_current_organization(organizacion)
-        print(f"[OrgMiddleware] Final organization set: {organizacion.nombre if organizacion else 'None'} (ID: {organizacion.id if organizacion else 'None'})")
-        logger.info(f"[OrgMiddleware] Final organization set: {organizacion.nombre if organizacion else 'None'} (ID: {organizacion.id if organizacion else 'None'})")
 
         response = self.get_response(request)
         return response
