@@ -532,13 +532,13 @@ class ClientViewSet(viewsets.ModelViewSet):
         citas = Cita.all_objects.filter(
             Q(user=client) | Q(nombre=client.username)
         ).select_related(
-            'user__perfil',
             'sede'
         ).prefetch_related(
             servicios_prefetch,
             colaboradores_prefetch,
             'user__groups',
-            'user__perfil__sedes_administradas'
+            'user__perfiles',  # FIX: Changed from perfil to perfiles (ForeignKey relation)
+            'user__perfiles__sedes_administradas'
         ).distinct().order_by('-fecha')
 
         # Calcular estadísticas generales
