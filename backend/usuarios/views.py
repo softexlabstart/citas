@@ -411,6 +411,7 @@ class ClientViewSet(viewsets.ModelViewSet):
         Excluye: owner, admin, sede_admin, colaborador
         """
         user = self.request.user
+        logger.info(f"[CLIENTS] ClientViewSet.get_queryset called for user: {user.username}")
 
         # Base queryset: SOLO usuarios con rol 'cliente' en su perfil
         # MULTI-TENANT: prefetch_related para relación 1:N (perfiles plural)
@@ -419,6 +420,8 @@ class ClientViewSet(viewsets.ModelViewSet):
         ).exclude(
             Q(email__isnull=True) | Q(email__exact='')
         ).prefetch_related('perfiles__organizacion', 'perfiles__sede').distinct()
+
+        logger.info(f"[CLIENTS] Base queryset count (all clients): {base_queryset.count()}")
 
         # Filtrar por consentimiento si se especifica
         # LÓGICA: Un usuario tiene consentimiento si:
@@ -444,18 +447,24 @@ class ClientViewSet(viewsets.ModelViewSet):
 
         # SUPERUSUARIO: acceso completo
         if user.is_superuser:
+            logger.info(f"[CLIENTS] User is superuser, returning all clients")
             return base_queryset
 
         # MULTI-TENANT: Obtener perfil del usuario usando helper
         perfil = get_perfil_or_first(user)
+        logger.info(f"[CLIENTS] User profile: {perfil}, org: {perfil.organizacion if perfil else 'None'}")
+
         if not perfil or not perfil.organizacion:
+            logger.warning(f"[CLIENTS] User {user.username} has no profile or organization, returning empty queryset")
             return User.objects.none()
 
         user_org = perfil.organizacion
+        logger.info(f"[CLIENTS] User organization: {user_org.nombre} (ID: {user_org.id})")
 
         # REGLA PRINCIPAL: Filtrar por organización
         # Esto cubre tanto administradores de sede como colaboradores
         queryset = base_queryset.filter(perfiles__organizacion=user_org)
+        logger.info(f"[CLIENTS] Queryset filtered by organization, count: {queryset.count()}")
 
         # COLABORADOR: filtrado adicional por sede si es necesario
         # Verificar si es colaborador usando ORM en lugar de SQL directo
@@ -463,15 +472,19 @@ class ClientViewSet(viewsets.ModelViewSet):
 
         try:
             colaborador = Colaborador.all_objects.select_related('sede__organizacion').get(usuario=user)
+            logger.info(f"[CLIENTS] User is colaborador, sede: {colaborador.sede.nombre if colaborador.sede else 'None'}")
             # Si es colaborador, también permitir clientes de su sede específica
             # que puedan no tener organización pero sí sede
             queryset = base_queryset.filter(
                 Q(perfiles__organizacion=user_org) | Q(perfiles__sede=colaborador.sede)
             )
+            logger.info(f"[CLIENTS] Queryset after colaborador filter, count: {queryset.count()}")
         except Colaborador.DoesNotExist:
             # No es colaborador, usar filtrado por organización únicamente
+            logger.info(f"[CLIENTS] User is not colaborador")
             pass
 
+        logger.info(f"[CLIENTS] Final queryset count: {queryset.count()}")
         return queryset
 
     def perform_create(self, serializer):
