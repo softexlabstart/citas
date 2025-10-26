@@ -68,12 +68,13 @@ MIDDLEWARE = [
     'csp.middleware.CSPMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.locale.LocaleMiddleware', 
+    'django.middleware.locale.LocaleMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'organizacion.middleware.OrganizacionMiddleware',  # Added for multi-tenancy
+    'organizacion.middleware.OrganizacionMiddleware',  # Multi-tenancy: identifica el tenant
+    'core.tenant_middleware.TenantSchemaMiddleware',  # DATABASE-PER-TENANT: setea search_path de PostgreSQL
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'axes.middleware.AxesMiddleware',
@@ -119,9 +120,14 @@ DATABASES = {
         'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'connect_timeout': 10,
+            # DATABASE-PER-TENANT: Configurar search_path por defecto
+            'options': '-c search_path=public',
         }
     }
 }
+
+# DATABASE-PER-TENANT: Router para dirigir queries al schema correcto
+DATABASE_ROUTERS = ['core.tenant_router.TenantRouter']
 
 
 # Caching configuration for Redis
