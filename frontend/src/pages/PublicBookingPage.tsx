@@ -30,10 +30,41 @@ const PublicBookingPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [orgInfo, setOrgInfo] = useState<any>(null);
+    const [checkingPermission, setCheckingPermission] = useState(true);
 
     const { data: availability, request: fetchAvailableSlots } = useApi<{ disponibilidad: any[] }, [string, number, string, string[]]>(getDisponibilidad);
 
     const availableSlots = availability?.disponibilidad.filter(slot => slot.status === 'disponible') || [];
+
+    // Verificar si la organización permite agendamiento público
+    useEffect(() => {
+        const checkPublicBookingPermission = async () => {
+            try {
+                const response = await fetch(`/api/organizacion/organizaciones/${organizacionSlug}/`);
+                if (!response.ok) {
+                    navigate('/login?message=Organización no encontrada');
+                    return;
+                }
+
+                const data = await response.json();
+                setOrgInfo(data);
+
+                if (!data.permitir_agendamiento_publico) {
+                    navigate(`/login?message=Esta organización requiere iniciar sesión para agendar citas&org=${organizacionSlug}`);
+                }
+            } catch (error) {
+                console.error('Error al verificar permisos de agendamiento:', error);
+                navigate('/login?message=Error al cargar información de la organización');
+            } finally {
+                setCheckingPermission(false);
+            }
+        };
+
+        if (organizacionSlug) {
+            checkPublicBookingPermission();
+        }
+    }, [organizacionSlug, navigate]);
 
     useEffect(() => {
         if (date && selectedRecurso && selectedSede && selectedServicios.length > 0) {
@@ -87,7 +118,7 @@ const PublicBookingPage: React.FC = () => {
         }
     };
 
-    if (loadingSedes) {
+    if (checkingPermission || loadingSedes) {
         return (
             <Container className="mt-5 text-center">
                 <Spinner animation="border" />

@@ -29,11 +29,17 @@ class OrganizacionPublicView(APIView):
 
     def get(self, request, slug, *args, **kwargs):
         try:
-            organizacion = Organizacion.objects.get(slug=slug)
+            organizacion = Organizacion.objects.get(slug=slug, is_active=True)
+
+            # Obtener sedes de esta organización
+            sedes = organizacion.sedes.all().values('id', 'nombre', 'direccion', 'telefono')
+
             return Response({
                 'id': organizacion.id,
                 'nombre': organizacion.nombre,
-                'slug': organizacion.slug
+                'slug': organizacion.slug,
+                'permitir_agendamiento_publico': organizacion.permitir_agendamiento_publico,
+                'sedes': list(sedes)
             })
         except Organizacion.DoesNotExist:
             # SECURITY: Log para debugging, mensaje genérico al cliente

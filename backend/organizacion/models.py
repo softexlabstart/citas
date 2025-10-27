@@ -34,6 +34,13 @@ class Organizacion(models.Model):
         help_text='Si está activo el tenant'
     )
 
+    # Configuración de agendamiento público
+    permitir_agendamiento_publico = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text='Permitir que usuarios sin cuenta agenden citas públicamente'
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)

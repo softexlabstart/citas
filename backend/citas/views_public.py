@@ -62,6 +62,19 @@ class PublicCitaViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        # VALIDAR: Verificar si la organización permite agendamiento público
+        organizacion = serializer.validated_data['sede'].organizacion
+
+        if not organizacion.permitir_agendamiento_publico:
+            return Response(
+                {
+                    'error': 'Esta organización requiere iniciar sesión para agendar citas.',
+                    'code': 'public_booking_disabled',
+                    'login_url': f'/login?org={organizacion.slug}'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         # Crear la cita
         cita = serializer.save()
 

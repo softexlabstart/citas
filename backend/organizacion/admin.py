@@ -6,8 +6,28 @@ from usuarios.utils import get_perfil_or_first
 
 @admin.register(Organizacion)
 class OrganizacionAdmin(admin.ModelAdmin):
-    list_display = ('nombre',)
-    search_fields = ('nombre',)
+    list_display = ('nombre', 'slug', 'permitir_agendamiento_publico', 'is_active', 'created_at')
+    list_filter = ('is_active', 'permitir_agendamiento_publico', 'created_at')
+    search_fields = ('nombre', 'slug')
+    readonly_fields = ('slug', 'schema_name', 'created_at', 'updated_at')
+
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('nombre', 'slug', 'is_active')
+        }),
+        ('Configuración de Agendamiento', {
+            'fields': ('permitir_agendamiento_publico',),
+            'description': 'Controla si usuarios sin cuenta pueden agendar citas públicamente'
+        }),
+        ('Database-per-Tenant (Avanzado)', {
+            'classes': ('collapse',),
+            'fields': ('schema_name', 'database_name')
+        }),
+        ('Timestamps', {
+            'classes': ('collapse',),
+            'fields': ('created_at', 'updated_at')
+        })
+    )
 
     # Only superusers can see and manage organizations
     def has_module_permission(self, request):
