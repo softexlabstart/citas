@@ -43,6 +43,7 @@ class TenantRouter:
         'usuarios.FailedLoginAttempt',  # Brute force tracking
         'usuarios.ActiveJWTToken',  # Session management
         'usuarios.AuditLog',  # Audit log global
+        'usuarios.PerfilUsuario',  # MOVED: Perfiles accesibles desde admin sin tenant
     ]
 
     # Tablas que van al schema del tenant actual
@@ -55,7 +56,7 @@ class TenantRouter:
 
     TENANT_MODELS = [
         'organizacion.Sede',  # Las sedes pertenecen al tenant
-        'usuarios.PerfilUsuario',  # Los perfiles pertenecen al tenant
+        # 'usuarios.PerfilUsuario',  # MOVED to SHARED_MODELS for admin access
         'usuarios.OnboardingProgress',
         # Todos los modelos de citas
         'citas.Servicio',
