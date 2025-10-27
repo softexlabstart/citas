@@ -238,13 +238,15 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Frontend URL for magic links in emails
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://www.softex-labs.xyz')
 
 CORS_ALLOWED_ORIGINS = [
     'http://16.52.17.116',
     'http://appcitas.softex-labs.xyz',
-    'https://appcitas.softex-labs.xyz',  # HTTPS version
-    'https://admin.softex-labs.xyz',  # Frontend actual
+    'https://appcitas.softex-labs.xyz',  # Backend API (HTTPS)
+    'https://admin.softex-labs.xyz',  # Django Admin
+    'https://www.softex-labs.xyz',  # Frontend principal (React)
+    'https://softex-labs.xyz',  # Sin www
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://localhost:3002',
