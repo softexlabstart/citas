@@ -90,7 +90,7 @@ class Cita(models.Model):
         ('No Asistio', _('No Asistió')),
     ]
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='citas', null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='citas', null=True, blank=True)
     nombre = models.CharField(max_length=100, db_index=True)
     fecha = models.DateTimeField(db_index=True)
     servicios = models.ManyToManyField(Servicio, related_name='citas')
@@ -105,6 +105,29 @@ class Cita(models.Model):
                                       help_text=_("Email del cliente para reservas como invitado"))
     telefono_cliente = models.CharField(max_length=20, blank=True, null=True,
                                         help_text=_("Teléfono del cliente para reservas como invitado"))
+
+    # Tipo de cita: registrado vs invitado
+    TIPO_CITA_CHOICES = [
+        ('registrado', _('Usuario Registrado')),
+        ('invitado', _('Invitado (sin cuenta)')),
+    ]
+    tipo_cita = models.CharField(
+        max_length=20,
+        choices=TIPO_CITA_CHOICES,
+        default='registrado',
+        db_index=True,
+        help_text=_("Indica si la cita fue creada por usuario registrado o invitado público")
+    )
+
+    # Token para que invitados gestionen su cita sin login
+    token_invitado = models.CharField(
+        max_length=64,
+        unique=True,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text=_("Token único para que invitados vean/cancelen su cita")
+    )
 
     objects = OrganizacionManager(organization_filter_path='sede__organizacion')
     all_objects = models.Manager()

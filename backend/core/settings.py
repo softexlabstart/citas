@@ -243,6 +243,8 @@ FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 CORS_ALLOWED_ORIGINS = [
     'http://16.52.17.116',
     'http://appcitas.softex-labs.xyz',
+    'https://appcitas.softex-labs.xyz',  # HTTPS version
+    'https://admin.softex-labs.xyz',  # Frontend actual
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://localhost:3002',

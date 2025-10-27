@@ -6,7 +6,7 @@ from .views import (ServicioViewSet, CitaViewSet, HorarioViewSet,
                     AppointmentReportView, DisponibilidadView, RecursoViewSet,
                     SedeReportView, BloqueoViewSet, DashboardSummaryView,
                     NextAvailabilityView, RecursoCitaViewSet, ColaboradorViewSet)
-from .views_public import PublicCitaViewSet
+from .views_public import PublicCitaViewSet, InvitadoCitaView
 
 router = DefaultRouter()
 router.register(r'servicios', ServicioViewSet, basename='servicio')
@@ -23,7 +23,8 @@ urlpatterns = [
     path('reports/sede_summary/', SedeReportView.as_view(), name='sede-reports-summary'),
     path('next-availability/', NextAvailabilityView.as_view(), name='next-availability'),
     path('disponibilidad/', DisponibilidadView.as_view(), name='disponibilidad'),
-    # Endpoint público para reservas de invitados
+    # Endpoints públicos para reservas de invitados
     path('public-booking/', PublicCitaViewSet.as_view({'post': 'create'}), name='public-booking'),
+    path('invitado/<int:cita_id>/', InvitadoCitaView.as_view(), name='invitado-cita'),
     path('', include(router.urls)),
 ]

@@ -7,17 +7,14 @@ SEGURIDAD: Implementa rate limiting para prevenir spam y ataques DoS.
 from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.core.mail import send_mail
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.utils import timezone
 import logging
 
 from .models import Cita
 from .serializers import GuestCitaSerializer
-from usuarios.models import MagicLinkToken
-
-# MULTI-TENANT: Import helper for profile management
-from usuarios.utils import get_perfil_or_first
 
 # SECURITY: Import custom throttles
 from core.throttling import PublicBookingIPThrottle, PublicBookingEmailThrottle
@@ -75,113 +72,21 @@ class PublicCitaViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # Crear la cita
-        cita = serializer.save()
+        # CREAR CITA DE INVITADO (sin crear usuario)
+        import secrets
+        cita = serializer.save(
+            user=None,  # No asignar usuario
+            tipo_cita='invitado',
+            token_invitado=secrets.token_urlsafe(32)  # Token único para gestionar cita
+        )
 
-        # Enviar magic link automáticamente
+        # Enviar email de confirmación con link para gestionar cita
         email = cita.email_cliente
         if email:
             try:
-                from usuarios.models import PerfilUsuario
-                organizacion = cita.sede.organizacion
-
-                # Buscar usuario con este email que ya tenga perfil en esta organización
-                user = None
-                user_created = False
-                existing_users = User.objects.filter(email=email)
-
-                # MULTI-TENANT: Buscar si existe un usuario con perfil en esta organización
-                for existing_user in existing_users:
-                    existing_perfil = existing_user.perfiles.filter(organizacion=organizacion).first()
-                    if existing_perfil:
-                        user = existing_user
-                        logger.info(f"Usuario existente encontrado: {user.username} ({user.email}) en organización {organizacion.nombre}")
-                        break
-
-                # Si no existe usuario en esta organización, crear uno nuevo
-                if not user:
-                    # Generar username único
-                    import hashlib
-                    if existing_users.exists():
-                        # Ya existe usuario con este email en otra org - usar username con hash
-                        hash_suffix = hashlib.md5(organizacion.nombre.encode()).hexdigest()[:8]
-                        username = f"{email.split('@')[0]}_{hash_suffix}"
-                    else:
-                        # Primera vez con este email - usar email como username
-                        username = email
-
-                    user, user_created = User.objects.get_or_create(
-                        username=username,
-                        defaults={
-                            'email': email,
-                            'first_name': cita.nombre.split()[0] if cita.nombre else 'Invitado'
-                        }
-                    )
-
-                    if not user_created:
-                        # El username ya existía (caso raro) - buscar si tiene perfil en esta org
-                        user_perfil = user.perfiles.filter(organizacion=organizacion).first()
-                        if user_perfil:
-                            logger.info(f"Usuario con username {username} ya existe en esta organización")
-                        else:
-                            logger.warning(f"Usuario con username {username} existe pero sin perfil en esta organización")
-                    else:
-                        logger.info(f"Nuevo usuario creado: {username} ({email})")
-
-                # MULTI-TENANT: Manejo del perfil del usuario
-                if user_created or not user.perfiles.filter(organizacion=organizacion).exists():
-                    # Usuario nuevo O usuario sin perfil en esta org: crear perfil con sede asignada
-                    from usuarios.models import PerfilUsuario
-                    perfil = PerfilUsuario.objects.create(
-                        user=user,
-                        organizacion=organizacion,
-                        sede=cita.sede,
-                        nombre=cita.nombre or 'Invitado',
-                        telefono=cita.telefono_cliente or ''
-                    )
-                    # Agregar la sede a la relación M2M sedes
-                    perfil.sedes.add(cita.sede)
-                    logger.info(f"Perfil creado para usuario {user.email} con organización {organizacion.nombre} y sede {cita.sede.nombre}")
-                else:
-                    # Usuario YA existe con perfil en esta organización
-                    # Obtener el perfil para esta organización específica
-                    perfil_actual = user.perfiles.filter(organizacion=organizacion).first()
-                    if perfil_actual:
-                        # Agregar sede si no la tiene
-                        if cita.sede not in perfil_actual.sedes.all():
-                            perfil_actual.sedes.add(cita.sede)
-                            logger.info(f"Sede {cita.sede.nombre} agregada al perfil de {user.email}")
-
-                        # Actualizar sede principal si no tiene una asignada
-                        if not perfil_actual.sede:
-                            perfil_actual.sede = cita.sede
-                            perfil_actual.save()
-                            logger.info(f"Sede principal {cita.sede.nombre} asignada a {user.email}")
-
-                        # Actualizar información si ha cambiado
-                        updated = False
-                        if cita.nombre and perfil_actual.nombre != cita.nombre:
-                            perfil_actual.nombre = cita.nombre
-                            updated = True
-                        if cita.telefono_cliente and perfil_actual.telefono != cita.telefono_cliente:
-                            perfil_actual.telefono = cita.telefono_cliente
-                            updated = True
-                        if updated:
-                            perfil_actual.save()
-                            logger.info(f"Información del perfil actualizada para {user.email}")
-
-                # Asociar el usuario a la cita si no está ya asociado
-                if not cita.user:
-                    cita.user = user
-                    cita.save()
-
-                # Eliminar tokens antiguos y crear uno nuevo
-                MagicLinkToken.objects.filter(user=user).delete()
-                magic_token = MagicLinkToken.objects.create(user=user)
-
-                # Construir el enlace mágico
+                # Preparar link para gestionar cita (ver/cancelar)
                 frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-                magic_link = f"{frontend_url}/magic-link-auth?token={magic_token.token}"
+                manage_link = f"{frontend_url}/cita/{cita.id}?token={cita.token_invitado}"
 
                 # Preparar mensaje de email
                 servicios_nombres = ', '.join([s.nombre for s in cita.servicios.all()])
@@ -197,16 +102,17 @@ Hola {cita.nombre},
 📍 Sede: {cita.sede.nombre}
 💼 Servicios: {servicios_nombres}
 
-Para ver los detalles de tu cita y tu historial completo, haz clic en el siguiente enlace:
+Para ver los detalles de tu cita o cancelarla, usa este enlace:
+{manage_link}
 
-{magic_link}
+Este enlace es personal e intransferible.
 
-Este enlace es válido por 15 minutos y solo puede usarse una vez.
+Por favor, llega 10 minutos antes de tu cita.
 
 Si no solicitaste esta cita, puedes ignorar este correo.
 
-¡Nos vemos pronto!
-Equipo de {getattr(settings, 'SITE_NAME', 'Citas')}
+¡Te esperamos!
+{cita.sede.organizacion.nombre}
                 """.strip()
 
                 # Enviar email
@@ -218,7 +124,7 @@ Equipo de {getattr(settings, 'SITE_NAME', 'Citas')}
                     fail_silently=True
                 )
 
-                logger.info(f"Cita creada y magic link enviado a {email} (ID cita: {cita.id})")
+                logger.info(f"Cita de invitado creada y email enviado a {email} (ID cita: {cita.id})")
 
             except Exception as e:
                 logger.error(f"Error enviando magic link para cita {cita.id}: {str(e)}")
@@ -226,8 +132,119 @@ Equipo de {getattr(settings, 'SITE_NAME', 'Citas')}
 
         return Response(
             {
-                **serializer.data,
-                'message': 'Cita creada exitosamente. Se ha enviado un enlace a tu email para ver tus citas.'
+                'message': 'Cita creada exitosamente',
+                'cita_id': cita.id,
+                'email_enviado': True if email else False,
+                'detalle': 'Se ha enviado un enlace a tu email para gestionar tu cita' if email else 'Cita creada sin email'
             },
             status=status.HTTP_201_CREATED
         )
+
+
+class InvitadoCitaView(APIView):
+    """
+    Permite a invitados ver y cancelar su cita usando el token único.
+
+    GET /api/citas/invitado/{cita_id}/?token={token}
+    DELETE /api/citas/invitado/{cita_id}/?token={token}
+
+    SEGURIDAD:
+    - No requiere autenticación
+    - Requiere token único generado al crear la cita
+    - Token es único por cita (no reutilizable)
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, cita_id):
+        """Obtener detalles de una cita de invitado"""
+        token = request.query_params.get('token')
+
+        if not token:
+            return Response(
+                {'error': 'Token requerido'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            cita = Cita.objects.get(
+                id=cita_id,
+                tipo_cita='invitado',
+                token_invitado=token
+            )
+        except Cita.DoesNotExist:
+            return Response(
+                {'error': 'Cita no encontrada o token inválido'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Serializar y retornar
+        serializer = GuestCitaSerializer(cita)
+        return Response(serializer.data)
+
+    def delete(self, request, cita_id):
+        """Cancelar cita de invitado"""
+        token = request.query_params.get('token')
+
+        if not token:
+            return Response(
+                {'error': 'Token requerido'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            cita = Cita.objects.get(
+                id=cita_id,
+                tipo_cita='invitado',
+                token_invitado=token
+            )
+        except Cita.DoesNotExist:
+            return Response(
+                {'error': 'Cita no encontrada o token inválido'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Verificar que la cita no esté ya cancelada
+        if cita.estado == 'Cancelada':
+            return Response(
+                {'error': 'Esta cita ya fue cancelada'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Verificar que no esté muy cerca de la fecha (2 horas de anticipación)
+        hours_until = (cita.fecha - timezone.now()).total_seconds() / 3600
+
+        if hours_until < 2:
+            return Response(
+                {'error': 'No puedes cancelar con menos de 2 horas de anticipación. Por favor contacta directamente a la sede.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Cancelar la cita
+        cita.estado = 'Cancelada'
+        cita.save()
+
+        # Enviar email de confirmación de cancelación
+        if cita.email_cliente:
+            try:
+                send_mail(
+                    subject=f'Cita Cancelada - {cita.sede.nombre}',
+                    message=f"""
+Hola {cita.nombre},
+
+Tu cita del {cita.fecha.strftime('%d/%m/%Y a las %H:%M')} ha sido cancelada exitosamente.
+
+Si deseas reagendar, puedes visitar nuestra página de agendamiento.
+
+{cita.sede.organizacion.nombre}
+                    """.strip(),
+                    from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
+                    recipient_list=[cita.email_cliente],
+                    fail_silently=True
+                )
+            except Exception as e:
+                logger.error(f"Error enviando email de cancelación: {str(e)}")
+
+        return Response({
+            'message': 'Cita cancelada exitosamente',
+            'cita_id': cita.id
+        })
