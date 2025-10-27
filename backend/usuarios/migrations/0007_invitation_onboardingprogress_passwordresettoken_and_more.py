@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('organizacion', '0006_organizacion_slug'),
+        ('organizacion', '0006_tenant_schema_support'),  # Updated to new unified migration
         ('usuarios', '0006_magiclinktoken'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
