@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin # type: ignore
 from .models import Organizacion, Sede
 
 # MULTI-TENANT: Import helper for profile management
