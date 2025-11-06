@@ -134,6 +134,9 @@ class TenantRouter:
     def allow_relation(self, obj1, obj2, **hints):
         """
         Permitir relaciones solo si están en el mismo schema.
+
+        IMPORTANTE: Permitimos tenant → public (ej: Cita → User, Sede → Organizacion)
+        porque los modelos del tenant necesitan referencias a modelos compartidos.
         """
         schema1 = self._get_schema_for_model(type(obj1))
         schema2 = self._get_schema_for_model(type(obj2))
@@ -142,11 +145,17 @@ class TenantRouter:
         if schema1 == schema2:
             return True
 
-        # Permitir relaciones de tenant → public (ej: Sede → Organizacion)
+        # Permitir relaciones de tenant → public (ej: Cita → User, Sede → Organizacion)
         if schema1 != 'public' and schema2 == 'public':
             return True
 
-        # Denegar relaciones de public → tenant (no tiene sentido)
+        # TAMBIÉN permitir public → tenant SOLO para User model
+        # Esto permite asignar User a Cita desde el serializer
+        from django.contrib.auth.models import User
+        if type(obj1) == User or type(obj2) == User:
+            return True
+
+        # Denegar otras relaciones de public → tenant
         if schema1 == 'public' and schema2 != 'public':
             return False
 
