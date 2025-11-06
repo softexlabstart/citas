@@ -2,7 +2,6 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
 from organizacion.models import Sede
-from organizacion.managers import OrganizacionManager
 
 # Create your models here.
 
@@ -22,7 +21,8 @@ class Horario(models.Model):
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
 
-    objects = OrganizacionManager(organization_filter_path='colaborador__sede__organizacion')
+    # NOTA: Filtrado manual en vistas
+    objects = models.Manager()
     all_objects = models.Manager()
 
     def __str__(self):
@@ -38,7 +38,9 @@ class Servicio(models.Model):
     metadata = models.JSONField(blank=True, null=True)
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='servicios')
 
-    objects = OrganizacionManager(organization_filter_path='sede__organizacion')
+    # NOTA: Filtrado manual en vistas en lugar de OrganizacionManager
+    # para evitar conflictos con serializers y relaciones ManyToMany
+    objects = models.Manager()  # Manager por defecto sin filtrado automático
     all_objects = models.Manager()
 
     class Meta:
@@ -57,7 +59,8 @@ class Colaborador(models.Model):
     metadata = models.JSONField(blank=True, null=True)
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='colaboradores')
 
-    objects = OrganizacionManager(organization_filter_path='sede__organizacion')
+    # NOTA: Filtrado manual en vistas para evitar conflictos
+    objects = models.Manager()
     all_objects = models.Manager()
 
     class Meta:
@@ -73,7 +76,8 @@ class Bloqueo(models.Model):
     fecha_inicio = models.DateTimeField(db_index=True)
     fecha_fin = models.DateTimeField(db_index=True)
 
-    objects = OrganizacionManager(organization_filter_path='colaborador__sede__organizacion')
+    # NOTA: Filtrado manual en vistas
+    objects = models.Manager()
     all_objects = models.Manager()
 
     def __str__(self):
@@ -129,7 +133,8 @@ class Cita(models.Model):
         help_text=_("Token único para que invitados vean/cancelen su cita")
     )
 
-    objects = OrganizacionManager(organization_filter_path='sede__organizacion')
+    # NOTA: Filtrado manual en vistas para evitar conflictos con relaciones
+    objects = models.Manager()
     all_objects = models.Manager()
 
     def __str__(self):
