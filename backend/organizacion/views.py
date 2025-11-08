@@ -106,7 +106,7 @@ class BrandingConfigView(APIView):
                 }, status=status.HTTP_403_FORBIDDEN)
 
             # Verificar que el usuario sea administrador o propietario
-            if perfil.rol not in ['propietario', 'administrador']:
+            if perfil.role not in ['owner', 'admin']:
                 return Response({
                     'error': 'Solo administradores y propietarios pueden modificar el branding'
                 }, status=status.HTTP_403_FORBIDDEN)
