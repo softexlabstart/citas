@@ -2,6 +2,8 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.request import Request
+from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import Sede, Organizacion
 from .serializers import SedeSerializer, OrganizacionSerializer
 from usuarios.permissions import IsSuperAdmin
@@ -46,8 +48,12 @@ class OrganizacionPublicView(APIView):
 
             # Agregar branding si está habilitado
             if organizacion.usar_branding_personalizado:
+                logo_url = None
+                if organizacion.logo:
+                    logo_url = request.build_absolute_uri(organizacion.logo.url)
+
                 response_data['branding'] = {
-                    'logo_url': organizacion.logo_url,
+                    'logo_url': logo_url,
                     'color_primario': organizacion.color_primario or '#007bff',
                     'color_secundario': organizacion.color_secundario or '#6c757d',
                     'color_texto': organizacion.color_texto or '#212529',
@@ -64,6 +70,67 @@ class OrganizacionPublicView(APIView):
             return Response({
                 'error': 'No se encontró la información solicitada'
             }, status=status.HTTP_404_NOT_FOUND)
+
+
+class BrandingConfigView(APIView):
+    """Vista para que administradores/propietarios configuren el branding de su organización."""
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Obtener configuración de branding de la organización del usuario."""
+        try:
+            perfil = get_perfil_or_first(request.user)
+            if not perfil or not perfil.organizacion:
+                return Response({
+                    'error': 'Usuario no tiene organización asignada'
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            organizacion = perfil.organizacion
+            serializer = OrganizacionSerializer(organizacion, context={'request': request})
+            return Response(serializer.data)
+
+        except Exception as e:
+            logger.error(f"Error al obtener branding: {str(e)}")
+            return Response({
+                'error': 'Error al obtener configuración de branding'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Actualizar configuración de branding (solo admin/propietario)."""
+        try:
+            perfil = get_perfil_or_first(request.user)
+            if not perfil or not perfil.organizacion:
+                return Response({
+                    'error': 'Usuario no tiene organización asignada'
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            # Verificar que el usuario sea administrador o propietario
+            if perfil.rol not in ['propietario', 'administrador']:
+                return Response({
+                    'error': 'Solo administradores y propietarios pueden modificar el branding'
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            organizacion = perfil.organizacion
+            serializer = OrganizacionSerializer(
+                organizacion,
+                data=request.data,
+                partial=True,
+                context={'request': request}
+            )
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            logger.error(f"Error al actualizar branding: {str(e)}")
+            return Response({
+                'error': 'Error al actualizar configuración de branding'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class SedeViewSet(viewsets.ModelViewSet):  # type: ignore
     serializer_class = SedeSerializer

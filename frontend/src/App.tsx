@@ -33,6 +33,7 @@ const Clients = lazy(() => import('./components/Clients'));
 const MarketingPage = lazy(() => import('./pages/MarketingPage')); // Import MarketingPage
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage')); // New Role System
 const AcceptInvitationPage = lazy(() => import('./pages/AcceptInvitationPage')); // Accept Invitation
+const BrandingConfigPage = lazy(() => import('./pages/BrandingConfigPage')); // Branding Configuration
 // If EditProfilePage is a named export:
 const EditProfilePage = lazy(() =>
   import('./pages/EditProfilePage').then(module => ({ default: module.EditProfilePage }))
@@ -93,6 +94,7 @@ const App: React.FC = () => {
                 <Route path="/marketing" element={<MarketingPage />} />
                 <Route path="/organization" element={<OrganizationPage />} />
                 <Route path="/register-organization" element={<RegisterOrganizationPage />} />
+                <Route path="/branding" element={<BrandingConfigPage />} />
               </Route>
             </Routes>
           </Suspense>

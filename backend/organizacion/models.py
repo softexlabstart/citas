@@ -46,11 +46,11 @@ class Organizacion(models.Model):  # type: ignore
         default=False,
         help_text='Activar branding personalizado para la página pública'
     )
-    logo_url = models.URLField(
-        max_length=500,
+    logo = models.ImageField(
+        upload_to='logos/',
         blank=True,
         null=True,
-        help_text='URL del logo de la organización'
+        help_text='Logo de la organización (máx. 2MB, formatos: PNG, JPG, SVG)'
     )
     color_primario = models.CharField(
         max_length=7,

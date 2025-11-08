@@ -22,7 +22,7 @@ class OrganizacionAdmin(admin.ModelAdmin):
         ('Branding Personalizado', {
             'fields': (
                 'usar_branding_personalizado',
-                'logo_url',
+                'logo',
                 'color_primario',
                 'color_secundario',
                 'color_texto',
