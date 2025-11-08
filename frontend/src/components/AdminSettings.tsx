@@ -257,6 +257,31 @@ const AdminSettings: React.FC = () => {
                 )}
 
                 <Tabs defaultActiveKey="services" id="admin-settings-tabs" className="mb-3">
+                    <Tab eventKey="branding" title="Branding">
+                        <Alert variant="info" className="mb-3">
+                            <h5>Personalización de Marca</h5>
+                            <p>
+                                Configura el logo, colores y mensaje de bienvenida para la página pública de agendamiento de tu organización.
+                            </p>
+                            <Button
+                                variant="primary"
+                                onClick={() => navigate('/branding')}
+                            >
+                                Ir a Configuración de Branding
+                            </Button>
+                        </Alert>
+                        <div className="border rounded p-4 bg-light">
+                            <h6 className="mb-3">¿Qué puedes personalizar?</h6>
+                            <ul>
+                                <li><strong>Logo:</strong> Sube el logo de tu empresa (PNG, JPG o SVG, máx. 2MB)</li>
+                                <li><strong>Colores:</strong> Define color primario, secundario, texto y fondo con selectores visuales</li>
+                                <li><strong>Mensaje de Bienvenida:</strong> Personaliza el texto que ven tus clientes al agendar</li>
+                            </ul>
+                            <p className="text-muted mb-0">
+                                <small>Solo administradores y propietarios pueden modificar el branding de la organización.</small>
+                            </p>
+                        </div>
+                    </Tab>
                     <Tab eventKey="services" title={t('manage_services')}>
                         <Button className="mb-3" onClick={() => handleOpenModal('service')}>{t('new_service')}</Button>
                         <Table striped bordered hover responsive>
