@@ -10,10 +10,24 @@ const api = axios.create({
 
 // Agregar token de autenticación a las peticiones
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Agregar header de organización
+    const selectedOrganization = localStorage.getItem('selectedOrganization');
+    if (selectedOrganization) {
+        try {
+            const org = JSON.parse(selectedOrganization);
+            if (org && org.id) {
+                config.headers['X-Organization-ID'] = org.id.toString();
+            }
+        } catch (error) {
+            console.error('Error parsing selectedOrganization:', error);
+        }
+    }
+
     return config;
 });
 
