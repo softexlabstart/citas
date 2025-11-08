@@ -54,7 +54,7 @@ const BrandingConfigPage: React.FC = () => {
 
     const fetchBrandingConfig = async () => {
         try {
-            const response = await api.get('/organizacion/branding/');
+            const response = await api.get('/api/organizacion/branding/');
             const data = response.data;
 
             setConfig({
@@ -131,7 +131,7 @@ const BrandingConfigPage: React.FC = () => {
             formData.append('color_fondo', config.color_fondo);
             formData.append('texto_bienvenida', config.texto_bienvenida);
 
-            await api.patch('/organizacion/branding/', formData, {
+            await api.patch('/api/organizacion/branding/', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
