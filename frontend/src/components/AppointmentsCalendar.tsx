@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, momentLocalizer, Event, Views, NavigateAction } from 'react-big-calendar';
+import { Calendar, momentLocalizer, Event } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Container, Spinner, Alert, Modal, Button, Badge, Row, Col, Form, ListGroup } from 'react-bootstrap';
@@ -97,10 +97,12 @@ const AppointmentsCalendar: React.FC = () => {
         setShowMoreModal(true);
     };
 
-    const handleNavigate = (newDate: Date, view: string) => {
+    const handleNavigate = (newDate: Date, view?: string) => {
+        // Determine the current view if not provided
+        const currentView = view || 'month';
         setDateRange({
-            start: moment(newDate).startOf(view as moment.unitOfTime.StartOf).toDate(),
-            end: moment(newDate).endOf(view as moment.unitOfTime.StartOf).toDate(),
+            start: moment(newDate).startOf(currentView as moment.unitOfTime.StartOf).toDate(),
+            end: moment(newDate).endOf(currentView as moment.unitOfTime.StartOf).toDate(),
         });
     };
 
