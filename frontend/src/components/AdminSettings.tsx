@@ -256,8 +256,8 @@ const AdminSettings: React.FC = () => {
                     </Form.Group>
                 )}
 
-                <Tabs defaultActiveKey="services" id="admin-settings-tabs" className="mb-3">
-                    <Tab eventKey="branding" title="Branding">
+                <Tabs defaultActiveKey="branding" id="admin-settings-tabs" className="mb-3">
+                    <Tab eventKey="branding" title="Branding Personalizado">
                         <Alert variant="info" className="mb-3">
                             <h5>Personalización de Marca</h5>
                             <p>
