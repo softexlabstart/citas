@@ -2,7 +2,7 @@ from django.db import models
 from django.utils.text import slugify
 from .managers import OrganizacionManager
 
-class Organizacion(models.Model):
+class Organizacion(models.Model):  # type: ignore
     """
     Modelo de Organización (Tenant) con soporte para database-per-tenant.
     Cada organización puede tener su propia base de datos o schema PostgreSQL.
@@ -41,6 +41,51 @@ class Organizacion(models.Model):
         help_text='Permitir que usuarios sin cuenta agenden citas públicamente'
     )
 
+    # Configuración de branding personalizado
+    usar_branding_personalizado = models.BooleanField(
+        default=False,
+        help_text='Activar branding personalizado para la página pública'
+    )
+    logo_url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text='URL del logo de la organización'
+    )
+    color_primario = models.CharField(
+        max_length=7,
+        blank=True,
+        null=True,
+        default='#007bff',
+        help_text='Color principal en formato hex (ej: #007bff)'
+    )
+    color_secundario = models.CharField(
+        max_length=7,
+        blank=True,
+        null=True,
+        default='#6c757d',
+        help_text='Color secundario en formato hex'
+    )
+    color_texto = models.CharField(
+        max_length=7,
+        blank=True,
+        null=True,
+        default='#212529',
+        help_text='Color del texto en formato hex'
+    )
+    color_fondo = models.CharField(
+        max_length=7,
+        blank=True,
+        null=True,
+        default='#ffffff',
+        help_text='Color de fondo en formato hex'
+    )
+    texto_bienvenida = models.TextField(
+        blank=True,
+        null=True,
+        help_text='Mensaje de bienvenida personalizado para la página pública'
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
@@ -77,15 +122,15 @@ class Organizacion(models.Model):
             return f"tenant_{self.id}"
         return 'default'
 
-class Sede(models.Model):
+class Sede(models.Model):  # type: ignore
     organizacion = models.ForeignKey(Organizacion, on_delete=models.CASCADE, related_name='sedes', null=True)
     nombre = models.CharField(max_length=100, db_index=True)
     direccion = models.CharField(max_length=255, blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
 
     objects = OrganizacionManager(organization_filter_path='organizacion')
-    all_objects = models.Manager() # To access all objects without filtering
+    all_objects = models.Manager()  # To access all objects without filtering
 
-    def __str__(self):
+    def __str__(self) -> str:
         # The string representation will be more informative with the organization name
         return f"{self.organizacion.nombre} - {self.nombre}" if self.organizacion else self.nombre

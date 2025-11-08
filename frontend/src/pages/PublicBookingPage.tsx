@@ -32,6 +32,7 @@ const PublicBookingPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [orgInfo, setOrgInfo] = useState<any>(null);
     const [checkingPermission, setCheckingPermission] = useState(true);
+    const [branding, setBranding] = useState<any>(null);
 
     const { data: availability, request: fetchAvailableSlots } = useApi<{ disponibilidad: any[] }, [string, number, string, string[]]>(getDisponibilidad);
 
@@ -49,6 +50,11 @@ const PublicBookingPage: React.FC = () => {
 
                 const data = await response.json();
                 setOrgInfo(data);
+
+                // Guardar branding si existe
+                if (data.branding) {
+                    setBranding(data.branding);
+                }
 
                 if (!data.permitir_agendamiento_publico) {
                     navigate(`/login?message=Esta organización requiere iniciar sesión para agendar citas&org=${organizacionSlug}`);
@@ -128,6 +134,12 @@ const PublicBookingPage: React.FC = () => {
     }
 
     if (success) {
+        const successButtonStyle: React.CSSProperties = branding ? {
+            backgroundColor: branding.color_primario,
+            borderColor: branding.color_primario,
+            color: '#ffffff'
+        } : {};
+
         return (
             <Container className="mt-5">
                 <Row className="justify-content-center">
@@ -142,7 +154,11 @@ const PublicBookingPage: React.FC = () => {
                                 El enlace es válido por 15 minutos. Revisa tu bandeja de entrada.
                             </p>
                             <hr />
-                            <Button variant="primary" onClick={() => setSuccess(false)}>
+                            <Button
+                                variant={branding ? undefined : "primary"}
+                                onClick={() => setSuccess(false)}
+                                style={branding ? successButtonStyle : undefined}
+                            >
                                 Hacer Otra Reserva
                             </Button>
                         </Alert>
@@ -154,25 +170,64 @@ const PublicBookingPage: React.FC = () => {
 
     const organizacionNombre = sedes && sedes.length > 0 ? sedes[0].organizacion_nombre : null;
 
+    // Estilos dinámicos basados en branding
+    const containerStyle: React.CSSProperties = branding ? {
+        backgroundColor: branding.color_fondo
+    } : {};
+
+    const cardStyle: React.CSSProperties = branding ? {
+        border: `2px solid ${branding.color_primario}`,
+        backgroundColor: branding.color_fondo
+    } : {};
+
+    const titleStyle: React.CSSProperties = branding ? {
+        color: branding.color_primario
+    } : {};
+
+    const textStyle: React.CSSProperties = branding ? {
+        color: branding.color_texto
+    } : {};
+
+    const buttonStyle: React.CSSProperties = branding ? {
+        backgroundColor: branding.color_primario,
+        borderColor: branding.color_primario,
+        color: '#ffffff'
+    } : {};
+
     return (
-        <Container className="mt-5">
+        <Container className="mt-5" style={containerStyle}>
             <Row className="justify-content-center">
                 <Col md={8}>
-                    <Card>
+                    <Card style={cardStyle}>
                         <Card.Body>
+                            {/* Logo personalizado */}
+                            {branding?.logo_url && (
+                                <div className="text-center mb-4">
+                                    <img
+                                        src={branding.logo_url}
+                                        alt={organizacionNombre || 'Logo'}
+                                        style={{ maxHeight: '80px', maxWidth: '200px', objectFit: 'contain' }}
+                                    />
+                                </div>
+                            )}
+
                             <Card.Title className="text-center mb-4">
-                                <h2>Agenda tu Cita</h2>
+                                <h2 style={titleStyle}>Agenda tu Cita</h2>
                                 {organizacionNombre && (
-                                    <h4 className="text-primary">{organizacionNombre}</h4>
+                                    <h4 style={titleStyle}>{organizacionNombre}</h4>
                                 )}
-                                <p className="text-muted">Completa el formulario para reservar</p>
+                                {branding?.texto_bienvenida ? (
+                                    <p style={textStyle}>{branding.texto_bienvenida}</p>
+                                ) : (
+                                    <p className="text-muted">Completa el formulario para reservar</p>
+                                )}
                             </Card.Title>
 
                             {error && <Alert variant="danger">{error}</Alert>}
 
                             <Form onSubmit={handleSubmit}>
                                 {/* Información Personal */}
-                                <h5 className="mb-3">Información Personal</h5>
+                                <h5 className="mb-3" style={titleStyle}>Información Personal</h5>
                                 <Form.Group className="mb-3">
                                     <Form.Label>Nombre Completo *</Form.Label>
                                     <Form.Control
@@ -212,7 +267,7 @@ const PublicBookingPage: React.FC = () => {
                                 <hr />
 
                                 {/* Detalles de la Cita */}
-                                <h5 className="mb-3">Detalles de la Cita</h5>
+                                <h5 className="mb-3" style={titleStyle}>Detalles de la Cita</h5>
                                 <Form.Group className="mb-3">
                                     <Form.Label>Sede *</Form.Label>
                                     <Form.Control
@@ -320,7 +375,13 @@ const PublicBookingPage: React.FC = () => {
                                 <hr />
 
                                 <div className="d-grid gap-2">
-                                    <Button variant="primary" type="submit" disabled={loading} size="lg">
+                                    <Button
+                                        variant={branding ? undefined : "primary"}
+                                        type="submit"
+                                        disabled={loading}
+                                        size="lg"
+                                        style={branding ? buttonStyle : undefined}
+                                    >
                                         {loading ? (
                                             <>
                                                 <Spinner

@@ -4,7 +4,14 @@ from .models import Organizacion, Sede
 class OrganizacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organizacion
-        fields = ['id', 'nombre', 'slug']
+        fields = [
+            'id', 'nombre', 'slug', 'is_active',
+            'permitir_agendamiento_publico',
+            'usar_branding_personalizado', 'logo_url',
+            'color_primario', 'color_secundario',
+            'color_texto', 'color_fondo',
+            'texto_bienvenida'
+        ]
 
 class SedeSerializer(serializers.ModelSerializer):
     organizacion_nombre = serializers.CharField(source='organizacion.nombre', read_only=True)

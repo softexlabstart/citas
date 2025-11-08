@@ -6,8 +6,8 @@ from usuarios.utils import get_perfil_or_first
 
 @admin.register(Organizacion)
 class OrganizacionAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'slug', 'permitir_agendamiento_publico', 'is_active', 'created_at')
-    list_filter = ('is_active', 'permitir_agendamiento_publico', 'created_at')
+    list_display = ('nombre', 'slug', 'permitir_agendamiento_publico', 'usar_branding_personalizado', 'is_active', 'created_at')
+    list_filter = ('is_active', 'permitir_agendamiento_publico', 'usar_branding_personalizado', 'created_at')
     search_fields = ('nombre', 'slug')
     readonly_fields = ('slug', 'schema_name', 'created_at', 'updated_at')
 
@@ -18,6 +18,18 @@ class OrganizacionAdmin(admin.ModelAdmin):
         ('Configuración de Agendamiento', {
             'fields': ('permitir_agendamiento_publico',),
             'description': 'Controla si usuarios sin cuenta pueden agendar citas públicamente'
+        }),
+        ('Branding Personalizado', {
+            'fields': (
+                'usar_branding_personalizado',
+                'logo_url',
+                'color_primario',
+                'color_secundario',
+                'color_texto',
+                'color_fondo',
+                'texto_bienvenida'
+            ),
+            'description': 'Personaliza la apariencia de la página pública de agendamiento'
         }),
         ('Database-per-Tenant (Avanzado)', {
             'classes': ('collapse',),

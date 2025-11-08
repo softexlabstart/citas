@@ -1,10 +1,12 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.request import Request
 from .models import Sede, Organizacion
 from .serializers import SedeSerializer, OrganizacionSerializer
 from usuarios.permissions import IsSuperAdmin
 import logging
+from typing import Any
 
 # MULTI-TENANT: Import helper for profile management
 from usuarios.utils import get_perfil_or_first
@@ -27,20 +29,35 @@ class OrganizacionPublicView(APIView):
     """Vista pública para obtener información básica de una organización por slug."""
     permission_classes = [permissions.AllowAny]
 
-    def get(self, request, slug, *args, **kwargs):
+    def get(self, request: Request, slug: str, *args: Any, **kwargs: Any) -> Response:
         try:
             organizacion = Organizacion.objects.get(slug=slug, is_active=True)
 
             # Obtener sedes de esta organización
             sedes = organizacion.sedes.all().values('id', 'nombre', 'direccion', 'telefono')
 
-            return Response({
+            response_data = {
                 'id': organizacion.id,
                 'nombre': organizacion.nombre,
                 'slug': organizacion.slug,
                 'permitir_agendamiento_publico': organizacion.permitir_agendamiento_publico,
                 'sedes': list(sedes)
-            })
+            }
+
+            # Agregar branding si está habilitado
+            if organizacion.usar_branding_personalizado:
+                response_data['branding'] = {
+                    'logo_url': organizacion.logo_url,
+                    'color_primario': organizacion.color_primario or '#007bff',
+                    'color_secundario': organizacion.color_secundario or '#6c757d',
+                    'color_texto': organizacion.color_texto or '#212529',
+                    'color_fondo': organizacion.color_fondo or '#ffffff',
+                    'texto_bienvenida': organizacion.texto_bienvenida or ''
+                }
+            else:
+                response_data['branding'] = None
+
+            return Response(response_data)
         except Organizacion.DoesNotExist:
             # SECURITY: Log para debugging, mensaje genérico al cliente
             logger.info(f"Intento de acceso a organización con slug inexistente: {slug}")
@@ -48,18 +65,18 @@ class OrganizacionPublicView(APIView):
                 'error': 'No se encontró la información solicitada'
             }, status=status.HTTP_404_NOT_FOUND)
 
-class SedeViewSet(viewsets.ModelViewSet):
+class SedeViewSet(viewsets.ModelViewSet):  # type: ignore
     serializer_class = SedeSerializer
     # No permission_classes aquí - se define en get_permissions()
 
-    def get_permissions(self):
+    def get_permissions(self):  # type: ignore
         # Allow public access for list action when organizacion_slug is provided
         if self.action == 'list' and 'organizacion_slug' in self.request.query_params:
             return [permissions.AllowAny()]
         # Require authentication for other actions
         return [permissions.IsAuthenticated()]
 
-    def get_queryset(self):
+    def get_queryset(self):  # type: ignore
         user = self.request.user
         organizacion_slug = self.request.query_params.get('organizacion_slug')
 
