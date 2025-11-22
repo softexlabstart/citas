@@ -32,6 +32,7 @@ const AppointmentsCalendar: React.FC = () => {
     const [selectedResourceId, setSelectedResourceId] = useState<string>('');
     const [selectedSedeId, setSelectedSedeId] = useState<string>('');
     const [dateRange, setDateRange] = useState<{ start: Date, end: Date } | null>(null);
+    const [currentDate, setCurrentDate] = useState<Date>(new Date());
     const [showMoreModal, setShowMoreModal] = useState(false);
     const [moreModalEvents, setMoreModalEvents] = useState<CalendarEvent[]>([]);
     const [moreModalDate, setMoreModalDate] = useState<Date | null>(null);
@@ -98,6 +99,9 @@ const AppointmentsCalendar: React.FC = () => {
     };
 
     const handleNavigate = (newDate: Date, view?: string) => {
+        // Update the current date that the calendar displays
+        setCurrentDate(newDate);
+
         // Determine the current view if not provided
         const currentView = view || 'month';
         setDateRange({
@@ -167,7 +171,19 @@ const AppointmentsCalendar: React.FC = () => {
             
             {!(loadingAppointments || loadingBloqueos || loadingRecursos) && (
                 <div style={{ height: '70vh' }}>
-                    <Calendar<CalendarEvent> localizer={localizer} events={events} startAccessor="start" endAccessor="end" messages={calendarMessages} onSelectEvent={handleSelectEvent} eventPropGetter={eventPropGetter} onNavigate={handleNavigate} onShowMore={handleShowMore} style={{ height: '100%' }} />
+                    <Calendar<CalendarEvent>
+                        localizer={localizer}
+                        events={events}
+                        startAccessor="start"
+                        endAccessor="end"
+                        messages={calendarMessages}
+                        onSelectEvent={handleSelectEvent}
+                        eventPropGetter={eventPropGetter}
+                        onNavigate={handleNavigate}
+                        onShowMore={handleShowMore}
+                        date={currentDate}
+                        style={{ height: '100%' }}
+                    />
                 </div>
             )}
 
