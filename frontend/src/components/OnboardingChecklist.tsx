@@ -85,22 +85,52 @@ const OnboardingChecklist: React.FC = () => {
                     {steps.map((step, index) => (
                         <ListGroup.Item
                             key={step.key}
-                            className="d-flex align-items-center border-0 py-3"
+                            className={`d-flex align-items-center border-0 py-3 ${
+                                step.completed ? 'bg-light bg-opacity-50' : ''
+                            }`}
+                            style={{
+                                transition: 'all 0.3s ease',
+                                opacity: step.completed ? 0.7 : 1,
+                            }}
                         >
-                            <div className="me-3">
+                            <div className="me-3" style={{ minWidth: '32px' }}>
                                 {step.completed ? (
-                                    <CheckCircleFill size={24} className="text-success" />
+                                    <CheckCircleFill
+                                        size={24}
+                                        className="text-success"
+                                        style={{
+                                            animation: 'pulse 0.5s ease-in-out'
+                                        }}
+                                    />
                                 ) : (
-                                    <Circle size={24} className="text-muted" />
+                                    <div className="position-relative">
+                                        <Circle size={24} className="text-muted" />
+                                        <small
+                                            className="position-absolute top-50 start-50 translate-middle"
+                                            style={{ fontSize: '10px', fontWeight: 'bold' }}
+                                        >
+                                            {index + 1}
+                                        </small>
+                                    </div>
                                 )}
                             </div>
                             <div className="flex-grow-1">
                                 <div className="d-flex align-items-center mb-1">
-                                    <span className="me-2">{step.icon}</span>
-                                    <strong>{step.label}</strong>
-                                    {step.required && (
+                                    <span className="me-2" style={{ fontSize: '1.2rem' }}>{step.icon}</span>
+                                    <strong style={{
+                                        textDecoration: step.completed ? 'line-through' : 'none',
+                                        color: step.completed ? '#6c757d' : 'inherit'
+                                    }}>
+                                        {step.label}
+                                    </strong>
+                                    {step.required && !step.completed && (
                                         <Badge bg="danger" className="ms-2" pill>
                                             Requerido
+                                        </Badge>
+                                    )}
+                                    {step.completed && (
+                                        <Badge bg="success" className="ms-2" pill>
+                                            ✓ Completado
                                         </Badge>
                                     )}
                                 </div>
@@ -109,7 +139,7 @@ const OnboardingChecklist: React.FC = () => {
                             {!step.completed && (
                                 <Link to={step.link}>
                                     <Button variant="outline-primary" size="sm">
-                                        Ir
+                                        Comenzar →
                                     </Button>
                                 </Link>
                             )}

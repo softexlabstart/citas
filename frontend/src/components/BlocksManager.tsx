@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Table, Button, Form, Row, Col, Spinner, Alert, Card, Modal } from 'react-bootstrap';
+import { Table, Button, Form, Row, Col, Spinner, Alert, Card, Modal, Badge } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import { useApi } from '../hooks/useApi';
@@ -158,13 +158,70 @@ const BlocksManager: React.FC = () => {
 
                     <hr className="my-4" />
 
-                    <h4 className="mb-3">{t('active_blocks')}</h4>
-                    {loading && <Spinner animation="border" />}
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                        <h4 className="mb-0">{t('active_blocks')}</h4>
+                        <Badge bg="primary" pill>{activeBlocks?.length || 0} activos</Badge>
+                    </div>
+                    {loading && <div className="text-center py-4"><Spinner animation="border" /></div>}
                     {error && <Alert variant="danger">{t(error)}</Alert>}
-                    <Table striped bordered hover responsive>
-                        <thead><tr><th>{t('resource_label')}</th><th>{t('reason')}</th><th>{t('start_datetime')}</th><th>{t('end_datetime')}</th><th>{t('actions')}</th></tr></thead>
-                        <tbody>{activeBlocks?.map(b => (<tr key={b.id}><td>{b.colaborador?.nombre}</td><td>{b.motivo}</td><td>{new Date(b.fecha_inicio).toLocaleString()}</td><td>{new Date(b.fecha_fin).toLocaleString()}</td><td><Button variant="danger" size="sm" onClick={() => handleDelete(b.id)} disabled={isDeleting && processingId === b.id}>{isDeleting && processingId === b.id ? <Spinner size="sm" /> : t('delete')}</Button></td></tr>))}</tbody>
-                    </Table>
+                    {!loading && activeBlocks && activeBlocks.length === 0 && (
+                        <Alert variant="info">
+                            <i className="bi bi-info-circle me-2"></i>
+                            No hay bloqueos activos en este momento
+                        </Alert>
+                    )}
+                    {!loading && activeBlocks && activeBlocks.length > 0 && (
+                        <Table striped bordered hover responsive>
+                            <thead>
+                                <tr>
+                                    <th>{t('resource_label')}</th>
+                                    <th>{t('reason')}</th>
+                                    <th>{t('start_datetime')}</th>
+                                    <th>{t('end_datetime')}</th>
+                                    <th>Estado</th>
+                                    <th>{t('actions')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {activeBlocks.map(b => {
+                                    const now = new Date();
+                                    const start = new Date(b.fecha_inicio);
+                                    const isActive = start <= now;
+                                    return (
+                                        <tr key={b.id} className={isActive ? 'table-warning' : ''}>
+                                            <td>{b.colaborador?.nombre}</td>
+                                            <td>{b.motivo}</td>
+                                            <td>{new Date(b.fecha_inicio).toLocaleString()}</td>
+                                            <td>{new Date(b.fecha_fin).toLocaleString()}</td>
+                                            <td>
+                                                {isActive ? (
+                                                    <Badge bg="warning" text="dark">
+                                                        <i className="bi bi-clock-fill me-1"></i>
+                                                        En curso
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge bg="secondary">
+                                                        <i className="bi bi-calendar-event me-1"></i>
+                                                        Programado
+                                                    </Badge>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <Button
+                                                    variant="danger"
+                                                    size="sm"
+                                                    onClick={() => handleDelete(b.id)}
+                                                    disabled={isDeleting && processingId === b.id}
+                                                >
+                                                    {isDeleting && processingId === b.id ? <Spinner size="sm" /> : t('delete')}
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </Table>
+                    )}
 
                     <hr className="my-4" />
 

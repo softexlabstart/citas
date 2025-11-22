@@ -364,19 +364,56 @@ class CitaViewSet(viewsets.ModelViewSet):
                 queryset = base_queryset.filter(user=user)
 
         # Aplicar filtros adicionales
+        # Búsqueda por nombre, email o teléfono
         search_term = self.request.query_params.get('search', None)
         if search_term:
-            queryset = queryset.filter(nombre__icontains=search_term)
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(nombre__icontains=search_term) |
+                Q(email_cliente__icontains=search_term) |
+                Q(telefono_cliente__icontains=search_term)
+            )
 
+        # Filtro por estado
         estado = self.request.query_params.get('estado')
         if estado:
             queryset = queryset.filter(estado=estado)
 
+        # Filtro por sede
         sede_id = self.request.query_params.get('sede_id')
         if sede_id:
             queryset = queryset.filter(sede_id=sede_id)
 
-        return queryset.order_by('fecha')
+        # Filtro por servicio
+        servicio_id = self.request.query_params.get('servicio_id')
+        if servicio_id:
+            queryset = queryset.filter(servicios__id=servicio_id)
+
+        # Filtro por colaborador
+        colaborador_id = self.request.query_params.get('colaborador_id')
+        if colaborador_id:
+            queryset = queryset.filter(colaboradores__id=colaborador_id)
+
+        # Filtro por rango de fechas
+        fecha_desde = self.request.query_params.get('fecha_desde')
+        if fecha_desde:
+            queryset = queryset.filter(fecha__gte=fecha_desde)
+
+        fecha_hasta = self.request.query_params.get('fecha_hasta')
+        if fecha_hasta:
+            queryset = queryset.filter(fecha__lte=fecha_hasta)
+
+        # Filtro por tipo de cita (invitado vs usuario registrado)
+        tipo_cita = self.request.query_params.get('tipo_cita')
+        if tipo_cita:
+            queryset = queryset.filter(tipo_cita=tipo_cita)
+
+        # Filtro por confirmación
+        confirmado = self.request.query_params.get('confirmado')
+        if confirmado is not None:
+            queryset = queryset.filter(confirmado=confirmado.lower() == 'true')
+
+        return queryset.distinct().order_by('fecha')
 
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
