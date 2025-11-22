@@ -41,6 +41,33 @@ class Organizacion(models.Model):  # type: ignore
         help_text='Permitir que usuarios sin cuenta agenden citas públicamente'
     )
 
+    # Configuración de notificaciones WhatsApp
+    whatsapp_enabled = models.BooleanField(
+        default=False,
+        help_text='Activar notificaciones por WhatsApp'
+    )
+    whatsapp_sender_name = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text='Nombre del negocio que aparecerá en los mensajes'
+    )
+    whatsapp_reminder_24h_enabled = models.BooleanField(
+        default=True,
+        help_text='Enviar recordatorio 24 horas antes de la cita'
+    )
+    whatsapp_reminder_1h_enabled = models.BooleanField(
+        default=True,
+        help_text='Enviar recordatorio 1 hora antes de la cita'
+    )
+    whatsapp_confirmation_enabled = models.BooleanField(
+        default=True,
+        help_text='Enviar confirmación al crear la cita'
+    )
+    whatsapp_cancellation_enabled = models.BooleanField(
+        default=True,
+        help_text='Enviar notificación al cancelar la cita'
+    )
+
     # Configuración de branding personalizado
     usar_branding_personalizado = models.BooleanField(
         default=False,
