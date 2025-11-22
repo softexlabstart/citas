@@ -249,8 +249,12 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
         {date && selectedRecurso && (
           <Form.Group className="mb-3">
             <Form.Label>{t('available_time')}</Form.Label>
-            {slotsLoading && <Spinner animation="border" size="sm" />}
-            {!slotsLoading && availableSlots.length > 0 ? (
+            {slotsLoading ? (
+              <div className="text-center p-3">
+                <Spinner animation="border" size="sm" className="me-2" />
+                <span className="text-muted">{t('loading_available_slots') || 'Cargando horarios disponibles...'}</span>
+              </div>
+            ) : availableSlots.length > 0 ? (
               <Form.Control as="select" value={selectedSlot} onChange={(e) => setSelectedSlot(e.target.value)} required>
                 <option value="">{t('select_time')}</option>
                 {availableSlots.map((slot, index) => (
@@ -258,7 +262,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
                 ))}
               </Form.Control>
             ) : (
-              !slotsLoading && <p className="text-muted">{t('no_available_slots')}</p>
+              <p className="text-muted">{t('no_available_slots')}</p>
             )}
           </Form.Group>
         )}

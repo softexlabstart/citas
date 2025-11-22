@@ -880,6 +880,8 @@ class AcceptInvitationView(APIView):
 
     def post(self, request, token, *args, **kwargs):
         """Aceptar invitación y crear cuenta de usuario."""
+        from django.db import transaction
+
         try:
             invitation = Invitation.objects.select_related(
                 'organization', 'sender', 'sede'
@@ -896,73 +898,86 @@ class AcceptInvitationView(APIView):
             first_name = request.data.get('first_name', invitation.first_name)
             last_name = request.data.get('last_name', invitation.last_name)
 
-            # MULTI-TENANT: Buscar usuario existente por email
-            user, created = User.objects.get_or_create(
-                email=invitation.email,
-                defaults={
-                    'username': username or invitation.email.split('@')[0],
-                    'first_name': first_name,
-                    'last_name': last_name
-                }
-            )
+            # Usar transacción atómica para prevenir race conditions
+            with transaction.atomic():
+                # Bloquear la invitación para evitar aceptaciones simultáneas
+                invitation = Invitation.objects.select_for_update().get(token=token)
 
-            if created:
-                # Usuario nuevo: validar y establecer contraseña
-                if not password:
+                # Re-validar dentro de la transacción
+                if not invitation.is_valid():
                     return Response({
-                        'error': 'La contraseña es requerida para usuarios nuevos'
+                        'error': 'Esta invitación ha expirado o ya ha sido aceptada'
                     }, status=status.HTTP_400_BAD_REQUEST)
 
-                user.set_password(password)
-                user.save()
-                logger.info(f'Nuevo usuario creado: {user.username} ({user.email})')
-            else:
-                # Usuario existente: solo verificar que no haya perfil en esta org
-                if PerfilUsuario.objects.filter(user=user, organizacion=invitation.organization).exists():
-                    return Response({
-                        'error': 'Ya tienes acceso a esta organización'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                logger.info(f'Usuario existente {user.username} agregado a nueva organización')
+                # MULTI-TENANT: Buscar usuario existente por email
+                user, created = User.objects.get_or_create(
+                    email=invitation.email,
+                    defaults={
+                        'username': username or invitation.email.split('@')[0],
+                        'first_name': first_name,
+                        'last_name': last_name
+                    }
+                )
 
-            # Crear perfil en la nueva organización (o primera)
-            perfil = PerfilUsuario.objects.create(
-                user=user,
-                organizacion=invitation.organization,
-                sede=invitation.sede
-            )
+                if created:
+                    # Usuario nuevo: validar y establecer contraseña
+                    if not password:
+                        return Response({
+                            'error': 'La contraseña es requerida para usuarios nuevos'
+                        }, status=status.HTTP_400_BAD_REQUEST)
 
-            # Asignar rol
-            if invitation.role == 'admin':
-                user.is_staff = True
-                user.save()
-            elif invitation.role == 'sede_admin':
-                try:
-                    sede_admin_group, _ = Group.objects.get_or_create(name='SedeAdmin')
-                    user.groups.add(sede_admin_group)
-                    if invitation.sede:
-                        perfil.sedes_administradas.add(invitation.sede)
-                except Exception as e:
-                    logger.error(f'Error al asignar grupo SedeAdmin: {str(e)}')
-            elif invitation.role == 'colaborador':
-                try:
-                    colaborador_group, _ = Group.objects.get_or_create(name='Recurso')
-                    user.groups.add(colaborador_group)
-                    # Crear el colaborador en citas.models
-                    from citas.models import Colaborador
-                    if invitation.sede:
-                        Colaborador.objects.create(
-                            usuario=user,
-                            nombre=f"{first_name} {last_name}".strip(),
-                            email=invitation.email,
-                            sede=invitation.sede
-                        )
-                except Exception as e:
-                    logger.error(f'Error al crear colaborador: {str(e)}')
+                    user.set_password(password)
+                    user.save()
+                    logger.info(f'Nuevo usuario creado: {user.username} ({user.email})')
+                else:
+                    # Usuario existente: solo verificar que no haya perfil en esta org
+                    if PerfilUsuario.objects.filter(user=user, organizacion=invitation.organization).exists():
+                        return Response({
+                            'error': 'Ya tienes acceso a esta organización'
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                    logger.info(f'Usuario existente {user.username} agregado a nueva organización')
 
-            # Marcar invitación como aceptada
-            invitation.accept()
+                # Crear perfil en la nueva organización (o primera)
+                perfil = PerfilUsuario.objects.create(
+                    user=user,
+                    organizacion=invitation.organization,
+                    sede=invitation.sede
+                )
 
-            # Generar tokens JWT
+                # Asignar rol
+                if invitation.role == 'admin':
+                    user.is_staff = True
+                    user.save()
+                elif invitation.role == 'sede_admin':
+                    try:
+                        sede_admin_group, _ = Group.objects.get_or_create(name='SedeAdmin')
+                        user.groups.add(sede_admin_group)
+                        if invitation.sede:
+                            perfil.sedes_administradas.add(invitation.sede)
+                    except Exception as e:
+                        logger.error(f'Error al asignar grupo SedeAdmin: {str(e)}')
+                        raise
+                elif invitation.role == 'colaborador':
+                    try:
+                        colaborador_group, _ = Group.objects.get_or_create(name='Recurso')
+                        user.groups.add(colaborador_group)
+                        # Crear el colaborador en citas.models
+                        from citas.models import Colaborador
+                        if invitation.sede:
+                            Colaborador.objects.create(
+                                usuario=user,
+                                nombre=f"{first_name} {last_name}".strip(),
+                                email=invitation.email,
+                                sede=invitation.sede
+                            )
+                    except Exception as e:
+                        logger.error(f'Error al crear colaborador: {str(e)}')
+                        raise
+
+                # Marcar invitación como aceptada
+                invitation.accept()
+
+            # Generar tokens JWT (fuera de transacción)
             refresh = RefreshToken.for_user(user)
 
             logger.info(f'Usuario {user.username} registrado exitosamente mediante invitación')

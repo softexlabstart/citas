@@ -95,6 +95,13 @@ class UserSerializer(serializers.ModelSerializer):
     def get_groups(self, obj):
         return [group.name for group in obj.groups.all()]
 
+    def validate_email(self, value):
+        """Validate that email is unique across the system."""
+        user = self.instance
+        if User.objects.exclude(pk=user.pk if user else None).filter(email=value).exists():
+            raise serializers.ValidationError("Este email ya está en uso por otro usuario.")
+        return value
+
     def to_representation(self, instance):
         """Override to use read-only serializer for output."""
         from organizacion.thread_locals import set_current_organization, get_current_organization

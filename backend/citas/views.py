@@ -127,6 +127,7 @@ class ColaboradorViewSet(viewsets.ModelViewSet):
 class DisponibilidadView(APIView):
     permission_classes = [AllowAny]
 
+    @method_decorator(cache_page(60 * 5))  # Cache for 5 minutes
     def get(self, request):
         fecha_str = request.query_params.get('fecha')
         recurso_id = request.query_params.get('recurso_id')
@@ -146,6 +147,7 @@ class DisponibilidadView(APIView):
 class NextAvailabilityView(APIView):
     permission_classes = [AllowAny]
 
+    @method_decorator(cache_page(60 * 5))  # Cache for 5 minutes
     def get(self, request):
         servicio_ids_str = request.query_params.get('servicio_ids')
         sede_id = request.query_params.get('sede_id')
@@ -639,16 +641,13 @@ class DashboardSummaryView(APIView):
             pendientes_confirmacion = base_queryset.filter(estado='Pendiente').count()
 
             start_of_month = today.replace(day=1)
-            # Optimized query: Use prefetch_related and limit results to prevent OOM
-            citas_asistidas = base_queryset.filter(
+            # Optimized query: Use database aggregation instead of Python loop
+            from django.db.models import Sum
+            ingresos_result = base_queryset.filter(
                 estado='Asistio',
                 fecha__gte=start_of_month
-            ).prefetch_related('servicios')[:500]  # Limit to 500 citas max
-
-            # Calculate sum in Python (more reliable than aggregating ManyToMany)
-            ingresos_mes = 0
-            for cita in citas_asistidas:
-                ingresos_mes += sum(servicio.precio for servicio in cita.servicios.all())
+            ).aggregate(total=Sum('servicios__precio'))
+            ingresos_mes = ingresos_result['total'] or 0
 
             proximas_citas = base_queryset.filter(
                 fecha__gte=timezone.now(),
