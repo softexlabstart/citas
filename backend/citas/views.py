@@ -483,6 +483,19 @@ class CitaViewSet(viewsets.ModelViewSet):
             # Usuarios regulares crean citas para sí mismos
             cita = serializer.save(user=user)
 
+        # Enviar notificaciones de WhatsApp de forma asíncrona
+        try:
+            from .tasks_whatsapp import send_whatsapp_confirmation, schedule_appointment_reminders
+
+            # Enviar confirmación inmediata
+            send_whatsapp_confirmation.delay(cita.id)
+
+            # Programar recordatorios (24h y 1h antes)
+            schedule_appointment_reminders.delay(cita.id)
+        except Exception as e:
+            # No fallar la creación de la cita si el WhatsApp falla
+            logger.warning(f"Error encolando tareas de WhatsApp para cita {cita.id}: {str(e)}")
+
     def _check_cita_permission(self, cita, action='modify'):
         """
         SECURITY: Validate that user has permission to perform action on this cita.
@@ -573,6 +586,14 @@ class CitaViewSet(viewsets.ModelViewSet):
         original_fecha = instance.fecha
         instance.estado = 'Cancelada'
         instance.save()
+
+        # Enviar notificación de cancelación por WhatsApp
+        try:
+            from .tasks_whatsapp import send_whatsapp_cancellation
+            reason = request.data.get('reason', '')
+            send_whatsapp_cancellation.delay(instance.id, reason)
+        except Exception as e:
+            logger.warning(f"Error encolando WhatsApp de cancelación para cita {instance.id}: {str(e)}")
 
         # Pass serializable data to the Celery task
         context = {'original_fecha': original_fecha.isoformat()}
