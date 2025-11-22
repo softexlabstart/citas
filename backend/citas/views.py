@@ -492,6 +492,13 @@ class CitaViewSet(viewsets.ModelViewSet):
         self._check_cita_permission(instance, 'update')  # SECURITY: Validate permission
         if instance.estado == 'Cancelada':
             raise PermissionDenied(_("No se puede modificar una cita cancelada."))
+
+        # Prevent editing past appointments (except for admins)
+        user = request.user
+        is_admin = user.is_staff or user.is_superuser
+        if not is_admin and instance.fecha < timezone.now():
+            raise PermissionDenied(_("No se pueden modificar citas pasadas."))
+
         return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
@@ -501,7 +508,13 @@ class CitaViewSet(viewsets.ModelViewSet):
 
         if original_instance.estado == 'Cancelada':
             raise PermissionDenied(_("No se puede modificar una cita cancelada."))
-        
+
+        # Prevent editing past appointments (except for admins)
+        user = request.user
+        is_admin = user.is_staff or user.is_superuser
+        if not is_admin and original_instance.fecha < timezone.now():
+            raise PermissionDenied(_("No se pueden modificar citas pasadas."))
+
         response = super().partial_update(request, *args, **kwargs)
 
         # After a successful update, check if the date has changed to send a notification

@@ -317,11 +317,13 @@ class MagicLinkToken(models.Model):
     """
     Modelo para tokens de Magic Link que permiten acceso temporal sin contraseña.
     Los tokens expiran automáticamente después de 15 minutos.
+    Incluye protección contra fuerza bruta con contador de intentos.
     """
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='magic_link_tokens')
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(editable=False)
+    failed_attempts = models.IntegerField(default=0)  # Protección contra fuerza bruta
 
     class Meta:
         verbose_name = 'Magic Link Token'
@@ -338,8 +340,10 @@ class MagicLinkToken(models.Model):
         super().save(*args, **kwargs)
 
     def is_valid(self):
-        """Verifica si el token no ha expirado."""
-        return timezone.now() <= self.expires_at
+        """Verifica si el token no ha expirado y no ha excedido intentos fallidos."""
+        is_not_expired = timezone.now() <= self.expires_at
+        not_too_many_attempts = self.failed_attempts < 3
+        return is_not_expired and not_too_many_attempts
 
     def __str__(self):
         return f"Magic Link for {self.user.email} - Expires: {self.expires_at}"

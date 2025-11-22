@@ -1196,12 +1196,15 @@ class AccessHistoryWithTokenView(APIView):
             # Buscar el token
             magic_token = MagicLinkToken.objects.select_related('user').get(token=token_value)
 
-            # Verificar si el token es válido (no expirado)
+            # Verificar si el token es válido (no expirado y no bloqueado por intentos)
             if not magic_token.is_valid():
-                # Eliminar token expirado
+                # Eliminar token expirado o bloqueado
+                error_msg = 'El token ha expirado. Por favor, solicita un nuevo enlace.'
+                if magic_token.failed_attempts >= 3:
+                    error_msg = 'Demasiados intentos fallidos. Por favor, solicita un nuevo enlace.'
                 magic_token.delete()
                 return Response({
-                    'error': 'El token ha expirado. Por favor, solicita un nuevo enlace.'
+                    'error': error_msg
                 }, status=status.HTTP_400_BAD_REQUEST)
 
             # Token válido: generar tokens JWT
@@ -1234,6 +1237,7 @@ class AccessHistoryWithTokenView(APIView):
             }, status=status.HTTP_200_OK)
 
         except MagicLinkToken.DoesNotExist:
+            # No revelar si el token existe o no por seguridad
             return Response({
                 'error': 'Token inválido o ya utilizado'
             }, status=status.HTTP_400_BAD_REQUEST)

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dropdown, Spinner, Badge } from 'react-bootstrap';
+import { Dropdown, Spinner, Badge, Modal, Button } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserOrganizations, switchOrganization } from '../api';
 import { UserOrganization } from '../interfaces/Role';
@@ -11,6 +11,8 @@ const OrganizationSelector: React.FC = () => {
     const [organizations, setOrganizations] = useState<UserOrganization[]>([]);
     const [loading, setLoading] = useState(true);
     const [switching, setSwitching] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [pendingOrg, setPendingOrg] = useState<UserOrganization | null>(null);
 
     useEffect(() => {
         loadOrganizations();
@@ -31,21 +33,28 @@ const OrganizationSelector: React.FC = () => {
         }
     };
 
-    const handleSwitchOrganization = async (org: UserOrganization) => {
+    const handleRequestSwitch = (org: UserOrganization) => {
         if (selectedOrganization?.id === org.id) {
             return; // Already selected
         }
+        setPendingOrg(org);
+        setShowConfirmModal(true);
+    };
 
+    const handleConfirmSwitch = async () => {
+        if (!pendingOrg) return;
+
+        setShowConfirmModal(false);
         setSwitching(true);
         try {
-            await switchOrganization(org.id);
+            await switchOrganization(pendingOrg.id);
             selectOrganization({
-                id: org.id,
-                nombre: org.nombre,
-                slug: org.slug,
+                id: pendingOrg.id,
+                nombre: pendingOrg.nombre,
+                slug: pendingOrg.slug,
                 perfil_id: 0 // This will be set by backend
             });
-            toast.success(`Cambiado a organización: ${org.nombre}`);
+            toast.success(`Cambiado a organización: ${pendingOrg.nombre}`);
             // Reload the page to refresh data for new organization
             window.location.reload();
         } catch (error: any) {
@@ -53,7 +62,13 @@ const OrganizationSelector: React.FC = () => {
             toast.error('Error al cambiar de organización');
         } finally {
             setSwitching(false);
+            setPendingOrg(null);
         }
+    };
+
+    const handleCancelSwitch = () => {
+        setShowConfirmModal(false);
+        setPendingOrg(null);
     };
 
     if (loading) {
@@ -113,7 +128,7 @@ const OrganizationSelector: React.FC = () => {
                     <Dropdown.Item
                         key={org.id}
                         active={currentOrg?.id === org.id}
-                        onClick={() => handleSwitchOrganization(org)}
+                        onClick={() => handleRequestSwitch(org)}
                         className="py-2"
                     >
                         <div className="d-flex flex-column">
@@ -140,6 +155,28 @@ const OrganizationSelector: React.FC = () => {
                     Tienes acceso a {organizations.length} organizaciones
                 </Dropdown.Item>
             </Dropdown.Menu>
+
+            {/* Confirmation Modal */}
+            <Modal show={showConfirmModal} onHide={handleCancelSwitch} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Confirmar cambio de organización</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p>¿Estás seguro que deseas cambiar a la organización <strong>{pendingOrg?.nombre}</strong>?</p>
+                    <p className="text-muted small">
+                        <i className="bi bi-exclamation-triangle me-1"></i>
+                        La página se recargará y cualquier cambio no guardado se perderá.
+                    </p>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleCancelSwitch}>
+                        Cancelar
+                    </Button>
+                    <Button variant="primary" onClick={handleConfirmSwitch}>
+                        Cambiar organización
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </Dropdown>
     );
 };

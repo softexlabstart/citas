@@ -96,7 +96,22 @@ const AcceptInvitationPage: React.FC = () => {
             }, 2000);
         } catch (error: any) {
             console.error('Error accepting invitation:', error);
-            const errorMessage = error.response?.data?.error || 'Error al crear la cuenta';
+            let errorMessage = 'Error al crear la cuenta';
+
+            if (error.response?.data?.error) {
+                const backendError = error.response.data.error;
+                // Provide more specific error messages
+                if (backendError.includes('expirado') || backendError.includes('expired')) {
+                    errorMessage = 'Esta invitación ha expirado. Por favor, solicita una nueva invitación.';
+                } else if (backendError.includes('aceptada') || backendError.includes('accepted')) {
+                    errorMessage = 'Esta invitación ya ha sido aceptada anteriormente.';
+                } else if (backendError.includes('email')) {
+                    errorMessage = 'Este email ya está registrado en el sistema.';
+                } else {
+                    errorMessage = backendError;
+                }
+            }
+
             toast.error(errorMessage);
         } finally {
             setSubmitting(false);
