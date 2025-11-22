@@ -19,6 +19,17 @@ class OrganizacionAdmin(admin.ModelAdmin):
             'fields': ('permitir_agendamiento_publico',),
             'description': 'Controla si usuarios sin cuenta pueden agendar citas públicamente'
         }),
+        ('Notificaciones WhatsApp', {
+            'fields': (
+                'whatsapp_enabled',
+                'whatsapp_sender_name',
+                'whatsapp_confirmation_enabled',
+                'whatsapp_reminder_24h_enabled',
+                'whatsapp_reminder_1h_enabled',
+                'whatsapp_cancellation_enabled',
+            ),
+            'description': 'Configura las notificaciones automáticas por WhatsApp via Twilio'
+        }),
         ('Branding Personalizado', {
             'fields': (
                 'usar_branding_personalizado',
