@@ -80,14 +80,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const storedOrganizations = localStorage.getItem('organizations');
             const storedSelectedOrganization = localStorage.getItem('selectedOrganization');
 
-            if (storedUser) {
-                setUser(JSON.parse(storedUser));
-            }
-            if (storedOrganizations) {
-                setOrganizations(JSON.parse(storedOrganizations));
-            }
-            if (storedSelectedOrganization) {
-                setSelectedOrganization(JSON.parse(storedSelectedOrganization));
+            try {
+                if (storedUser) {
+                    setUser(JSON.parse(storedUser));
+                }
+                if (storedOrganizations) {
+                    setOrganizations(JSON.parse(storedOrganizations));
+                }
+                if (storedSelectedOrganization) {
+                    setSelectedOrganization(JSON.parse(storedSelectedOrganization));
+                }
+            } catch (error) {
+                console.error('Error parsing localStorage data:', error);
+                // Clear corrupted data
+                localStorage.removeItem('user');
+                localStorage.removeItem('organizations');
+                localStorage.removeItem('selectedOrganization');
             }
         }
     }, []);

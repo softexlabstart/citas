@@ -532,7 +532,8 @@ class ClientViewSet(viewsets.ModelViewSet):
         citas = Cita.all_objects.filter(
             Q(user=client) | Q(nombre=client.username)
         ).select_related(
-            'sede'
+            'sede',
+            'user'  # Optimize user access
         ).prefetch_related(
             servicios_prefetch,
             colaboradores_prefetch,

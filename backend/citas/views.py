@@ -755,7 +755,13 @@ class AppointmentReportView(APIView):
             servicios_prefetch = Prefetch('servicios', queryset=Servicio.all_objects.all())
             colaboradores_prefetch = Prefetch('colaboradores', queryset=Colaborador.all_objects.all())
 
-            for cita in queryset.select_related('user', 'sede').prefetch_related(servicios_prefetch, colaboradores_prefetch):
+            # Use iterator() to stream results and prevent loading all records into memory
+            # chunk_size optimizes DB fetching for large datasets
+            queryset_iterator = queryset.select_related('user', 'sede').prefetch_related(
+                servicios_prefetch, colaboradores_prefetch
+            ).iterator(chunk_size=1000)
+
+            for cita in queryset_iterator:
                 local_fecha = cita.fecha.astimezone(user_timezone)
                 writer.writerow([
                     cita.id, cita.nombre, local_fecha.strftime('%Y-%m-%d %H:%M'),

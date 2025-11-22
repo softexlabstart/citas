@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Container, Row, Col, Table, Button, Form, Badge, Spinner, Modal, Alert, Pagination, Dropdown } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { Appointment } from '../interfaces/Appointment';
@@ -67,7 +67,7 @@ const Appointments: React.FC = () => {
     }
   }, [location, navigate]);
 
-  const handleConfirmAppointment = async (id: number) => {
+  const handleConfirmAppointment = useCallback(async (id: number) => {
     setProcessingId(id);
     const { success } = await confirmApi(id);
     if (success) {
@@ -77,17 +77,17 @@ const Appointments: React.FC = () => {
       toast.error(t('error_confirming_appointment'));
     }
     setProcessingId(null);
-  };
+  }, [confirmApi, fetchAppointmentsApi, filterStatus, currentPage, debouncedSearchTerm, filterSede, t]);
 
-  const openConfirmCancelModal = (id: number) => {
+  const openConfirmCancelModal = useCallback((id: number) => {
     setDeletingId(id);
     setShowConfirmCancelModal(true);
-  };
+  }, []);
 
-  const closeConfirmCancelModal = () => {
+  const closeConfirmCancelModal = useCallback(() => {
     setDeletingId(null);
     setShowConfirmCancelModal(false);
-  };
+  }, []);
 
   const handleDeleteAppointment = async () => {
     if (!deletingId) return;

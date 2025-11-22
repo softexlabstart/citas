@@ -45,6 +45,12 @@ class BloqueoSerializer(serializers.ModelSerializer):
         model = Bloqueo
         fields = ['id', 'colaborador', 'motivo', 'fecha_inicio', 'fecha_fin', 'colaborador_id']
 
+    def validate_motivo(self, value):
+        """Validate motivo field length to prevent DoS."""
+        if len(value) > 500:
+            raise serializers.ValidationError("El motivo no puede exceder 500 caracteres.")
+        return value
+
     def to_representation(self, instance):
         """Override to ensure colaborador is fetched with all_objects"""
         representation = super().to_representation(instance)
@@ -69,6 +75,18 @@ class CitaSerializer(serializers.ModelSerializer):
         model = Cita
         fields = ['id', 'nombre', 'fecha', 'servicios', 'servicios_ids', 'confirmado', 'user', 'estado', 'colaboradores', 'colaboradores_ids', 'sede', 'sede_id', 'comentario']
         read_only_fields = ['id', 'user', 'confirmado', 'estado']  # SECURITY: Status changes only via dedicated actions
+
+    def validate_nombre(self, value):
+        """Validate nombre field length to prevent DoS and XSS."""
+        if len(value) > 200:
+            raise serializers.ValidationError("El nombre no puede exceder 200 caracteres.")
+        return value
+
+    def validate_comentario(self, value):
+        """Validate comentario field length to prevent DoS and XSS."""
+        if value and len(value) > 1000:
+            raise serializers.ValidationError("El comentario no puede exceder 1000 caracteres.")
+        return value
 
     def validate_servicios_ids(self, value):
         """
