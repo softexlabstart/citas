@@ -7,6 +7,7 @@ from .views import (ServicioViewSet, CitaViewSet, HorarioViewSet,
                     SedeReportView, BloqueoViewSet, DashboardSummaryView,
                     NextAvailabilityView, RecursoCitaViewSet, ColaboradorViewSet)
 from .views_public import PublicCitaViewSet, InvitadoCitaView
+from .views_whatsapp_reports import WhatsAppReportsViewSet
 
 router = DefaultRouter()
 router.register(r'servicios', ServicioViewSet, basename='servicio')
@@ -16,6 +17,7 @@ router.register(r'recursos', RecursoViewSet, basename='recurso')
 router.register(r'colaboradores', ColaboradorViewSet, basename='colaborador')
 router.register(r'bloqueos', BloqueoViewSet)
 router.register(r'recurso-citas', RecursoCitaViewSet, basename='recurso-cita')
+router.register(r'whatsapp-reports', WhatsAppReportsViewSet, basename='whatsapp-reports')
 
 urlpatterns = [
     path('reports/appointments/', AppointmentReportView.as_view(), name='appointment-reports'),

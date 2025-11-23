@@ -30,6 +30,7 @@ const AdminSettings = lazy(() => import('./components/AdminSettings'));
 const UserGuide = lazy(() => import('./components/UserGuide'));
 const RecursoDashboard = lazy(() => import('./components/RecursoDashboard'));
 const Clients = lazy(() => import('./components/Clients'));
+const WhatsAppReports = lazy(() => import('./components/WhatsAppReports'));
 const MarketingPage = lazy(() => import('./pages/MarketingPage')); // Import MarketingPage
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage')); // New Role System
 const AcceptInvitationPage = lazy(() => import('./pages/AcceptInvitationPage')); // Accept Invitation
@@ -89,6 +90,7 @@ const App: React.FC = () => {
               <Route element={<AdminRoute />}>
                 <Route path="/users" element={<UserManagementPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/whatsapp-reports" element={<WhatsAppReports />} />
                 <Route path="/admin-settings" element={<AdminSettings />} />
                 <Route path="/clients" element={<Clients />} />
                 <Route path="/marketing" element={<MarketingPage />} />
