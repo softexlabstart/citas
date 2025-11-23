@@ -80,6 +80,19 @@ class PublicCitaViewSet(viewsets.ModelViewSet):
             token_invitado=secrets.token_urlsafe(32)  # Token único para gestionar cita
         )
 
+        # Enviar notificaciones de WhatsApp de forma asíncrona
+        try:
+            from .tasks_whatsapp import send_whatsapp_confirmation, schedule_appointment_reminders
+
+            # Enviar confirmación inmediata
+            send_whatsapp_confirmation.delay(cita.id)
+
+            # Programar recordatorios (24h y 1h antes)
+            schedule_appointment_reminders.delay(cita.id)
+        except Exception as e:
+            # No fallar la creación de la cita si el WhatsApp falla
+            logger.warning(f"Error al programar WhatsApp para cita {cita.id}: {str(e)}")
+
         # Enviar email de confirmación con link para gestionar cita
         email = cita.email_cliente
         if email:
@@ -222,6 +235,13 @@ class InvitadoCitaView(APIView):
         # Cancelar la cita
         cita.estado = 'Cancelada'
         cita.save()
+
+        # Enviar notificación de WhatsApp de cancelación
+        try:
+            from .tasks_whatsapp import send_whatsapp_cancellation
+            send_whatsapp_cancellation.delay(cita.id, reason="Cancelada por el cliente")
+        except Exception as e:
+            logger.warning(f"Error al enviar WhatsApp de cancelación para cita {cita.id}: {str(e)}")
 
         # Enviar email de confirmación de cancelación
         if cita.email_cliente:
