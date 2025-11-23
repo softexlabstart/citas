@@ -180,6 +180,8 @@ export interface CreateAppointmentPayload {
     colaboradores_ids: number[];
     sede_id: number;
     estado: 'Pendiente';
+    email_cliente?: string;
+    telefono_cliente?: string;
 }
 
 export const addAppointment = (appointment: CreateAppointmentPayload) => api.post<Appointment>('/api/citas/citas/', appointment);

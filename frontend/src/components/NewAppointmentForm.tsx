@@ -35,6 +35,8 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
   const [selectedServicios, setSelectedServicios] = useState<string[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [isColaboradorOrAdmin, setIsColaboradorOrAdmin] = useState(false);
+  const [emailCliente, setEmailCliente] = useState<string>('');
+  const [telefonoCliente, setTelefonoCliente] = useState<string>('');
 
   const { data: availability, loading: slotsLoading, request: fetchAvailableSlots, error: availabilityError } = useApi<{ disponibilidad: any[] }, [string, number, string, string[]]>(getDisponibilidad);
   const { loading: isSubmitting, request: submitAppointment, error: submitError } = useApi(addAppointment);
@@ -114,6 +116,8 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
     setSelectedRecurso('');
     setSelectedSlot('');
     setSelectedClientId('');
+    setEmailCliente('');
+    setTelefonoCliente('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,14 +137,21 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
       estado: 'Pendiente' as const,
     };
 
-    // Si es colaborador/admin y seleccionó un cliente, agregar user_id
+    // Si es colaborador/admin y seleccionó un cliente, agregar user_id y datos del cliente
     if (isColaboradorOrAdmin && selectedClientId) {
       newAppointment.user_id = parseInt(selectedClientId, 10);
-      // Actualizar el nombre con el del cliente seleccionado
+      // Actualizar el nombre y datos de contacto con el del cliente seleccionado
       const selectedClient = clients?.find(c => c.id === parseInt(selectedClientId, 10));
       if (selectedClient) {
         newAppointment.nombre = selectedClient.username;
+        newAppointment.email_cliente = selectedClient.email;
+        newAppointment.telefono_cliente = selectedClient.telefono;
       }
+    } else {
+      // Si NO es colaborador/admin, usar los datos ingresados en el formulario
+      // O si es colaborador/admin pero NO seleccionó cliente, usar los datos del usuario actual
+      newAppointment.email_cliente = emailCliente || user.email;
+      newAppointment.telefono_cliente = telefonoCliente || user.perfil?.telefono || '';
     }
 
     const { success, error } = await submitAppointment(newAppointment);
@@ -176,6 +187,39 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
             ))}
           </Form.Control>
         </Form.Group>
+
+        {/* Campos de contacto - Solo para usuarios regulares o colaboradores sin cliente seleccionado */}
+        {(!isColaboradorOrAdmin || !selectedClientId) && (
+          <>
+            <Form.Group className="mb-3">
+              <Form.Label>Email {!isColaboradorOrAdmin && <span className="text-danger">*</span>}</Form.Label>
+              <Form.Control
+                type="email"
+                value={emailCliente}
+                onChange={(e) => setEmailCliente(e.target.value)}
+                placeholder={user?.email || "tu@email.com"}
+                required={!isColaboradorOrAdmin}
+              />
+              <Form.Text className="text-muted">
+                Usaremos este email para enviarte notificaciones sobre tu cita
+              </Form.Text>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Teléfono (WhatsApp) {!isColaboradorOrAdmin && <span className="text-danger">*</span>}</Form.Label>
+              <Form.Control
+                type="tel"
+                value={telefonoCliente}
+                onChange={(e) => setTelefonoCliente(e.target.value)}
+                placeholder="+57 300 123 4567"
+                required={!isColaboradorOrAdmin}
+              />
+              <Form.Text className="text-muted">
+                Incluye el código de país (ej: +57 para Colombia). Recibirás recordatorios por WhatsApp.
+              </Form.Text>
+            </Form.Group>
+          </>
+        )}
 
         {/* Selector de cliente - Solo para colaboradores y admins */}
         {isColaboradorOrAdmin && (
