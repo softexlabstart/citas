@@ -327,6 +327,13 @@ EMAIL_HOST_PASSWORD = config('SMTP_PASS', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='')
 
 # ============================================================================
+# TWILIO WHATSAPP CONFIGURATION
+# ============================================================================
+TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN', '')
+TWILIO_WHATSAPP_FROM = os.getenv('TWILIO_WHATSAPP_FROM', '')
+
+# ============================================================================
 # SECURITY HEADERS - Solo activos en producción (DEBUG=False)
 # ============================================================================
 if not DEBUG:
