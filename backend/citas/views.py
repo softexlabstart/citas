@@ -54,15 +54,27 @@ class ColaboradorViewSet(viewsets.ModelViewSet):
         queryset = Colaborador.all_objects.select_related('sede', 'sede__organizacion')
         now = timezone.now()
 
+        # Helper function to exclude blocked collaborators efficiently
+        def exclude_blocked(qs):
+            # Usar annotate con Exists para mejorar performance vs exclude con JOIN
+            from django.db.models import Exists, OuterRef
+            from .models import Bloqueo
+
+            blocked_subquery = Bloqueo.objects.filter(
+                colaborador=OuterRef('pk'),
+                fecha_inicio__lte=now,
+                fecha_fin__gte=now
+            )
+
+            return qs.annotate(
+                is_blocked=Exists(blocked_subquery)
+            ).filter(is_blocked=False)
+
         # SUPERUSUARIO: puede ver todos los colaboradores
         if user.is_authenticated and user.is_superuser:
             if sede_id:
                 queryset = queryset.filter(sede_id=sede_id)
-            # Excluir colaboradores con bloqueo activo
-            return queryset.exclude(
-                bloqueos__fecha_inicio__lte=now,
-                bloqueos__fecha_fin__gte=now
-            )
+            return exclude_blocked(queryset)
 
         # OWNER y ADMIN: pueden ver todos los colaboradores de su organización
         if user.is_authenticated:
@@ -73,20 +85,14 @@ class ColaboradorViewSet(viewsets.ModelViewSet):
                     queryset = queryset.filter(sede__organizacion=perfil.organizacion)
                     if sede_id:
                         queryset = queryset.filter(sede_id=sede_id)
-                    return queryset.exclude(
-                        bloqueos__fecha_inicio__lte=now,
-                        bloqueos__fecha_fin__gte=now
-                    )
+                    return exclude_blocked(queryset)
                 # SEDE_ADMIN: solo colaboradores de sus sedes administradas
                 elif perfil.sedes_administradas.exists():
                     org = perfil.organizacion
                     queryset = queryset.filter(sede__organizacion=org)
                     if sede_id:
                         queryset = queryset.filter(sede_id=sede_id)
-                    return queryset.exclude(
-                        bloqueos__fecha_inicio__lte=now,
-                        bloqueos__fecha_fin__gte=now
-                    )
+                    return exclude_blocked(queryset)
 
         # COLABORADOR: puede ver colaboradores de su organización (para coordinación)
         if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
@@ -96,31 +102,19 @@ class ColaboradorViewSet(viewsets.ModelViewSet):
             if sede_id:
                 # Validar que la sede pertenece a su organización
                 queryset = queryset.filter(sede_id=sede_id)
-            # Excluir colaboradores con bloqueo activo
-            return queryset.exclude(
-                bloqueos__fecha_inicio__lte=now,
-                bloqueos__fecha_fin__gte=now
-            )
+            return exclude_blocked(queryset)
 
         # CLIENTE: solo colaboradores si proporciona sede_id
         if user.is_authenticated:
             if sede_id:
                 queryset = queryset.filter(sede_id=sede_id)
-                # Excluir colaboradores con bloqueo activo
-                return queryset.exclude(
-                    bloqueos__fecha_inicio__lte=now,
-                    bloqueos__fecha_fin__gte=now
-                )
+                return exclude_blocked(queryset)
             return Colaborador.all_objects.none()
 
         # ANÓNIMO: debe proporcionar sede_id
         if sede_id:
             queryset = queryset.filter(sede_id=sede_id)
-            # Excluir colaboradores con bloqueo activo
-            return queryset.exclude(
-                bloqueos__fecha_inicio__lte=now,
-                bloqueos__fecha_fin__gte=now
-            )
+            return exclude_blocked(queryset)
         return Colaborador.all_objects.none()
 
 
