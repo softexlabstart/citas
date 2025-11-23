@@ -151,13 +151,22 @@ class NextAvailabilityView(APIView):
     def get(self, request):
         servicio_ids_str = request.query_params.get('servicio_ids')
         sede_id = request.query_params.get('sede_id')
+        days_to_check = request.query_params.get('days_to_check', '90')  # Default: 90 days
+        limit = request.query_params.get('limit', '10')  # Default: 10 slots
 
         if not servicio_ids_str or not sede_id:
             return Response({'error': _('Faltan parámetros de servicios o sede.')}, status=400)
 
         try:
             servicio_ids = [int(s_id) for s_id in servicio_ids_str.split(',')]
-            slots = find_next_available_slots(servicio_ids, sede_id)
+            days_to_check_int = int(days_to_check)
+            limit_int = int(limit)
+
+            # Limitar los valores máximos para evitar sobrecarga
+            days_to_check_int = min(days_to_check_int, 180)  # Máximo 6 meses
+            limit_int = min(limit_int, 20)  # Máximo 20 slots
+
+            slots = find_next_available_slots(servicio_ids, sede_id, limit=limit_int, days_to_check=days_to_check_int)
             return Response(slots)
         except ValueError as e:
             return Response({'error': str(e)}, status=400)

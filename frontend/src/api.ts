@@ -270,10 +270,12 @@ export interface NextAvailableSlot {
     end: string;
 }
 
-export const getNextAvailableSlots = (servicioIds: string[], sedeId: string) => {
+export const getNextAvailableSlots = (servicioIds: string[], sedeId: string, daysToCheck: number = 90, limit: number = 10) => {
     const params = new URLSearchParams({
         servicio_ids: servicioIds.join(','),
-        sede_id: sedeId
+        sede_id: sedeId,
+        days_to_check: daysToCheck.toString(),
+        limit: limit.toString()
     });
     return api.get<NextAvailableSlot[]>(`/api/citas/next-availability/?${params.toString()}`);
 };

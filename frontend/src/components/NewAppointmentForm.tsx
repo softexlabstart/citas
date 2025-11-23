@@ -46,6 +46,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
   const [date, setDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
   const [showNextAvailableModal, setShowNextAvailableModal] = useState(false);
+  const [searchDays, setSearchDays] = useState(90);
 
   useEffect(() => {
     // NUEVO SISTEMA DE ROLES: Verificar si el usuario es colaborador o admin
@@ -91,11 +92,17 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
     }
   }, [date, selectedRecurso, selectedSede, selectedServicios, fetchAvailableSlots]);
 
-  const handleFindNextAvailable = () => {
+  const handleFindNextAvailable = (days: number = searchDays) => {
     if (selectedServicios.length > 0 && selectedSede) {
-      fetchNextAvailable(selectedServicios, selectedSede);
+      fetchNextAvailable(selectedServicios, selectedSede, days, 10);
       setShowNextAvailableModal(true);
     }
+  };
+
+  const handleExtendSearch = () => {
+    const newDays = searchDays + 60; // Extender 60 días más
+    setSearchDays(newDays);
+    handleFindNextAvailable(newDays);
   };
 
   const handleServiciosChange = (selected: string[]) => {
@@ -321,18 +328,48 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
           <Modal.Title>{t('next_available_slots')}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {nextAvailableLoading && <Spinner animation="border" />}
+          {nextAvailableLoading && (
+            <div className="text-center p-3">
+              <Spinner animation="border" />
+              <p className="mt-2">Buscando disponibilidad en los próximos {searchDays} días...</p>
+            </div>
+          )}
           {nextAvailableError && <Alert variant="danger">{t('error_finding_slots')}</Alert>}
           {nextAvailable && nextAvailable.length > 0 ? (
-            <ListGroup>
-              {nextAvailable.map((slot, index) => (
-                <ListGroup.Item key={index} action onClick={() => handleSelectNextAvailable(slot)}>
-                  {new Date(slot.start).toLocaleString()} - {slot.recurso.nombre}
-                </ListGroup.Item>
-              ))}
-            </ListGroup>
+            <>
+              <Alert variant="info">
+                Se encontraron {nextAvailable.length} horarios disponibles en los próximos {searchDays} días
+              </Alert>
+              <ListGroup>
+                {nextAvailable.map((slot, index) => (
+                  <ListGroup.Item key={index} action onClick={() => handleSelectNextAvailable(slot)}>
+                    <strong>{new Date(slot.start).toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong>
+                    <br />
+                    {new Date(slot.start).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })} - {slot.recurso.nombre}
+                  </ListGroup.Item>
+                ))}
+              </ListGroup>
+            </>
           ) : (
-            !nextAvailableLoading && <p>{t('no_upcoming_availability')}</p>
+            !nextAvailableLoading && (
+              <>
+                <Alert variant="warning">
+                  <strong>No hay disponibilidad en los próximos {searchDays} días</strong>
+                  <p className="mb-0 mt-2">
+                    {searchDays < 180 ?
+                      'Puedes ampliar la búsqueda para encontrar fechas más adelante.' :
+                      'Por favor, contacta directamente con la sede para coordinar una cita.'}
+                  </p>
+                </Alert>
+                {searchDays < 180 && (
+                  <div className="text-center">
+                    <Button variant="primary" onClick={handleExtendSearch} disabled={nextAvailableLoading}>
+                      Buscar en los próximos {searchDays + 60} días
+                    </Button>
+                  </div>
+                )}
+              </>
+            )
           )}
         </Modal.Body>
       </Modal>

@@ -205,10 +205,19 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
     available_slots.sort(key=lambda x: x['start'])
     return available_slots
 
-def find_next_available_slots(servicio_ids, sede_id, limit=5):
+def find_next_available_slots(servicio_ids, sede_id, limit=5, days_to_check=90):
     """
     Finds the next available slots for a given service at a specific location,
     across all available resources.
+
+    Args:
+        servicio_ids: List of service IDs
+        sede_id: Location ID
+        limit: Maximum number of slots to return (default: 5)
+        days_to_check: Number of days to search ahead (default: 90)
+
+    Returns:
+        List of available slots with metadata
     """
     import logging
     logger = logging.getLogger(__name__)
@@ -243,8 +252,6 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5):
 
     colaborador_ids = [c.id for c in colaboradores]
     all_found_slots = []
-    
-    days_to_check = 30
 
     end_date = timezone.now().date() + timedelta(days=days_to_check)
     day_start = timezone.make_aware(datetime.combine(timezone.now().date(), time.min))
