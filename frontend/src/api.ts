@@ -562,3 +562,17 @@ export const getUserOrganizations = () => {
 export const switchOrganization = (organizationId: number) => {
     return api.post('/api/switch-organization/', { organization_id: organizationId });
 };
+
+// WhatsApp Reports
+export const getWhatsAppReportsSummary = (days: number = 30) =>
+    api.get(`/api/citas/whatsapp-reports/summary/?days=${days}`);
+
+export const getWhatsAppRecentMessages = (limit: number = 50, status?: string, messageType?: string) => {
+    let url = `/api/citas/whatsapp-reports/recent-messages/?limit=${limit}`;
+    if (status) url += `&status=${status}`;
+    if (messageType) url += `&message_type=${messageType}`;
+    return api.get(url);
+};
+
+export const getWhatsAppDeliveryPerformance = (days: number = 30) =>
+    api.get(`/api/citas/whatsapp-reports/delivery-performance/?days=${days}`);

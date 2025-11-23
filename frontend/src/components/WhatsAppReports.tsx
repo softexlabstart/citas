@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Badge, Spinner, Alert, Form } from 'react-bootstrap';
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, LineElement, PointElement } from 'chart.js';
 import { Pie, Bar, Line } from 'react-chartjs-2';
-import api from '../api';
+import { getWhatsAppReportsSummary, getWhatsAppRecentMessages, getWhatsAppDeliveryPerformance } from '../api';
 
 // Registrar componentes de Chart.js
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, LineElement, PointElement);
@@ -20,20 +20,20 @@ const WhatsAppReports: React.FC = () => {
     const fetchData = async () => {
         setLoading(true);
         setError(null);
-        
+
         try {
             // Fetch summary
-            const summaryRes = await api.get(`/api/citas/whatsapp-reports/summary/?days=${days}`);
+            const summaryRes = await getWhatsAppReportsSummary(days);
             setSummary(summaryRes.data);
-            
+
             // Fetch recent messages
-            const messagesRes = await api.get('/api/citas/whatsapp-reports/recent-messages/?limit=50');
+            const messagesRes = await getWhatsAppRecentMessages(50);
             setRecentMessages(messagesRes.data.messages);
-            
+
             // Fetch performance
-            const perfRes = await api.get(`/api/citas/whatsapp-reports/delivery-performance/?days=${days}`);
+            const perfRes = await getWhatsAppDeliveryPerformance(days);
             setPerformance(perfRes.data.performance);
-            
+
         } catch (err: any) {
             console.error('Error fetching WhatsApp reports:', err);
             setError('Error al cargar los reportes de WhatsApp');
