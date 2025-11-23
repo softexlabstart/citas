@@ -8,7 +8,7 @@ from datetime import timedelta
 
 from .models import Cita
 from .models_whatsapp import WhatsAppReminderSchedule
-from .services.whatsapp_service import whatsapp_service
+from .whatsapp.whatsapp_service import whatsapp_service
 
 logger = logging.getLogger(__name__)
 
