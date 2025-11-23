@@ -16,6 +16,9 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()
 
+# Importar explícitamente las tareas de WhatsApp
+app.autodiscover_tasks(['citas'], related_name='tasks_whatsapp')
+
 # Configuración de tareas periódicas (Celery Beat)
 app.conf.beat_schedule = {
     # Enviar recordatorios de WhatsApp cada 5 minutos
