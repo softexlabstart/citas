@@ -717,24 +717,44 @@ class DashboardSummaryView(APIView):
 
         # Admin/Staff specific stats
         if is_admin_user:
-            citas_hoy = base_queryset.filter(fecha__date=today).count()
-            pendientes_confirmacion = base_queryset.filter(estado='Pendiente').count()
+            # Optimized: Combine counts into a single query using aggregation
+            from django.db.models import Count, Q
 
+            # Counts en una sola query
+            stats = base_queryset.aggregate(
+                citas_hoy=Count('id', filter=Q(fecha__date=today)),
+                pendientes_confirmacion=Count('id', filter=Q(estado='Pendiente'))
+            )
+
+            citas_hoy = stats['citas_hoy']
+            pendientes_confirmacion = stats['pendientes_confirmacion']
+
+            # Calcular ingresos del mes usando prefetch para evitar N+1 queries
             start_of_month = today.replace(day=1)
-            # Optimized query: Use database aggregation instead of Python loop
-            from django.db.models import Sum
-            ingresos_result = base_queryset.filter(
+
+            # Usar prefetch_related para cargar servicios en una sola query adicional
+            citas_asistidas = base_queryset.filter(
                 estado='Asistio',
                 fecha__gte=start_of_month
-            ).aggregate(total=Sum('servicios__precio'))
-            ingresos_mes = ingresos_result['total'] or 0
+            ).prefetch_related('servicios')
 
+            # Calcular ingresos sumando en Python (más eficiente que Sum con ManyToMany)
+            ingresos_mes = 0
+            for cita in citas_asistidas:
+                ingresos_mes += sum(servicio.precio for servicio in cita.servicios.all())
+
+            # Proximas citas optimizadas con select_related y prefetch_related
             proximas_citas = base_queryset.filter(
                 fecha__gte=timezone.now(),
                 estado__in=['Pendiente', 'Confirmada']
-            ).select_related('sede').prefetch_related('servicios', 'colaboradores')[:5]
+            ).select_related('sede').prefetch_related('servicios', 'colaboradores').order_by('fecha')[:5]
 
-            summary = { 'citas_hoy': citas_hoy, 'pendientes_confirmacion': pendientes_confirmacion, 'ingresos_mes': ingresos_mes, 'proximas_citas': CitaSerializer(proximas_citas, many=True).data }
+            summary = {
+                'citas_hoy': citas_hoy,
+                'pendientes_confirmacion': pendientes_confirmacion,
+                'ingresos_mes': float(ingresos_mes),
+                'proximas_citas': CitaSerializer(proximas_citas, many=True).data
+            }
         else: # Regular user stats
             proxima_cita = base_queryset.filter( fecha__gte=timezone.now(), estado__in=['Pendiente', 'Confirmada'] ).order_by('fecha').first()
             summary = { 'proxima_cita': CitaSerializer(proxima_cita).data if proxima_cita else None }
