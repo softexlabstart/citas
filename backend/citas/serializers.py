@@ -73,7 +73,7 @@ class CitaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cita
-        fields = ['id', 'nombre', 'fecha', 'servicios', 'servicios_ids', 'confirmado', 'user', 'estado', 'colaboradores', 'colaboradores_ids', 'sede', 'sede_id', 'comentario']
+        fields = ['id', 'nombre', 'email_cliente', 'telefono_cliente', 'fecha', 'servicios', 'servicios_ids', 'confirmado', 'user', 'estado', 'colaboradores', 'colaboradores_ids', 'sede', 'sede_id', 'comentario']
         read_only_fields = ['id', 'user', 'confirmado', 'estado']  # SECURITY: Status changes only via dedicated actions
 
     def validate_nombre(self, value):
