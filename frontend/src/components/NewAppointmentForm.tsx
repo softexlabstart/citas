@@ -40,7 +40,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
 
   const { data: availability, loading: slotsLoading, request: fetchAvailableSlots, error: availabilityError } = useApi<{ disponibilidad: any[] }, [string, number, string, string[]]>(getDisponibilidad);
   const { loading: isSubmitting, request: submitAppointment, error: submitError } = useApi(addAppointment);
-  const { data: nextAvailable, loading: nextAvailableLoading, request: fetchNextAvailable, error: nextAvailableError } = useApi<NextAvailableSlot[], [string[], string]>(getNextAvailableSlots);
+  const { data: nextAvailable, loading: nextAvailableLoading, request: fetchNextAvailable, error: nextAvailableError } = useApi<NextAvailableSlot[], [string[], string, number, number]>(getNextAvailableSlots);
   const { data: clients, loading: loadingClients, request: fetchClients } = useApi<Client[], []>(getClients);
 
   const [date, setDate] = useState('');
@@ -92,9 +92,9 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
     }
   }, [date, selectedRecurso, selectedSede, selectedServicios, fetchAvailableSlots]);
 
-  const handleFindNextAvailable = (days: number = searchDays) => {
+  const handleFindNextAvailable = () => {
     if (selectedServicios.length > 0 && selectedSede) {
-      fetchNextAvailable(selectedServicios, selectedSede, days, 10);
+      fetchNextAvailable(selectedServicios, selectedSede, searchDays, 10);
       setShowNextAvailableModal(true);
     }
   };
@@ -102,7 +102,10 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onAppointmentAd
   const handleExtendSearch = () => {
     const newDays = searchDays + 60; // Extender 60 días más
     setSearchDays(newDays);
-    handleFindNextAvailable(newDays);
+    // Re-fetch con el nuevo rango después de actualizar el estado
+    if (selectedServicios.length > 0 && selectedSede) {
+      fetchNextAvailable(selectedServicios, selectedSede, newDays, 10);
+    }
   };
 
   const handleServiciosChange = (selected: string[]) => {
