@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import moment from 'moment';
-import { HouseDoor, Briefcase, CalendarCheck, CalendarWeek, Gear, QuestionCircle, Search, People, Megaphone, Building, PlusCircle, CurrencyDollar, PersonPlus } from 'react-bootstrap-icons';
+import { HouseDoor, Briefcase, CalendarCheck, CalendarWeek, Gear, QuestionCircle, Search, People, Megaphone, Building, PlusCircle, CurrencyDollar, PersonPlus, Whatsapp } from 'react-bootstrap-icons';
 import Footer from './Footer';
 import OrganizationSelector from './OrganizationSelector';
 import RoleBadge from './RoleBadge';
@@ -141,9 +141,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         <Megaphone className="nav-icon" /> {t('marketing')}
                       </Nav.Link>
                       {canViewReports && (
-                        <Nav.Link as={Link} to="/reports" onClick={handleClose} className="nav-link-custom">
-                          <CurrencyDollar className="nav-icon" /> {t('financial_dashboard') || 'Dashboard Financiero'}
-                        </Nav.Link>
+                        <>
+                          <Nav.Link as={Link} to="/reports" onClick={handleClose} className="nav-link-custom">
+                            <CurrencyDollar className="nav-icon" /> {t('financial_dashboard') || 'Dashboard Financiero'}
+                          </Nav.Link>
+                          <Nav.Link as={Link} to="/whatsapp-reports" onClick={handleClose} className="nav-link-custom">
+                            <Whatsapp className="nav-icon" /> Reportes WhatsApp
+                          </Nav.Link>
+                        </>
                       )}
                       <Nav.Link as={Link} to="/admin-settings" onClick={handleClose} className="nav-link-custom">
                         <Gear className="nav-icon" /> {t('admin_settings')}
