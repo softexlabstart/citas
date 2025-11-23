@@ -568,11 +568,11 @@ export const getWhatsAppReportsSummary = (days: number = 30) =>
     api.get(`/api/citas/whatsapp-reports/summary/?days=${days}`);
 
 export const getWhatsAppRecentMessages = (limit: number = 50, status?: string, messageType?: string) => {
-    let url = `/api/citas/whatsapp-reports/recent-messages/?limit=${limit}`;
+    let url = `/api/citas/whatsapp-reports/recent_messages/?limit=${limit}`;
     if (status) url += `&status=${status}`;
     if (messageType) url += `&message_type=${messageType}`;
     return api.get(url);
 };
 
 export const getWhatsAppDeliveryPerformance = (days: number = 30) =>
-    api.get(`/api/citas/whatsapp-reports/delivery-performance/?days=${days}`);
+    api.get(`/api/citas/whatsapp-reports/delivery_performance/?days=${days}`);
