@@ -355,3 +355,6 @@ class LogEntryAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+# Import WhatsApp admin to register models
+from . import admin_whatsapp  # noqa

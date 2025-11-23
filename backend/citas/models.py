@@ -139,3 +139,7 @@ class Cita(models.Model):
 
     def __str__(self):
         return f"{self.nombre} - {self.fecha}"
+
+
+# Import WhatsApp models to register them with Django
+from .models_whatsapp import WhatsAppMessage, WhatsAppReminderSchedule  # noqa
