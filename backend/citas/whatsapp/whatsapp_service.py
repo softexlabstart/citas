@@ -63,6 +63,29 @@ class WhatsAppService:
 
         return cleaned
 
+    def _render_template(self, template: str, context: Dict[str, Any], default_template: str) -> str:
+        """
+        Renderiza una plantilla personalizada o usa la plantilla por defecto.
+
+        Args:
+            template: Plantilla personalizada de la organización
+            context: Variables para reemplazar en la plantilla
+            default_template: Plantilla por defecto si no hay personalizada
+
+        Returns:
+            Mensaje renderizado
+        """
+        # Si hay plantilla personalizada, úsala
+        if template and template.strip():
+            try:
+                return template.format(**context)
+            except KeyError as e:
+                logger.warning(f"Error en plantilla personalizada, usando default: {e}")
+                return default_template.format(**context)
+
+        # Usar plantilla por defecto
+        return default_template.format(**context)
+
     def send_appointment_confirmation(self, cita: Cita) -> Optional[WhatsAppMessage]:
         """
         Envía confirmación de cita por WhatsApp.
@@ -86,26 +109,47 @@ class WhatsAppService:
             logger.warning(f"Cita #{cita.id} no tiene teléfono, no se puede enviar WhatsApp")
             return None
 
-        # Preparar mensaje
+        # Preparar variables para plantilla
         sender_name = org.whatsapp_sender_name or org.nombre
-        fecha_formateada = cita.fecha.strftime('%d/%m/%Y a las %H:%M')
+        fecha_formateada = cita.fecha.strftime('%d/%m/%Y')
+        hora_formateada = cita.fecha.strftime('%H:%M')
         servicios_nombres = ', '.join([s.nombre for s in cita.servicios.all()])
+        colaboradores_nombres = ', '.join([c.nombre for c in cita.colaboradores.all()])
 
-        message_body = f"""🔔 *{sender_name}*
+        # Contexto para plantilla
+        context = {
+            'nombre': cita.nombre,
+            'fecha': fecha_formateada,
+            'hora': hora_formateada,
+            'sede': cita.sede.nombre,
+            'servicios': servicios_nombres,
+            'colaboradores': colaboradores_nombres,
+            'sender_name': sender_name
+        }
 
-¡Hola {cita.nombre}!
+        # Plantilla por defecto
+        default_template = """🔔 *{sender_name}*
+
+¡Hola {nombre}!
 
 Tu cita ha sido confirmada:
 
-📅 *Fecha:* {fecha_formateada}
-📍 *Sede:* {cita.sede.nombre}
-💼 *Servicios:* {servicios_nombres}
+📅 *Fecha:* {fecha} a las {hora}
+📍 *Sede:* {sede}
+💼 *Servicios:* {servicios}
 
 Te esperamos 10 minutos antes de tu cita.
 
 Si necesitas cancelar o reprogramar, por favor contáctanos lo antes posible.
 
 ¡Gracias por preferirnos!"""
+
+        # Renderizar plantilla (personalizada o por defecto)
+        message_body = self._render_template(
+            org.whatsapp_template_confirmation,
+            context,
+            default_template
+        )
 
         return self._send_message(
             cita=cita,
@@ -136,18 +180,37 @@ Si necesitas cancelar o reprogramar, por favor contáctanos lo antes posible.
             return None
 
         sender_name = org.whatsapp_sender_name or org.nombre
-        fecha_formateada = cita.fecha.strftime('%d/%m/%Y a las %H:%M')
+        fecha_formateada = cita.fecha.strftime('%d/%m/%Y')
+        hora_formateada = cita.fecha.strftime('%H:%M')
+        servicios_nombres = ', '.join([s.nombre for s in cita.servicios.all()])
+        colaboradores_nombres = ', '.join([c.nombre for c in cita.colaboradores.all()])
 
-        message_body = f"""⏰ *Recordatorio - {sender_name}*
+        context = {
+            'nombre': cita.nombre,
+            'fecha': fecha_formateada,
+            'hora': hora_formateada,
+            'sede': cita.sede.nombre,
+            'servicios': servicios_nombres,
+            'colaboradores': colaboradores_nombres,
+            'sender_name': sender_name
+        }
 
-Hola {cita.nombre},
+        default_template = """⏰ *Recordatorio - {sender_name}*
+
+Hola {nombre},
 
 Te recordamos que mañana tienes tu cita:
 
-📅 *Fecha:* {fecha_formateada}
-📍 *Sede:* {cita.sede.nombre}
+📅 *Fecha:* {fecha} a las {hora}
+📍 *Sede:* {sede}
 
 Nos vemos mañana. ¡No faltes! 😊"""
+
+        message_body = self._render_template(
+            org.whatsapp_template_reminder_24h,
+            context,
+            default_template
+        )
 
         return self._send_message(
             cita=cita,
@@ -178,18 +241,37 @@ Nos vemos mañana. ¡No faltes! 😊"""
             return None
 
         sender_name = org.whatsapp_sender_name or org.nombre
+        fecha_formateada = cita.fecha.strftime('%d/%m/%Y')
         hora_formateada = cita.fecha.strftime('%H:%M')
+        servicios_nombres = ', '.join([s.nombre for s in cita.servicios.all()])
+        colaboradores_nombres = ', '.join([c.nombre for c in cita.colaboradores.all()])
 
-        message_body = f"""🔔 *Recordatorio - {sender_name}*
+        context = {
+            'nombre': cita.nombre,
+            'fecha': fecha_formateada,
+            'hora': hora_formateada,
+            'sede': cita.sede.nombre,
+            'servicios': servicios_nombres,
+            'colaboradores': colaboradores_nombres,
+            'sender_name': sender_name
+        }
 
-Hola {cita.nombre},
+        default_template = """🔔 *Recordatorio - {sender_name}*
+
+Hola {nombre},
 
 Tu cita es en 1 hora:
 
-🕐 *Hora:* {hora_formateada}
-📍 *Sede:* {cita.sede.nombre}
+🕐 *Hora:* {hora}
+📍 *Sede:* {sede}
 
 Te esperamos. Por favor llega a tiempo. ⏰"""
+
+        message_body = self._render_template(
+            org.whatsapp_template_reminder_1h,
+            context,
+            default_template
+        )
 
         return self._send_message(
             cita=cita,
@@ -221,22 +303,43 @@ Te esperamos. Por favor llega a tiempo. ⏰"""
             return None
 
         sender_name = org.whatsapp_sender_name or org.nombre
-        fecha_formateada = cita.fecha.strftime('%d/%m/%Y a las %H:%M')
+        fecha_formateada = cita.fecha.strftime('%d/%m/%Y')
+        hora_formateada = cita.fecha.strftime('%H:%M')
+        servicios_nombres = ', '.join([s.nombre for s in cita.servicios.all()])
+        colaboradores_nombres = ', '.join([c.nombre for c in cita.colaboradores.all()])
+
+        context = {
+            'nombre': cita.nombre,
+            'fecha': fecha_formateada,
+            'hora': hora_formateada,
+            'sede': cita.sede.nombre,
+            'servicios': servicios_nombres,
+            'colaboradores': colaboradores_nombres,
+            'razon': reason if reason else 'No especificada',
+            'sender_name': sender_name
+        }
 
         reason_text = f"\n\n*Razón:* {reason}" if reason else ""
 
-        message_body = f"""❌ *Cancelación - {sender_name}*
+        default_template = """❌ *Cancelación - {sender_name}*
 
-Hola {cita.nombre},
+Hola {nombre},
 
 Tu cita ha sido cancelada:
 
-📅 *Fecha que tenías:* {fecha_formateada}
-📍 *Sede:* {cita.sede.nombre}{reason_text}
+📅 *Fecha que tenías:* {fecha} a las {hora}
+📍 *Sede:* {sede}
+*Razón:* {razon}
 
 Si deseas reagendar, por favor contáctanos.
 
 Gracias por tu comprensión."""
+
+        message_body = self._render_template(
+            org.whatsapp_template_cancellation,
+            context,
+            default_template
+        )
 
         return self._send_message(
             cita=cita,

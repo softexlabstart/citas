@@ -30,6 +30,16 @@ class OrganizacionAdmin(admin.ModelAdmin):
             ),
             'description': 'Configura las notificaciones automáticas por WhatsApp via Twilio'
         }),
+        ('Plantillas de WhatsApp Personalizadas', {
+            'classes': ('collapse',),
+            'fields': (
+                'whatsapp_template_confirmation',
+                'whatsapp_template_reminder_24h',
+                'whatsapp_template_reminder_1h',
+                'whatsapp_template_cancellation',
+            ),
+            'description': 'Personaliza los mensajes de WhatsApp. Deja en blanco para usar las plantillas por defecto. Variables disponibles: {nombre}, {fecha}, {hora}, {sede}, {servicios}, {colaboradores}, {razon}'
+        }),
         ('Branding Personalizado', {
             'fields': (
                 'usar_branding_personalizado',

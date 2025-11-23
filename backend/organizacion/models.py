@@ -68,6 +68,28 @@ class Organizacion(models.Model):  # type: ignore
         help_text='Enviar notificación al cancelar la cita'
     )
 
+    # Plantillas personalizables de WhatsApp
+    whatsapp_template_confirmation = models.TextField(
+        blank=True,
+        default='',
+        help_text='Plantilla de confirmación. Variables: {nombre}, {fecha}, {hora}, {sede}, {servicios}, {colaboradores}'
+    )
+    whatsapp_template_reminder_24h = models.TextField(
+        blank=True,
+        default='',
+        help_text='Plantilla recordatorio 24h. Variables: {nombre}, {fecha}, {hora}, {sede}, {servicios}, {colaboradores}'
+    )
+    whatsapp_template_reminder_1h = models.TextField(
+        blank=True,
+        default='',
+        help_text='Plantilla recordatorio 1h. Variables: {nombre}, {fecha}, {hora}, {sede}, {servicios}, {colaboradores}'
+    )
+    whatsapp_template_cancellation = models.TextField(
+        blank=True,
+        default='',
+        help_text='Plantilla de cancelación. Variables: {nombre}, {fecha}, {hora}, {sede}, {razon}'
+    )
+
     # Configuración de branding personalizado
     usar_branding_personalizado = models.BooleanField(
         default=False,
