@@ -168,25 +168,31 @@ class SendMarketingWhatsAppView(APIView):
             media_url = request.build_absolute_uri(default_storage.url(saved_path))
 
         # Obtener destinatarios
-        recipient_phones = request.data.get('recipient_phones')
+        recipient_phones = request.data.getlist('recipient_phones')
+
+        # Obtener clientes (usuarios con rol 'cliente') de la organización
+        client_users = User.objects.filter(
+            perfiles__role='cliente',
+            perfiles__organizacion=organizacion
+        ).prefetch_related('perfiles').distinct()
 
         if recipient_phones:
-            # Si se proporcionan teléfonos específicos, buscar esos clientes
-            from citas.models import Cliente
-            clients = Cliente.objects.filter(
-                telefono__in=recipient_phones,
-                organizacion=organizacion
-            )
+            # Si se proporcionan teléfonos específicos, filtrar por esos teléfonos
+            client_users = client_users.filter(perfiles__telefono__in=recipient_phones)
 
-            recipient_phones_list = [c.telefono for c in clients]
-            recipient_names_list = [f"{c.nombre} {c.apellido}" for c in clients]
-        else:
-            # Obtener todos los clientes de la organización
-            from citas.models import Cliente
-            clients = Cliente.objects.filter(organizacion=organizacion)
+        # Construir listas de teléfonos y nombres
+        recipient_phones_list = []
+        recipient_names_list = []
 
-            recipient_phones_list = [c.telefono for c in clients if c.telefono]
-            recipient_names_list = [f"{c.nombre} {c.apellido}" for c in clients if c.telefono]
+        for user in client_users:
+            # Obtener perfil de la organización actual
+            perfil = get_perfil_or_first(user)
+            if perfil and perfil.telefono:
+                recipient_phones_list.append(perfil.telefono)
+                nombre_completo = f"{user.first_name} {user.last_name}".strip()
+                if not nombre_completo:
+                    nombre_completo = user.email.split('@')[0]
+                recipient_names_list.append(nombre_completo)
 
         if not recipient_phones_list:
             return Response(
