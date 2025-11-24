@@ -11,6 +11,9 @@ from django.core.files.storage import default_storage
 from django.conf import settings
 from organizacion.thread_locals import set_current_organization
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 class SendMarketingEmailView(APIView):
     """
@@ -205,21 +208,34 @@ class SendMarketingWhatsAppView(APIView):
             # Establecer tenant actual para el router de BD
             set_current_organization(organizacion)
 
-            # Enviar mensajes
-            sent_count, failed_count, messages = whatsapp_service.send_bulk_marketing_message(
-                organizacion=organizacion,
-                recipient_phones=recipient_phones_list,
-                recipient_names=recipient_names_list,
-                message_body=message,
-                media_url=media_url
-            )
+            # Enviar mensajes de forma asíncrona (en background)
+            from django.core.management import call_command
+            import threading
+
+            def send_messages_async():
+                """Función para enviar mensajes en background"""
+                try:
+                    set_current_organization(organizacion)
+                    whatsapp_service.send_bulk_marketing_message(
+                        organizacion=organizacion,
+                        recipient_phones=recipient_phones_list,
+                        recipient_names=recipient_names_list,
+                        message_body=message,
+                        media_url=media_url
+                    )
+                except Exception as e:
+                    logger.error(f"Error enviando WhatsApp en background: {str(e)}")
+
+            # Iniciar thread en background
+            thread = threading.Thread(target=send_messages_async)
+            thread.daemon = True
+            thread.start()
 
             return Response({
-                'message': f'WhatsApp enviado exitosamente.',
-                'sent': sent_count,
-                'failed': failed_count,
-                'total': len(recipient_phones_list)
-            }, status=status.HTTP_200_OK)
+                'message': f'WhatsApp en proceso de envío a {len(recipient_phones_list)} destinatarios.',
+                'total': len(recipient_phones_list),
+                'status': 'processing'
+            }, status=status.HTTP_202_ACCEPTED)
 
         except Exception as e:
             return Response(
