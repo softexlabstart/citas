@@ -21,6 +21,8 @@ router.register(r'recurso-citas', RecursoCitaViewSet, basename='recurso-cita')
 router.register(r'whatsapp-reports', WhatsAppReportsViewSet, basename='whatsapp-reports')
 
 urlpatterns = [
+    # Webhook de Twilio para actualizar estados de WhatsApp (DEBE IR PRIMERO)
+    path('whatsapp-webhook/', TwilioWhatsAppWebhook.as_view(), name='whatsapp-webhook'),
     path('reports/appointments/', AppointmentReportView.as_view(), name='appointment-reports'),
     path('dashboard/summary/', DashboardSummaryView.as_view(), name='dashboard-summary'),
     path('reports/sede_summary/', SedeReportView.as_view(), name='sede-reports-summary'),
@@ -29,7 +31,5 @@ urlpatterns = [
     # Endpoints públicos para reservas de invitados
     path('public-booking/', PublicCitaViewSet.as_view({'post': 'create'}), name='public-booking'),
     path('invitado/<int:cita_id>/', InvitadoCitaView.as_view(), name='invitado-cita'),
-    # Webhook de Twilio para actualizar estados de WhatsApp
-    path('whatsapp-webhook/', TwilioWhatsAppWebhook.as_view(), name='whatsapp-webhook'),
     path('', include(router.urls)),
 ]
