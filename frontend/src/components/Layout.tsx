@@ -140,6 +140,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       <Nav.Link as={Link} to="/marketing" onClick={handleClose} className="nav-link-custom">
                         <Megaphone className="nav-icon" /> {t('marketing')}
                       </Nav.Link>
+                      <Nav.Link as={Link} to="/whatsapp-marketing" onClick={handleClose} className="nav-link-custom">
+                        <Whatsapp className="nav-icon" /> Marketing WhatsApp
+                      </Nav.Link>
                       {canViewReports && (
                         <>
                           <Nav.Link as={Link} to="/reports" onClick={handleClose} className="nav-link-custom">

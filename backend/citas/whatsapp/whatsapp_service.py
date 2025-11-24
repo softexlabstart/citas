@@ -436,6 +436,104 @@ Gracias por tu comprensión."""
             )
             return whatsapp_msg
 
+    def send_bulk_marketing_message(
+        self,
+        organizacion: Organizacion,
+        recipient_phones: list,
+        recipient_names: list,
+        message_body: str,
+        media_url: Optional[str] = None
+    ) -> tuple[int, int, list]:
+        """
+        Envía mensajes de marketing masivos por WhatsApp.
+
+        Args:
+            organizacion: Organización que envía
+            recipient_phones: Lista de teléfonos destino
+            recipient_names: Lista de nombres (mismo orden que phones)
+            message_body: Cuerpo del mensaje
+            media_url: URL de imagen/media (opcional)
+
+        Returns:
+            Tupla (exitosos, fallidos, lista de WhatsAppMessage instances)
+        """
+        if not self.is_configured():
+            logger.error("Twilio no está configurado, no se puede enviar mensajes")
+            return (0, 0, [])
+
+        sent_count = 0
+        failed_count = 0
+        messages = []
+
+        for phone, name in zip(recipient_phones, recipient_names):
+            # Crear registro en BD
+            whatsapp_msg = WhatsAppMessage.objects.create(
+                cita=None,  # No asociado a cita específica
+                organizacion=organizacion,
+                message_type='marketing',
+                recipient_phone=phone,
+                recipient_name=name,
+                message_body=message_body,
+                status='pending'
+            )
+
+            try:
+                # Formatear número
+                to_number = self.format_phone_number(phone)
+
+                # Preparar parámetros del mensaje
+                message_params = {
+                    'from_': self.from_number,
+                    'to': to_number,
+                    'body': message_body
+                }
+
+                # Agregar media si está presente
+                if media_url:
+                    message_params['media_url'] = [media_url]
+
+                # Enviar via Twilio
+                message = self.client.messages.create(**message_params)
+
+                # Actualizar registro con éxito
+                whatsapp_msg.mark_as_sent(
+                    twilio_sid=message.sid,
+                    twilio_status=message.status
+                )
+
+                sent_count += 1
+                logger.info(
+                    f"WhatsApp marketing enviado a {name} ({phone}) - SID: {message.sid}"
+                )
+
+            except TwilioRestException as e:
+                # Error de Twilio
+                whatsapp_msg.mark_as_failed(
+                    error_code=str(e.code),
+                    error_message=e.msg
+                )
+                failed_count += 1
+                logger.error(
+                    f"Error Twilio enviando WhatsApp marketing a {name}: "
+                    f"[{e.code}] {e.msg}"
+                )
+
+            except Exception as e:
+                # Error genérico
+                whatsapp_msg.mark_as_failed(
+                    error_code='UNKNOWN',
+                    error_message=str(e)
+                )
+                failed_count += 1
+                logger.error(
+                    f"Error enviando WhatsApp marketing a {name}: {str(e)}",
+                    exc_info=True
+                )
+
+            messages.append(whatsapp_msg)
+
+        return (sent_count, failed_count, messages)
+
 
 # Instancia singleton del servicio
 whatsapp_service = WhatsAppService()

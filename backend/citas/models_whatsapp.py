@@ -16,6 +16,7 @@ class WhatsAppMessage(models.Model):
         ('reminder_24h', 'Recordatorio 24h'),
         ('reminder_1h', 'Recordatorio 1h'),
         ('cancellation', 'Cancelación'),
+        ('marketing', 'Marketing/Promoción'),
         ('custom', 'Personalizado'),
     ]
 
@@ -31,7 +32,10 @@ class WhatsAppMessage(models.Model):
     cita = models.ForeignKey(
         'citas.Cita',
         on_delete=models.CASCADE,
-        related_name='whatsapp_messages'
+        related_name='whatsapp_messages',
+        blank=True,
+        null=True,
+        help_text='Cita relacionada (opcional para mensajes de marketing)'
     )
     organizacion = models.ForeignKey(
         'organizacion.Organizacion',
