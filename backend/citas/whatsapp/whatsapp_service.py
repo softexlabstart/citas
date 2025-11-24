@@ -467,9 +467,10 @@ Gracias por tu comprensión."""
 
         for phone, name in zip(recipient_phones, recipient_names):
             # Crear registro en BD
+            # Usar organizacion_id en lugar de organizacion para evitar validación del router
             whatsapp_msg = WhatsAppMessage.objects.create(
                 cita=None,  # No asociado a cita específica
-                organizacion=organizacion,
+                organizacion_id=organizacion.id,
                 message_type='marketing',
                 recipient_phone=phone,
                 recipient_name=name,
