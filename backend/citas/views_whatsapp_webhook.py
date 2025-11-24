@@ -7,9 +7,11 @@ from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.utils import timezone
+from django.db import connection
 import logging
 
 from .models_whatsapp import WhatsAppMessage
+from organizacion.thread_locals import set_current_organization
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +64,41 @@ class TwilioWhatsAppWebhook(APIView):
             )
 
         try:
-            # Buscar mensaje por SID de Twilio
-            whatsapp_msg = WhatsAppMessage.objects.get(twilio_sid=message_sid)
+            # Buscar mensaje por SID de Twilio en todos los schemas
+            # Primero intentamos encontrarlo y establecer el tenant correcto
+            whatsapp_msg = None
+
+            # Buscar en todos los schemas de tenants
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT schema_name
+                    FROM information_schema.schemata
+                    WHERE schema_name LIKE 'tenant_%' OR schema_name = 'public'
+                    ORDER BY schema_name
+                """)
+                schemas = [row[0] for row in cursor.fetchall()]
+
+            for schema in schemas:
+                with connection.cursor() as cursor:
+                    cursor.execute(f"SET search_path TO {schema}")
+
+                try:
+                    msg = WhatsAppMessage.objects.get(twilio_sid=message_sid)
+                    whatsapp_msg = msg
+                    # Establecer el tenant correcto
+                    if msg.organizacion:
+                        set_current_organization(msg.organizacion)
+                        logger.info(f"[Twilio Webhook] Found message in schema {schema}, org: {msg.organizacion.nombre}")
+                    break
+                except WhatsAppMessage.DoesNotExist:
+                    continue
+
+            if not whatsapp_msg:
+                logger.error(f"[Twilio Webhook] Message with SID {message_sid} not found in any schema")
+                return Response(
+                    {'error': 'Message not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
 
             # Actualizar según el estado
             if message_status == 'delivered':
@@ -99,13 +134,6 @@ class TwilioWhatsAppWebhook(APIView):
                 logger.info(f"[Twilio Webhook] Message {message_sid} confirmed as sent")
 
             return Response({'status': 'success'}, status=status.HTTP_200_OK)
-
-        except WhatsAppMessage.DoesNotExist:
-            logger.error(f"[Twilio Webhook] Message with SID {message_sid} not found in database")
-            return Response(
-                {'error': 'Message not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
 
         except Exception as e:
             logger.error(f"[Twilio Webhook] Error processing webhook: {str(e)}", exc_info=True)
