@@ -8,6 +8,7 @@ from .views import (ServicioViewSet, CitaViewSet, HorarioViewSet,
                     NextAvailabilityView, RecursoCitaViewSet, ColaboradorViewSet)
 from .views_public import PublicCitaViewSet, InvitadoCitaView
 from .views_whatsapp_reports import WhatsAppReportsViewSet
+from .views_whatsapp_webhook import TwilioWhatsAppWebhook
 
 router = DefaultRouter()
 router.register(r'servicios', ServicioViewSet, basename='servicio')
@@ -28,5 +29,7 @@ urlpatterns = [
     # Endpoints públicos para reservas de invitados
     path('public-booking/', PublicCitaViewSet.as_view({'post': 'create'}), name='public-booking'),
     path('invitado/<int:cita_id>/', InvitadoCitaView.as_view(), name='invitado-cita'),
+    # Webhook de Twilio para actualizar estados de WhatsApp
+    path('whatsapp-webhook/', TwilioWhatsAppWebhook.as_view(), name='whatsapp-webhook'),
     path('', include(router.urls)),
 ]
