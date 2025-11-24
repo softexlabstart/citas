@@ -138,18 +138,19 @@ class OrganizacionAdmin(admin.ModelAdmin):
     @admin.display(description='Mensajes WhatsApp')
     def messages_count(self, obj):
         """Cuenta mensajes WhatsApp enviados (últimos 30 días)"""
-        from citas.models_whatsapp import WhatsAppMessage
         from django.db import connection
 
-        # Set search_path to the organization's schema
-        with connection.cursor() as cursor:
-            cursor.execute(f"SET search_path TO {obj.schema_name}")
-
         thirty_days_ago = timezone.now() - timedelta(days=30)
-        count = WhatsAppMessage.objects.filter(
-            organizacion_id=obj.id,
-            created_at__gte=thirty_days_ago
-        ).count()
+
+        # Usar SQL raw para contar mensajes en el schema del tenant
+        with connection.cursor() as cursor:
+            cursor.execute(f"""
+                SELECT COUNT(*)
+                FROM {obj.schema_name}.citas_whatsappmessage
+                WHERE organizacion_id = %s
+                AND created_at >= %s
+            """, [obj.id, thirty_days_ago])
+            count = cursor.fetchone()[0]
 
         if count > 0:
             return format_html(
@@ -193,29 +194,27 @@ class OrganizacionAdmin(admin.ModelAdmin):
     def organization_stats(self, obj):
         """Muestra estadísticas generales de la organización"""
         from django.contrib.auth.models import User
-        from citas.models import Cita
         from django.db import connection
 
-        # Set search_path to the organization's schema
-        with connection.cursor() as cursor:
-            cursor.execute(f"SET search_path TO {obj.schema_name}")
-
-        # Contar usuarios por rol
+        # Contar usuarios por rol (estos están en public)
         total_users = obj.miembros.count()
         admins = obj.miembros.filter(role='admin').count()
         colaboradores = obj.miembros.filter(Q(role='colaborador') | Q(additional_roles__contains=['colaborador'])).count()
         clientes = obj.miembros.filter(Q(role='cliente') | Q(additional_roles__contains=['cliente'])).count()
 
-        # Contar sedes
+        # Contar sedes (están en public)
         total_sedes = obj.sedes.count()
 
-        # Contar citas (últimos 30 días)
+        # Contar citas (últimos 30 días) - usando SQL raw porque están en schema del tenant
         thirty_days_ago = timezone.now() - timedelta(days=30)
         try:
-            total_citas = Cita.objects.filter(
-                sede__organizacion_id=obj.id,
-                created_at__gte=thirty_days_ago
-            ).count()
+            with connection.cursor() as cursor:
+                cursor.execute(f"""
+                    SELECT COUNT(*)
+                    FROM {obj.schema_name}.citas_cita
+                    WHERE created_at >= %s
+                """, [thirty_days_ago])
+                total_citas = cursor.fetchone()[0]
         except:
             total_citas = 0
 
@@ -252,47 +251,42 @@ class OrganizacionAdmin(admin.ModelAdmin):
         if not obj.whatsapp_enabled:
             return format_html('<p><em>WhatsApp no está habilitado</em></p>')
 
-        from citas.models_whatsapp import WhatsAppMessage
         from django.db import connection
 
-        # Set search_path to the organization's schema
-        with connection.cursor() as cursor:
-            cursor.execute(f"SET search_path TO {obj.schema_name}")
-
-        # Estadísticas de últimos 30 días
+        # Estadísticas de últimos 30 días usando SQL raw
         thirty_days_ago = timezone.now() - timedelta(days=30)
 
-        total = WhatsAppMessage.objects.filter(
-            organizacion_id=obj.id,
-            created_at__gte=thirty_days_ago
-        ).count()
+        try:
+            with connection.cursor() as cursor:
+                # Contar todos los mensajes
+                cursor.execute(f"""
+                    SELECT COUNT(*)
+                    FROM {obj.schema_name}.citas_whatsappmessage
+                    WHERE organizacion_id = %s
+                    AND created_at >= %s
+                """, [obj.id, thirty_days_ago])
+                total = cursor.fetchone()[0]
 
-        if total == 0:
-            return format_html('<p><em>No hay mensajes en los últimos 30 días</em></p>')
+                if total == 0:
+                    return format_html('<p><em>No hay mensajes en los últimos 30 días</em></p>')
 
-        sent = WhatsAppMessage.objects.filter(
-            organizacion_id=obj.id,
-            created_at__gte=thirty_days_ago,
-            status='sent'
-        ).count()
+                # Contar por estado
+                cursor.execute(f"""
+                    SELECT status, COUNT(*)
+                    FROM {obj.schema_name}.citas_whatsappmessage
+                    WHERE organizacion_id = %s
+                    AND created_at >= %s
+                    GROUP BY status
+                """, [obj.id, thirty_days_ago])
 
-        delivered = WhatsAppMessage.objects.filter(
-            organizacion_id=obj.id,
-            created_at__gte=thirty_days_ago,
-            status='delivered'
-        ).count()
+                status_counts = dict(cursor.fetchall())
+                sent = status_counts.get('sent', 0)
+                delivered = status_counts.get('delivered', 0)
+                read = status_counts.get('read', 0)
+                failed = status_counts.get('failed', 0)
 
-        read = WhatsAppMessage.objects.filter(
-            organizacion_id=obj.id,
-            created_at__gte=thirty_days_ago,
-            status='read'
-        ).count()
-
-        failed = WhatsAppMessage.objects.filter(
-            organizacion_id=obj.id,
-            created_at__gte=thirty_days_ago,
-            status='failed'
-        ).count()
+        except Exception as e:
+            return format_html('<p><em>Error al obtener estadísticas: {}</em></p>', str(e))
 
         delivery_rate = (delivered + read) / total * 100 if total > 0 else 0
 
