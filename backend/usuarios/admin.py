@@ -403,12 +403,80 @@ class AuditLogAdmin(admin.ModelAdmin):
     Admin interface for viewing audit logs.
     Read-only to prevent tampering with audit trail.
     """
-    list_display = ('timestamp', 'user', 'action', 'model_name', 'object_id', 'success', 'ip_address')
-    list_filter = ('action', 'success', 'timestamp', 'model_name')
-    search_fields = ('user__username', 'user__email', 'model_name', 'object_id', 'notes', 'ip_address')
-    readonly_fields = ('user', 'action', 'model_name', 'object_id', 'changes', 'ip_address', 'user_agent', 'timestamp', 'success', 'notes')
+    list_display = ('timestamp', 'user', 'user_organization', 'action', 'model_name', 'object_id', 'success_badge', 'ip_address')
+    list_filter = (
+        'action',
+        'success',
+        'timestamp',
+        'model_name',
+        ('user__perfiles__organizacion', admin.RelatedOnlyFieldListFilter),
+    )
+    search_fields = ('user__username', 'user__email', 'model_name', 'object_id', 'notes', 'ip_address', 'user__perfiles__organizacion__nombre')
+    readonly_fields = ('user', 'action', 'model_name', 'object_id', 'changes_display', 'ip_address', 'user_agent', 'timestamp', 'success', 'notes')
     ordering = ('-timestamp',)
     date_hierarchy = 'timestamp'
+    list_select_related = ('user',)
+
+    fieldsets = (
+        ('Usuario y Acción', {
+            'fields': ('user', 'action', 'timestamp', 'success')
+        }),
+        ('Objeto Afectado', {
+            'fields': ('model_name', 'object_id', 'changes_display')
+        }),
+        ('Contexto', {
+            'fields': ('ip_address', 'user_agent', 'notes'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    @admin.display(description='Organización')
+    def user_organization(self, obj):
+        """Muestra la organización del usuario"""
+        if obj.user:
+            from usuarios.utils import get_perfil_or_first
+            perfil = get_perfil_or_first(obj.user)
+            if perfil and perfil.organizacion:
+                from django.utils.html import format_html
+                from django.urls import reverse
+                url = reverse('admin:organizacion_organizacion_change', args=[perfil.organizacion.pk])
+                return format_html(
+                    '<a href="{}">{}</a>',
+                    url,
+                    perfil.organizacion.nombre
+                )
+        return '-'
+
+    @admin.display(description='Éxito')
+    def success_badge(self, obj):
+        """Muestra el estado de éxito con badge"""
+        from django.utils.html import format_html
+        if obj.success:
+            return format_html(
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px;">✓ Sí</span>'
+            )
+        else:
+            return format_html(
+                '<span style="background-color: #dc3545; color: white; padding: 3px 10px; border-radius: 3px;">✗ No</span>'
+            )
+
+    @admin.display(description='Cambios')
+    def changes_display(self, obj):
+        """Muestra los cambios en formato legible"""
+        from django.utils.html import format_html
+        import json
+
+        if not obj.changes:
+            return '-'
+
+        try:
+            changes_json = json.dumps(obj.changes, indent=2, ensure_ascii=False)
+            return format_html(
+                '<pre style="background: #f8f9fa; padding: 10px; border-radius: 5px; max-width: 600px; overflow-x: auto;">{}</pre>',
+                changes_json
+            )
+        except:
+            return str(obj.changes)
 
     def has_add_permission(self, request):
         # No permitir creación manual de audit logs
@@ -421,4 +489,17 @@ class AuditLogAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # Solo superusuarios pueden eliminar logs (para limpieza de datos antiguos)
         return request.user.is_superuser
+
+    def get_queryset(self, request):
+        """Filtrar logs por organización si no es superuser"""
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+
+        from usuarios.utils import get_perfil_or_first
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.organizacion:
+            return qs.filter(user__perfiles__organizacion=perfil.organizacion)
+
+        return qs.none()
 

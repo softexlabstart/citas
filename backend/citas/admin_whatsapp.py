@@ -16,15 +16,16 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
         'recipient_name',
         'recipient_phone',
         'status_badge',
-        'organizacion',
+        'organizacion_link',
         'created_at',
+        'delivered_at',
     ]
 
     list_filter = [
         'status',
         'message_type',
         'created_at',
-        'organizacion',
+        ('organizacion', admin.RelatedOnlyFieldListFilter),
     ]
 
     search_fields = [
@@ -32,6 +33,7 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
         'recipient_phone',
         'message_body',
         'twilio_sid',
+        'organizacion__nombre',
     ]
 
     readonly_fields = [
@@ -40,7 +42,7 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
         'message_type',
         'recipient_phone',
         'recipient_name',
-        'message_body',
+        'message_body_display',
         'status',
         'twilio_sid',
         'twilio_status',
@@ -53,6 +55,10 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
         'updated_at',
     ]
 
+    list_select_related = ['organizacion', 'cita']
+    date_hierarchy = 'created_at'
+    actions = ['retry_failed_messages']
+
     fieldsets = (
         ('Información General', {
             'fields': ('cita', 'organizacion', 'message_type', 'status')
@@ -61,7 +67,7 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
             'fields': ('recipient_name', 'recipient_phone')
         }),
         ('Mensaje', {
-            'fields': ('message_body',)
+            'fields': ('message_body_display',)
         }),
         ('Twilio', {
             'fields': ('twilio_sid', 'twilio_status', 'cost'),
@@ -77,6 +83,35 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
         }),
     )
 
+    @admin.display(description='Organización', ordering='organizacion__nombre')
+    def organizacion_link(self, obj):
+        """Link clickeable a la organización"""
+        if obj.organizacion:
+            from django.urls import reverse
+            url = reverse('admin:organizacion_organizacion_change', args=[obj.organizacion.pk])
+            return format_html(
+                '<a href="{}">{}</a>',
+                url,
+                obj.organizacion.nombre
+            )
+        return '-'
+
+    @admin.display(description='Mensaje')
+    def message_body_display(self, obj):
+        """Muestra el mensaje con formato"""
+        if obj.message_body:
+            # Truncar si es muy largo
+            max_length = 500
+            text = obj.message_body
+            if len(text) > max_length:
+                text = text[:max_length] + '...'
+            return format_html(
+                '<div style="white-space: pre-wrap; background: #f8f9fa; padding: 10px; border-radius: 5px;">{}</div>',
+                text
+            )
+        return '-'
+
+    @admin.display(description='Tipo')
     def message_type_badge(self, obj):
         """Display message type with color badge"""
         colors = {
@@ -84,6 +119,7 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
             'reminder_24h': '#ffc107',
             'reminder_1h': '#fd7e14',
             'cancellation': '#dc3545',
+            'marketing': '#17a2b8',
             'custom': '#6c757d',
         }
         color = colors.get(obj.message_type, '#6c757d')
@@ -92,8 +128,8 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
             color,
             obj.get_message_type_display()
         )
-    message_type_badge.short_description = 'Tipo'
 
+    @admin.display(description='Estado')
     def status_badge(self, obj):
         """Display status with color badge"""
         colors = {
@@ -104,12 +140,37 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
             'failed': '#dc3545',
         }
         color = colors.get(obj.status, '#6c757d')
+        icon = {
+            'pending': '⏳',
+            'sent': '✉️',
+            'delivered': '✓',
+            'read': '✓✓',
+            'failed': '✗',
+        }.get(obj.status, '')
+
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 10px; border-radius: 3px;">{}</span>',
+            '<span style="background-color: {}; color: white; padding: 3px 10px; border-radius: 3px;">{} {}</span>',
             color,
+            icon,
             obj.get_status_display()
         )
-    status_badge.short_description = 'Estado'
+
+    @admin.action(description='Reintentar mensajes fallidos')
+    def retry_failed_messages(self, request, queryset):
+        """Reintenta enviar mensajes que fallaron"""
+        failed_messages = queryset.filter(status='failed')
+        count = failed_messages.count()
+
+        if count == 0:
+            self.message_user(request, 'No hay mensajes fallidos seleccionados', level='warning')
+            return
+
+        # Aquí podrías implementar la lógica de reintento
+        self.message_user(
+            request,
+            f'Función de reintento no implementada aún. {count} mensajes seleccionados.',
+            level='info'
+        )
 
     def has_add_permission(self, request):
         """No permitir crear mensajes manualmente"""
@@ -118,6 +179,19 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         """Solo superusers pueden eliminar"""
         return request.user.is_superuser
+
+    def get_queryset(self, request):
+        """Filtrar por organización si no es superuser"""
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+
+        from usuarios.utils import get_perfil_or_first
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.organizacion:
+            return qs.filter(organizacion=perfil.organizacion)
+
+        return qs.none()
 
 
 @admin.register(WhatsAppReminderSchedule)
