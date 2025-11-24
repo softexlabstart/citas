@@ -9,6 +9,7 @@ from usuarios.utils import get_perfil_or_first
 from citas.whatsapp.whatsapp_service import whatsapp_service
 from django.core.files.storage import default_storage
 from django.conf import settings
+from organizacion.thread_locals import set_current_organization
 import os
 
 class SendMarketingEmailView(APIView):
@@ -201,6 +202,9 @@ class SendMarketingWhatsAppView(APIView):
             )
 
         try:
+            # Establecer tenant actual para el router de BD
+            set_current_organization(organizacion)
+
             # Enviar mensajes
             sent_count, failed_count, messages = whatsapp_service.send_bulk_marketing_message(
                 organizacion=organizacion,
