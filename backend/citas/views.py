@@ -213,50 +213,23 @@ class ServicioViewSet(viewsets.ModelViewSet):
                         queryset = queryset.filter(sede_id=sede_id)
                     return queryset
 
-        # COLABORADOR: servicios de su sede o sedes asignadas en el perfil
+        # COLABORADOR: puede ver servicios de TODAS las sedes de su organización
+        # Esto permite que los colaboradores agenden citas para clientes en cualquier sede
         if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
             colaborador = Colaborador.all_objects.get(usuario=user)
             org = colaborador.sede.organizacion
 
-            logger.info(f"[SERVICIOS] Colaborador: {user.username}, Sede: {colaborador.sede.id} ({colaborador.sede.nombre})")
+            logger.info(f"[SERVICIOS] Colaborador: {user.username}, Sede asignada: {colaborador.sede.id} ({colaborador.sede.nombre}), Org: {org.nombre}")
 
-            # Obtener sedes a las que tiene acceso
-            # Prioridad: perfil.sedes > colaborador.sede
-            sedes_acceso = []
-            perfil = get_perfil_or_first(user)
-            if perfil:
-                # SECURITY: Usar Django ORM en lugar de SQL raw
-                # Las relaciones ManyToMany no pasan por OrganizationManager
-                sedes_acceso = list(perfil.sedes.values_list('id', flat=True))
-                logger.info(f"[SERVICIOS] Sedes del perfil: {sedes_acceso}")
-
-                if not sedes_acceso and perfil.sede:
-                    sedes_acceso = [perfil.sede.id]
-                    logger.info(f"[SERVICIOS] Usando sede del perfil: {sedes_acceso}")
-
-            # FIX: Si el perfil no tiene sedes, usar la sede del colaborador
-            if not sedes_acceso:
-                sedes_acceso = [colaborador.sede.id]
-                logger.info(f"[SERVICIOS] Usando sede del colaborador: {sedes_acceso}")
-
-            logger.info(f"[SERVICIOS] Sedes finales de acceso: {sedes_acceso}, Sede solicitada: {sede_id}")
-
-            # Si tiene sedes específicas asignadas, mostrar solo servicios de esas sedes
-            if sedes_acceso:
-                if sede_id:
-                    # Validar que la sede solicitada esté en sus sedes asignadas
-                    if int(sede_id) in sedes_acceso:
-                        logger.info(f"[SERVICIOS] Acceso permitido a sede {sede_id}")
-                        return queryset.filter(sede_id=sede_id)
-                    logger.warning(f"[SERVICIOS] Acceso DENEGADO a sede {sede_id}. Sedes permitidas: {sedes_acceso}")
-                    return Servicio.all_objects.none()
-                # Sin sede_id, mostrar servicios de todas sus sedes asignadas
-                return queryset.filter(sede_id__in=sedes_acceso)
-
-            # Fallback: Si aún no tiene sedes (no debería pasar), mostrar servicios de toda su organización
+            # Los colaboradores pueden ver servicios de TODA su organización
             queryset = queryset.filter(sede__organizacion=org)
+
+            # Si se solicita una sede específica, filtrar por ella
             if sede_id:
+                logger.info(f"[SERVICIOS] Filtrando por sede solicitada: {sede_id}")
                 queryset = queryset.filter(sede_id=sede_id)
+
+            logger.info(f"[SERVICIOS] Retornando {queryset.count()} servicios")
             return queryset
 
         # CLIENTE: servicios de sus sedes asignadas o sede principal
