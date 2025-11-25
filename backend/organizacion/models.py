@@ -171,7 +171,7 @@ class Organizacion(models.Model):  # type: ignore
 
     def _setup_tenant_schema(self):
         """
-        Crea el schema de PostgreSQL y ejecuta las migraciones para este tenant.
+        Crea el schema de PostgreSQL y las tablas para este tenant.
         Se ejecuta automáticamente cuando se crea una nueva organización.
         """
         try:
@@ -182,19 +182,40 @@ class Organizacion(models.Model):  # type: ignore
                 cursor.execute(f'CREATE SCHEMA IF NOT EXISTS "{self.schema_name}"')
                 logger.info(f"[TENANT SETUP] Schema {self.schema_name} creado exitosamente")
 
-            # Ejecutar migraciones solo para las apps del tenant (citas)
-            logger.info(f"[TENANT SETUP] Ejecutando migraciones en schema {self.schema_name}")
+                # Copiar la estructura de las tablas desde public al nuevo schema
+                logger.info(f"[TENANT SETUP] Copiando estructura de tablas al schema {self.schema_name}")
 
-            # Cambiar temporalmente el search_path
-            with connection.cursor() as cursor:
-                cursor.execute(f'SET search_path TO "{self.schema_name}", public')
+                # Copiar tabla citas_cita
+                cursor.execute(f'''
+                    CREATE TABLE IF NOT EXISTS "{self.schema_name}".citas_cita
+                    (LIKE public.citas_cita INCLUDING ALL)
+                ''')
 
-            # Ejecutar migrate solo para la app 'citas' que contiene las tablas tenant-specific
-            call_command('migrate', 'citas', '--run-syncdb', verbosity=0)
+                # Copiar tabla citas_whatsapp_message
+                cursor.execute(f'''
+                    CREATE TABLE IF NOT EXISTS "{self.schema_name}".citas_whatsapp_message
+                    (LIKE public.citas_whatsapp_message INCLUDING ALL)
+                ''')
 
-            # Restaurar el search_path al public
-            with connection.cursor() as cursor:
-                cursor.execute('SET search_path TO public')
+                # Copiar tabla citas_servicio
+                cursor.execute(f'''
+                    CREATE TABLE IF NOT EXISTS "{self.schema_name}".citas_servicio
+                    (LIKE public.citas_servicio INCLUDING ALL)
+                ''')
+
+                # Copiar tabla citas_cita_servicios (many-to-many)
+                cursor.execute(f'''
+                    CREATE TABLE IF NOT EXISTS "{self.schema_name}".citas_cita_servicios
+                    (LIKE public.citas_cita_servicios INCLUDING ALL)
+                ''')
+
+                # Copiar tabla citas_cita_colaboradores (many-to-many)
+                cursor.execute(f'''
+                    CREATE TABLE IF NOT EXISTS "{self.schema_name}".citas_cita_colaboradores
+                    (LIKE public.citas_cita_colaboradores INCLUDING ALL)
+                ''')
+
+                logger.info(f"[TENANT SETUP] Tablas creadas exitosamente en schema {self.schema_name}")
 
             logger.info(f"[TENANT SETUP] Tenant {self.nombre} configurado exitosamente")
 
