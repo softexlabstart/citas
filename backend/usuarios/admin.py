@@ -1,6 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib import messages
+from django.utils.html import format_html
+from django.urls import reverse
 from .models import PerfilUsuario, OnboardingProgress, FailedLoginAttempt, ActiveJWTToken, AuditLog
 from organizacion.models import Sede, Organizacion
 import hashlib
@@ -503,3 +506,211 @@ class AuditLogAdmin(admin.ModelAdmin):
 
         return qs.none()
 
+
+# ==================== USER ADMIN PERSONALIZADO ====================
+
+class PerfilUsuarioInline(admin.TabularInline):
+    """Inline para mostrar perfiles del usuario"""
+    model = PerfilUsuario
+    extra = 0
+    fields = ('organizacion', 'role', 'additional_roles', 'sede', 'is_active')
+    readonly_fields = ('role', 'organizacion', 'sede')
+    can_delete = False
+    show_change_link = True
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+# Desregistrar el admin por defecto de User
+admin.site.unregister(User)
+
+
+@admin.register(User)
+class CustomUserAdmin(BaseUserAdmin):
+    """
+    Admin personalizado para User con información multi-organización.
+    Extiende el UserAdmin de Django con funcionalidad de perfiles.
+    """
+    inlines = [PerfilUsuarioInline]
+
+    list_display = (
+        'username',
+        'email',
+        'first_name',
+        'last_name',
+        'get_organizations',
+        'get_roles',
+        'is_active',
+        'date_joined_short',
+        'last_login_short',
+    )
+
+    list_filter = (
+        'is_active',
+        'is_staff',
+        'is_superuser',
+        'date_joined',
+        ('perfiles__organizacion', admin.RelatedOnlyFieldListFilter),
+        ('perfiles__role', admin.ChoicesFieldListFilter),
+    )
+
+    search_fields = (
+        'username',
+        'email',
+        'first_name',
+        'last_name',
+        'perfiles__organizacion__nombre',
+    )
+
+    readonly_fields = BaseUserAdmin.readonly_fields + (
+        'get_all_perfiles_info',
+        'get_login_history',
+    )
+
+    # Modificar fieldsets para agregar información de perfiles
+    fieldsets = BaseUserAdmin.fieldsets + (
+        ('📊 Información Multi-Organización', {
+            'fields': ('get_all_perfiles_info', 'get_login_history'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    @admin.display(description='Organizaciones')
+    def get_organizations(self, obj):
+        """Muestra todas las organizaciones del usuario"""
+        perfiles = obj.perfiles.select_related('organizacion').all()
+        if not perfiles.exists():
+            return format_html('<span style="color: #999;">Sin organización</span>')
+
+        org_names = []
+        for perfil in perfiles:
+            if perfil.organizacion:
+                url = reverse('admin:organizacion_organizacion_change', args=[perfil.organizacion.pk])
+                org_names.append(f'<a href="{url}">{perfil.organizacion.nombre}</a>')
+
+        return format_html('<br>'.join(org_names) if org_names else '-')
+
+    @admin.display(description='Roles')
+    def get_roles(self, obj):
+        """Muestra todos los roles del usuario en formato badge"""
+        perfiles = obj.perfiles.all()
+        if not perfiles.exists():
+            return '-'
+
+        role_names = {
+            'owner': ('Propietario', '#6f42c1'),
+            'admin': ('Admin', '#007bff'),
+            'sede_admin': ('Admin Sede', '#17a2b8'),
+            'colaborador': ('Colaborador', '#28a745'),
+            'cliente': ('Cliente', '#ffc107')
+        }
+
+        roles_set = set()
+        for perfil in perfiles:
+            roles_set.add(perfil.role)
+            if perfil.additional_roles:
+                roles_set.update(perfil.additional_roles)
+
+        badges = []
+        for role in roles_set:
+            label, color = role_names.get(role, (role, '#6c757d'))
+            badges.append(
+                f'<span style="background-color: {color}; color: white; padding: 2px 8px; '
+                f'border-radius: 3px; font-size: 11px; margin-right: 4px;">{label}</span>'
+            )
+
+        return format_html(''.join(badges))
+
+    @admin.display(description='Registro')
+    def date_joined_short(self, obj):
+        """Muestra fecha de registro en formato corto"""
+        return obj.date_joined.strftime('%d/%m/%Y')
+
+    @admin.display(description='Último Login')
+    def last_login_short(self, obj):
+        """Muestra último login en formato corto"""
+        if obj.last_login:
+            return obj.last_login.strftime('%d/%m/%Y %H:%M')
+        return '-'
+
+    @admin.display(description='Información de Perfiles')
+    def get_all_perfiles_info(self, obj):
+        """Muestra información detallada de todos los perfiles"""
+        perfiles = obj.perfiles.select_related('organizacion', 'sede').all()
+
+        if not perfiles.exists():
+            return format_html('<p><em>Este usuario no tiene perfiles asociados</em></p>')
+
+        html = '<div style="background: #f8f9fa; padding: 15px; border-radius: 5px;">'
+        html += '<h3 style="margin-top: 0;">Perfiles del Usuario</h3>'
+
+        for perfil in perfiles:
+            org_name = perfil.organizacion.nombre if perfil.organizacion else 'Sin organización'
+            sede_name = perfil.sede.nombre if perfil.sede else 'Sin sede'
+
+            html += '<div style="background: white; padding: 10px; margin-bottom: 10px; border-left: 3px solid #007bff;">'
+            html += f'<strong>Organización:</strong> {org_name}<br>'
+            html += f'<strong>Rol Principal:</strong> {perfil.get_role_display()}<br>'
+
+            if perfil.additional_roles:
+                roles_display = ', '.join([perfil.get_role_display() for r in perfil.additional_roles])
+                html += f'<strong>Roles Adicionales:</strong> {roles_display}<br>'
+
+            html += f'<strong>Sede:</strong> {sede_name}<br>'
+            html += f'<strong>Estado:</strong> {"✅ Activo" if perfil.is_active else "❌ Inactivo"}<br>'
+
+            # Link al perfil
+            perfil_url = reverse('admin:usuarios_perfilusuario_change', args=[perfil.pk])
+            html += f'<a href="{perfil_url}" style="color: #007bff;">Ver detalles del perfil →</a>'
+            html += '</div>'
+
+        html += '</div>'
+        return format_html(html)
+
+    @admin.display(description='Historial de Login')
+    def get_login_history(self, obj):
+        """Muestra historial de sesiones activas"""
+        tokens = ActiveJWTToken.objects.filter(user=obj).order_by('-last_used')[:5]
+
+        if not tokens.exists():
+            return format_html('<p><em>No hay sesiones activas</em></p>')
+
+        html = '<div style="background: #fff3cd; padding: 15px; border-radius: 5px;">'
+        html += '<h3 style="margin-top: 0;">Últimas 5 Sesiones</h3>'
+        html += '<table style="width: 100%; font-size: 12px;">'
+        html += '<tr><th>Dispositivo</th><th>IP</th><th>Último Uso</th><th>Expira</th></tr>'
+
+        for token in tokens:
+            from django.utils import timezone
+            is_expired = token.expires_at < timezone.now()
+            status_color = '#dc3545' if is_expired else '#28a745'
+
+            html += f'<tr>'
+            html += f'<td>{token.device_info or "Desconocido"}</td>'
+            html += f'<td>{token.ip_address or "-"}</td>'
+            html += f'<td>{token.last_used.strftime("%d/%m/%Y %H:%M")}</td>'
+            html += f'<td style="color: {status_color};">'
+            html += f'{"Expirado" if is_expired else token.expires_at.strftime("%d/%m/%Y")}'
+            html += f'</td>'
+            html += f'</tr>'
+
+        html += '</table>'
+        html += '</div>'
+        return format_html(html)
+
+    def get_queryset(self, request):
+        """Filtrar usuarios por organización si no es superuser"""
+        qs = super().get_queryset(request)
+
+        if request.user.is_superuser:
+            return qs.prefetch_related('perfiles__organizacion')
+
+        perfil = get_perfil_or_first(request.user)
+        if perfil and perfil.organizacion:
+            # Mostrar usuarios que pertenecen a la misma organización
+            return qs.filter(
+                perfiles__organizacion=perfil.organizacion
+            ).distinct().prefetch_related('perfiles__organizacion')
+
+        return qs.none()
