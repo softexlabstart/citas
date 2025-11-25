@@ -289,8 +289,9 @@ class OrganizacionAdmin(admin.ModelAdmin):
                 read = status_counts.get('read', 0)
                 failed = status_counts.get('failed', 0)
 
-        except Exception as e:
-            return format_html('<p><em>Error al obtener estadísticas: {}</em></p>', str(e))
+        except Exception:
+            # Si la tabla no existe en el schema (ej: migraciones pendientes)
+            return format_html('<p><em>No hay datos disponibles (tabla no encontrada en schema)</em></p>')
 
         delivery_rate = (delivered + read) / total * 100 if total > 0 else 0
 
