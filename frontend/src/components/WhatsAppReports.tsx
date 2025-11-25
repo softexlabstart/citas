@@ -21,7 +21,7 @@ const WhatsAppReports: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalMessages, setTotalMessages] = useState(0);
-    const pageSize = 20;
+    const pageSize = 10;
 
     const fetchData = async () => {
         setLoading(true);
