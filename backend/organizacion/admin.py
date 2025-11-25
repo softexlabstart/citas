@@ -143,14 +143,18 @@ class OrganizacionAdmin(admin.ModelAdmin):
         thirty_days_ago = timezone.now() - timedelta(days=30)
 
         # Usar SQL raw para contar mensajes en el schema del tenant
-        with connection.cursor() as cursor:
-            cursor.execute(f"""
-                SELECT COUNT(*)
-                FROM {obj.schema_name}.citas_whatsappmessage
-                WHERE organizacion_id = %s
-                AND created_at >= %s
-            """, [obj.id, thirty_days_ago])
-            count = cursor.fetchone()[0]
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(f"""
+                    SELECT COUNT(*)
+                    FROM "{obj.schema_name}"."citas_whatsappmessage"
+                    WHERE organizacion_id = %s
+                    AND created_at >= %s
+                """, [obj.id, thirty_days_ago])
+                count = cursor.fetchone()[0]
+        except Exception:
+            # Si falla, probablemente no hay tabla en ese schema
+            count = 0
 
         if count > 0:
             return format_html(
@@ -211,11 +215,11 @@ class OrganizacionAdmin(admin.ModelAdmin):
             with connection.cursor() as cursor:
                 cursor.execute(f"""
                     SELECT COUNT(*)
-                    FROM {obj.schema_name}.citas_cita
+                    FROM "{obj.schema_name}"."citas_cita"
                     WHERE created_at >= %s
                 """, [thirty_days_ago])
                 total_citas = cursor.fetchone()[0]
-        except:
+        except Exception:
             total_citas = 0
 
         html = f"""
@@ -261,7 +265,7 @@ class OrganizacionAdmin(admin.ModelAdmin):
                 # Contar todos los mensajes
                 cursor.execute(f"""
                     SELECT COUNT(*)
-                    FROM {obj.schema_name}.citas_whatsappmessage
+                    FROM "{obj.schema_name}"."citas_whatsappmessage"
                     WHERE organizacion_id = %s
                     AND created_at >= %s
                 """, [obj.id, thirty_days_ago])
@@ -273,7 +277,7 @@ class OrganizacionAdmin(admin.ModelAdmin):
                 # Contar por estado
                 cursor.execute(f"""
                     SELECT status, COUNT(*)
-                    FROM {obj.schema_name}.citas_whatsappmessage
+                    FROM "{obj.schema_name}"."citas_whatsappmessage"
                     WHERE organizacion_id = %s
                     AND created_at >= %s
                     GROUP BY status
