@@ -246,9 +246,13 @@ FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://www.softex-labs.xyz')
 
 CORS_ALLOWED_ORIGINS = [
     'http://16.52.17.116',
+    'https://16.52.17.116',
+    'http://52.44.192.66',
+    'https://52.44.192.66',
     'http://appcitas.softex-labs.xyz',
     'https://appcitas.softex-labs.xyz',  # Backend API (HTTPS)
     'https://admin.softex-labs.xyz',  # Django Admin
+    'http://admin.softex-labs.xyz',  # Django Admin (HTTP)
     'https://www.softex-labs.xyz',  # Frontend principal (React)
     'https://softex-labs.xyz',  # Sin www
     'http://localhost:3000',
@@ -256,6 +260,20 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:3002',
     'http://127.0.0.1:3002',
 ]
+
+# CORS: Allow all headers needed for JWT authentication
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
 CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {
@@ -306,16 +324,54 @@ SIMPLE_JWT = {
 AXES_FAILURE_LIMIT = 5  # Lock out after 5 failed attempts
 AXES_COOLOFF_TIME = 1   # Wait 1 hour before allowing attempts again
 
-# CSP Configuration
+# CSP Configuration - Permitir HTTP y HTTPS
 CSP_DEFAULT_SRC = ('self',)
-CSP_SCRIPT_SRC = ('self', 'http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3002', 'http://127.0.0.1:3002', 'http://appcitas.softex-labs.xyz', 'http://16.52.17.116', 'http://admin.softex-labs.xyz')
-CSP_STYLE_SRC = ('self', 'unsafe-inline', 'http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3002', 'http://127.0.0.1:3002', 'http://appcitas.softex-labs.xyz', 'http://16.52.17.116', 'http://admin.softex-labs.xyz')
-CSP_IMG_SRC = ('self', 'data:', 'http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3002', 'http://127.0.0.1:3002', 'http://appcitas.softex-labs.xyz', 'http://16.52.17.116', 'http://admin.softex-labs.xyz')
+CSP_SCRIPT_SRC = (
+    'self',
+    'http://localhost:3000', 'http://127.0.0.1:3000',
+    'http://localhost:3002', 'http://127.0.0.1:3002',
+    'http://appcitas.softex-labs.xyz', 'https://appcitas.softex-labs.xyz',
+    'http://16.52.17.116', 'https://16.52.17.116',
+    'http://admin.softex-labs.xyz', 'https://admin.softex-labs.xyz',
+    'https://www.softex-labs.xyz', 'https://softex-labs.xyz'
+)
+CSP_STYLE_SRC = (
+    'self', 'unsafe-inline',
+    'http://localhost:3000', 'http://127.0.0.1:3000',
+    'http://localhost:3002', 'http://127.0.0.1:3002',
+    'http://appcitas.softex-labs.xyz', 'https://appcitas.softex-labs.xyz',
+    'http://16.52.17.116', 'https://16.52.17.116',
+    'http://admin.softex-labs.xyz', 'https://admin.softex-labs.xyz',
+    'https://www.softex-labs.xyz', 'https://softex-labs.xyz'
+)
+CSP_IMG_SRC = (
+    'self', 'data:',
+    'http://localhost:3000', 'http://127.0.0.1:3000',
+    'http://localhost:3002', 'http://127.0.0.1:3002',
+    'http://appcitas.softex-labs.xyz', 'https://appcitas.softex-labs.xyz',
+    'http://16.52.17.116', 'https://16.52.17.116',
+    'http://admin.softex-labs.xyz', 'https://admin.softex-labs.xyz',
+    'https://www.softex-labs.xyz', 'https://softex-labs.xyz'
+)
 CSP_FONT_SRC = ('self',)
-CSP_CONNECT_SRC = ('self', 'http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3002', 'http://127.0.0.1:3002', 'http://appcitas.softex-labs.xyz', 'http://16.52.17.116', 'http://admin.softex-labs.xyz')
+CSP_CONNECT_SRC = (
+    'self',
+    'http://localhost:3000', 'http://127.0.0.1:3000',
+    'http://localhost:3002', 'http://127.0.0.1:3002',
+    'http://appcitas.softex-labs.xyz', 'https://appcitas.softex-labs.xyz',
+    'http://16.52.17.116', 'https://16.52.17.116',
+    'http://52.44.192.66', 'https://52.44.192.66',
+    'http://admin.softex-labs.xyz', 'https://admin.softex-labs.xyz',
+    'https://www.softex-labs.xyz', 'https://softex-labs.xyz'
+)
 CSP_FRAME_ANCESTORS = ('none',)
 CSP_BASE_URI = ('self',)
-CSP_FORM_ACTION = ('self', 'http://16.52.17.116', 'http://appcitas.softex-labs.xyz', 'http://admin.softex-labs.xyz')
+CSP_FORM_ACTION = (
+    'self',
+    'http://16.52.17.116', 'https://16.52.17.116',
+    'http://appcitas.softex-labs.xyz', 'https://appcitas.softex-labs.xyz',
+    'http://admin.softex-labs.xyz', 'https://admin.softex-labs.xyz'
+)
 
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = config('SMTP_HOST', default='')
