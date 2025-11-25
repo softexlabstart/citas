@@ -392,11 +392,16 @@ Gracias por tu comprensión."""
             # Formatear número
             to_number = self.format_phone_number(recipient_phone)
 
+            # URL del webhook para recibir actualizaciones de estado
+            from django.conf import settings
+            webhook_url = f"{settings.FRONTEND_URL}/api/citas/whatsapp-webhook/"
+
             # Enviar via Twilio
             message = self.client.messages.create(
                 from_=self.from_number,
                 to=to_number,
-                body=message_body
+                body=message_body,
+                status_callback=webhook_url  # Twilio llamará a esta URL con actualizaciones
             )
 
             # Actualizar registro con éxito
@@ -482,11 +487,16 @@ Gracias por tu comprensión."""
                 # Formatear número
                 to_number = self.format_phone_number(phone)
 
+                # URL del webhook para recibir actualizaciones de estado
+                from django.conf import settings
+                webhook_url = f"{settings.FRONTEND_URL}/api/citas/whatsapp-webhook/"
+
                 # Preparar parámetros del mensaje
                 message_params = {
                     'from_': self.from_number,
                     'to': to_number,
-                    'body': message_body
+                    'body': message_body,
+                    'status_callback': webhook_url  # Twilio llamará a esta URL con actualizaciones
                 }
 
                 # Agregar media si está presente
