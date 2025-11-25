@@ -575,8 +575,8 @@ export const switchOrganization = (organizationId: number) => {
 export const getWhatsAppReportsSummary = (days: number = 30) =>
     api.get(`/api/citas/whatsapp-reports/summary/?days=${days}`);
 
-export const getWhatsAppRecentMessages = (limit: number = 50, status?: string, messageType?: string) => {
-    let url = `/api/citas/whatsapp-reports/recent_messages/?limit=${limit}`;
+export const getWhatsAppRecentMessages = (page: number = 1, pageSize: number = 20, status?: string, messageType?: string) => {
+    let url = `/api/citas/whatsapp-reports/recent_messages/?page=${page}&page_size=${pageSize}`;
     if (status) url += `&status=${status}`;
     if (messageType) url += `&message_type=${messageType}`;
     return api.get(url);

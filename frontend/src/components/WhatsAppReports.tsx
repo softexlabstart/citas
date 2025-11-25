@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Table, Badge, Spinner, Alert, Form } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Badge, Spinner, Alert, Form, Pagination } from 'react-bootstrap';
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, LineElement, PointElement } from 'chart.js';
 import { Pie, Bar, Line } from 'react-chartjs-2';
 import { getWhatsAppReportsSummary, getWhatsAppRecentMessages, getWhatsAppDeliveryPerformance } from '../api';
@@ -11,11 +11,17 @@ const WhatsAppReports: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [days, setDays] = useState(30);
-    
+
     // Estados para datos
     const [summary, setSummary] = useState<any>(null);
     const [recentMessages, setRecentMessages] = useState<any[]>([]);
     const [performance, setPerformance] = useState<any[]>([]);
+
+    // Estados para paginación
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalMessages, setTotalMessages] = useState(0);
+    const pageSize = 20;
 
     const fetchData = async () => {
         setLoading(true);
@@ -26,9 +32,11 @@ const WhatsAppReports: React.FC = () => {
             const summaryRes = await getWhatsAppReportsSummary(days);
             setSummary(summaryRes.data);
 
-            // Fetch recent messages
-            const messagesRes = await getWhatsAppRecentMessages(50);
+            // Fetch recent messages with pagination
+            const messagesRes = await getWhatsAppRecentMessages(currentPage, pageSize);
             setRecentMessages(messagesRes.data.messages);
+            setTotalPages(messagesRes.data.total_pages);
+            setTotalMessages(messagesRes.data.total);
 
             // Fetch performance
             const perfRes = await getWhatsAppDeliveryPerformance(days);
@@ -44,7 +52,7 @@ const WhatsAppReports: React.FC = () => {
 
     useEffect(() => {
         fetchData();
-    }, [days]);
+    }, [days, currentPage]);
 
     const getStatusBadge = (status: string) => {
         const statusConfig: Record<string, { variant: string; label: string }> = {
@@ -257,7 +265,14 @@ const WhatsAppReports: React.FC = () => {
             <Row>
                 <Col>
                     <Card>
-                        <Card.Header>Mensajes Recientes</Card.Header>
+                        <Card.Header>
+                            <div className="d-flex justify-content-between align-items-center">
+                                <span>Mensajes Recientes</span>
+                                <small className="text-muted">
+                                    {totalMessages} mensaje{totalMessages !== 1 ? 's' : ''} en total
+                                </small>
+                            </div>
+                        </Card.Header>
                         <Card.Body>
                             <Table striped hover responsive>
                                 <thead>
@@ -271,22 +286,79 @@ const WhatsAppReports: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {recentMessages.map((msg: any) => (
-                                        <tr key={msg.id}>
-                                            <td>{new Date(msg.created_at).toLocaleString('es-CO')}</td>
-                                            <td>{getMessageTypeLabel(msg.message_type)}</td>
-                                            <td>{msg.recipient_name}</td>
-                                            <td className="text-muted">{msg.recipient_phone}</td>
-                                            <td>{getStatusBadge(msg.status)}</td>
-                                            <td>
-                                                {msg.cita_id && (
-                                                    <a href={`#/appointments?cita=${msg.cita_id}`}>#{msg.cita_id}</a>
-                                                )}
+                                    {recentMessages.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="text-center text-muted">
+                                                No hay mensajes para mostrar
                                             </td>
                                         </tr>
-                                    ))}
+                                    ) : (
+                                        recentMessages.map((msg: any) => (
+                                            <tr key={msg.id}>
+                                                <td>{new Date(msg.created_at).toLocaleString('es-CO')}</td>
+                                                <td>{getMessageTypeLabel(msg.message_type)}</td>
+                                                <td>{msg.recipient_name}</td>
+                                                <td className="text-muted">{msg.recipient_phone}</td>
+                                                <td>{getStatusBadge(msg.status)}</td>
+                                                <td>
+                                                    {msg.cita_id && (
+                                                        <a href={`#/appointments?cita=${msg.cita_id}`}>#{msg.cita_id}</a>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </Table>
+
+                            {/* Paginación */}
+                            {totalPages > 1 && (
+                                <div className="d-flex justify-content-center mt-3">
+                                    <Pagination>
+                                        <Pagination.First
+                                            onClick={() => setCurrentPage(1)}
+                                            disabled={currentPage === 1}
+                                        />
+                                        <Pagination.Prev
+                                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                            disabled={currentPage === 1}
+                                        />
+
+                                        {/* Mostrar páginas cercanas */}
+                                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                            let pageNum;
+                                            if (totalPages <= 5) {
+                                                pageNum = i + 1;
+                                            } else if (currentPage <= 3) {
+                                                pageNum = i + 1;
+                                            } else if (currentPage >= totalPages - 2) {
+                                                pageNum = totalPages - 4 + i;
+                                            } else {
+                                                pageNum = currentPage - 2 + i;
+                                            }
+
+                                            return (
+                                                <Pagination.Item
+                                                    key={pageNum}
+                                                    active={pageNum === currentPage}
+                                                    onClick={() => setCurrentPage(pageNum)}
+                                                >
+                                                    {pageNum}
+                                                </Pagination.Item>
+                                            );
+                                        })}
+
+                                        <Pagination.Next
+                                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                            disabled={currentPage === totalPages}
+                                        />
+                                        <Pagination.Last
+                                            onClick={() => setCurrentPage(totalPages)}
+                                            disabled={currentPage === totalPages}
+                                        />
+                                    </Pagination>
+                                </div>
+                            )}
                         </Card.Body>
                     </Card>
                 </Col>

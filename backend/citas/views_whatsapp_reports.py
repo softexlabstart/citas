@@ -130,16 +130,22 @@ class WhatsAppReportsViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def recent_messages(self, request):
         """
-        Lista de mensajes recientes de WhatsApp.
+        Lista de mensajes recientes de WhatsApp con paginación.
 
         GET /api/citas/whatsapp-reports/recent-messages/
         Query params:
-            - limit: Número de mensajes (default: 20, max: 100)
+            - page: Número de página (default: 1)
+            - page_size: Tamaño de página (default: 20, max: 100)
             - status: Filtrar por estado (pending, sent, delivered, failed)
             - message_type: Filtrar por tipo
         """
         org = self.get_user_organization(request)
-        limit = min(int(request.query_params.get('limit', 20)), 100)
+
+        # Parámetros de paginación
+        page = int(request.query_params.get('page', 1))
+        page_size = min(int(request.query_params.get('page_size', 20)), 100)
+
+        # Filtros
         status_filter = request.query_params.get('status')
         type_filter = request.query_params.get('message_type')
 
@@ -159,8 +165,15 @@ class WhatsAppReportsViewSet(viewsets.ViewSet):
         if type_filter:
             queryset = queryset.filter(message_type=type_filter)
 
-        # Limitar resultados
-        messages = queryset[:limit]
+        # Calcular total y paginación
+        total_count = queryset.count()
+        total_pages = (total_count + page_size - 1) // page_size  # Redondeo hacia arriba
+
+        # Calcular offset
+        offset = (page - 1) * page_size
+
+        # Obtener página actual
+        messages = queryset[offset:offset + page_size]
 
         # Serializar
         data = []
@@ -180,6 +193,12 @@ class WhatsAppReportsViewSet(viewsets.ViewSet):
 
         return Response({
             'count': len(data),
+            'total': total_count,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': total_pages,
+            'has_next': page < total_pages,
+            'has_previous': page > 1,
             'messages': data,
             'organization': org.nombre if org else 'Todas'
         })
