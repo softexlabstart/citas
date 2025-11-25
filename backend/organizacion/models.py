@@ -182,18 +182,15 @@ class Organizacion(models.Model):  # type: ignore
                 cursor.execute(f'CREATE SCHEMA IF NOT EXISTS "{self.schema_name}"')
                 logger.info(f"[TENANT SETUP] Schema {self.schema_name} creado exitosamente")
 
-                # Establecer el search_path al nuevo schema
-                cursor.execute(f'SET search_path TO "{self.schema_name}"')
-
-            # Ejecutar migraciones en el nuevo schema
+            # Ejecutar migraciones solo para las apps del tenant (citas)
             logger.info(f"[TENANT SETUP] Ejecutando migraciones en schema {self.schema_name}")
 
             # Cambiar temporalmente el search_path
             with connection.cursor() as cursor:
-                cursor.execute(f'SET search_path TO "{self.schema_name}"')
+                cursor.execute(f'SET search_path TO "{self.schema_name}", public')
 
-            # Ejecutar migrate con --run-syncdb para crear todas las tablas
-            call_command('migrate', '--run-syncdb', verbosity=0)
+            # Ejecutar migrate solo para la app 'citas' que contiene las tablas tenant-specific
+            call_command('migrate', 'citas', '--run-syncdb', verbosity=0)
 
             # Restaurar el search_path al public
             with connection.cursor() as cursor:
