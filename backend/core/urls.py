@@ -6,10 +6,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from citas.views import WelcomeView
 from organizacion.admin_dashboard import admin_dashboard
+from organizacion.health_check import system_health
 
 urlpatterns = [
     path('', WelcomeView.as_view(), name='api-root-welcome'),
     path('admin/dashboard/', admin_dashboard, name='admin_dashboard'),
+    path('admin/health/', system_health, name='system_health'),
     path('admin/', admin.site.urls),
     path('api/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

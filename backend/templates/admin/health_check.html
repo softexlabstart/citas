@@ -1,0 +1,394 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Panel de Salud - Administración{% endblock %}
+
+{% block extrastyle %}
+<style>
+    .health-container {
+        padding: 20px;
+    }
+
+    .health-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .health-card h3 {
+        margin-top: 0;
+        color: #417690;
+        font-size: 1.2em;
+        border-bottom: 2px solid #e1e4e8;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+
+    .health-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .status-card {
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 5px solid;
+    }
+
+    .status-healthy {
+        background: #d4edda;
+        border-color: #28a745;
+    }
+
+    .status-healthy .status-icon {
+        color: #28a745;
+    }
+
+    .status-warning {
+        background: #fff3cd;
+        border-color: #ffc107;
+    }
+
+    .status-warning .status-icon {
+        color: #856404;
+    }
+
+    .status-error, .status-critical {
+        background: #f8d7da;
+        border-color: #dc3545;
+    }
+
+    .status-error .status-icon, .status-critical .status-icon {
+        color: #dc3545;
+    }
+
+    .status-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .status-icon {
+        font-size: 2em;
+        margin-right: 15px;
+    }
+
+    .status-title {
+        font-weight: 600;
+        font-size: 1.1em;
+    }
+
+    .status-message {
+        font-size: 0.9em;
+        color: #666;
+        margin-top: 5px;
+    }
+
+    .status-details {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(0,0,0,0.1);
+        font-size: 0.85em;
+    }
+
+    .status-details dt {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .status-details dd {
+        margin-bottom: 5px;
+        color: #666;
+    }
+
+    .overall-status {
+        padding: 30px;
+        border-radius: 12px;
+        text-align: center;
+        margin-bottom: 30px;
+        font-size: 1.2em;
+    }
+
+    .migration-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+
+    .migration-table th {
+        background: #f6f6f6;
+        padding: 12px 8px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid #ddd;
+    }
+
+    .migration-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .migration-table tr:hover {
+        background: #f9f9f9;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: 600;
+    }
+
+    .badge-healthy {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge-warning {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .badge-error {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .progress-bar {
+        height: 20px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-top: 5px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.8em;
+        font-weight: 600;
+    }
+
+    .progress-healthy {
+        background: #28a745;
+    }
+
+    .progress-warning {
+        background: #ffc107;
+    }
+
+    .progress-critical {
+        background: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="health-container">
+    <h1>🏥 Panel de Salud del Sistema</h1>
+    <p style="color: #666; margin-bottom: 20px;">
+        Última verificación: {{ checked_at|date:"d/m/Y H:i:s" }}
+    </p>
+
+    <!-- Estado General -->
+    <div class="overall-status status-{{ overall_status }}">
+        <div class="status-icon">
+            {% if overall_status == 'healthy' %}✅{% elif overall_status == 'warning' %}⚠️{% else %}🚨{% endif %}
+        </div>
+        <div class="status-title">{{ overall_message }}</div>
+    </div>
+
+    <!-- Servicios Externos -->
+    <div class="health-card">
+        <h3>🔌 Servicios Externos</h3>
+        <div class="health-grid">
+            <!-- Base de Datos -->
+            <div class="status-card status-{{ db_health.status }}">
+                <div class="status-header">
+                    <div class="status-icon">🗄️</div>
+                    <div>
+                        <div class="status-title">Base de Datos</div>
+                        <div class="status-message">{{ db_health.message }}</div>
+                    </div>
+                </div>
+                <dl class="status-details">
+                    <dt>Base de datos:</dt>
+                    <dd>{{ db_health.database }}</dd>
+                    <dt>Conexiones activas:</dt>
+                    <dd>{{ db_health.active_connections }}</dd>
+                </dl>
+            </div>
+
+            <!-- Twilio -->
+            <div class="status-card status-{{ twilio_health.status }}">
+                <div class="status-header">
+                    <div class="status-icon">📱</div>
+                    <div>
+                        <div class="status-title">Twilio WhatsApp</div>
+                        <div class="status-message">{{ twilio_health.message }}</div>
+                    </div>
+                </div>
+                {% if twilio_health.account_sid %}
+                <dl class="status-details">
+                    <dt>Account SID:</dt>
+                    <dd>{{ twilio_health.account_sid }}</dd>
+                    {% if twilio_health.account_status %}
+                    <dt>Estado cuenta:</dt>
+                    <dd>{{ twilio_health.account_status }}</dd>
+                    {% endif %}
+                </dl>
+                {% endif %}
+            </div>
+
+            <!-- Webhook -->
+            <div class="status-card status-{{ webhook_health.status }}">
+                <div class="status-header">
+                    <div class="status-icon">🔗</div>
+                    <div>
+                        <div class="status-title">Webhook WhatsApp</div>
+                        <div class="status-message">{{ webhook_health.message }}</div>
+                    </div>
+                </div>
+                {% if webhook_health.url %}
+                <dl class="status-details">
+                    <dt>URL:</dt>
+                    <dd style="word-break: break-all; font-size: 0.8em;">{{ webhook_health.url }}</dd>
+                </dl>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recursos del Sistema -->
+    <div class="health-card">
+        <h3>💻 Recursos del Sistema</h3>
+        <div class="health-grid">
+            <!-- Disco -->
+            <div class="status-card status-{{ disk_health.status }}">
+                <div class="status-header">
+                    <div class="status-icon">💾</div>
+                    <div style="flex: 1;">
+                        <div class="status-title">Espacio en Disco</div>
+                        <div class="status-message">{{ disk_health.message }}</div>
+                    </div>
+                </div>
+                <dl class="status-details">
+                    <dt>Total:</dt>
+                    <dd>{{ disk_health.total_gb }} GB</dd>
+                    <dt>Usado:</dt>
+                    <dd>{{ disk_health.used_gb }} GB</dd>
+                    <dt>Disponible:</dt>
+                    <dd>{{ disk_health.free_gb }} GB</dd>
+                </dl>
+                <div class="progress-bar">
+                    <div class="progress-fill {% if disk_health.percent_used > 90 %}progress-critical{% elif disk_health.percent_used > 75 %}progress-warning{% else %}progress-healthy{% endif %}"
+                         style="width: {{ disk_health.percent_used }}%">
+                        {{ disk_health.percent_used }}%
+                    </div>
+                </div>
+            </div>
+
+            <!-- Memoria -->
+            <div class="status-card status-{{ memory_health.status }}">
+                <div class="status-header">
+                    <div class="status-icon">🧠</div>
+                    <div style="flex: 1;">
+                        <div class="status-title">Memoria RAM</div>
+                        <div class="status-message">{{ memory_health.message }}</div>
+                    </div>
+                </div>
+                <dl class="status-details">
+                    <dt>Total:</dt>
+                    <dd>{{ memory_health.total_gb }} GB</dd>
+                    <dt>Usado:</dt>
+                    <dd>{{ memory_health.used_gb }} GB</dd>
+                    <dt>Disponible:</dt>
+                    <dd>{{ memory_health.available_gb }} GB</dd>
+                </dl>
+                <div class="progress-bar">
+                    <div class="progress-fill {% if memory_health.percent_used > 90 %}progress-critical{% elif memory_health.percent_used > 75 %}progress-warning{% else %}progress-healthy{% endif %}"
+                         style="width: {{ memory_health.percent_used }}%">
+                        {{ memory_health.percent_used }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estado de Migraciones por Tenant -->
+    <div class="health-card">
+        <h3>🗂️ Estado de Migraciones por Organización</h3>
+        {% if migration_errors > 0 or migration_warnings > 0 %}
+        <p style="color: #dc3545; font-weight: 600;">
+            ⚠️ Se encontraron {{ migration_errors }} error(es) y {{ migration_warnings }} advertencia(s)
+        </p>
+        {% endif %}
+
+        <table class="migration-table">
+            <thead>
+                <tr>
+                    <th>Organización</th>
+                    <th>Schema</th>
+                    <th>Estado</th>
+                    <th>Tabla Citas</th>
+                    <th>Tabla WhatsApp</th>
+                    <th>Mensaje</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for migration in migration_status %}
+                <tr>
+                    <td>
+                        <strong>{{ migration.org_name }}</strong>
+                    </td>
+                    <td>
+                        <small style="color: #999;">{{ migration.schema }}</small>
+                    </td>
+                    <td>
+                        <span class="status-badge badge-{{ migration.status }}">
+                            {% if migration.status == 'healthy' %}✓ OK
+                            {% elif migration.status == 'warning' %}⚠ Advertencia
+                            {% else %}✗ Error{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        {% if migration.citas_table %}
+                            <span style="color: #28a745;">✓</span>
+                        {% else %}
+                            <span style="color: #dc3545;">✗</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if migration.whatsapp_table %}
+                            <span style="color: #28a745;">✓</span>
+                        {% else %}
+                            <span style="color: #dc3545;">✗</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ migration.message }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Acciones -->
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+        <a href="{% url 'admin_dashboard' %}" style="color: #417690; text-decoration: none; margin-right: 20px;">
+            ← Volver al Dashboard
+        </a>
+        <a href="{% url 'system_health' %}" style="color: #417690; text-decoration: none;">
+            🔄 Actualizar Estado
+        </a>
+    </div>
+</div>
+{% endblock %}

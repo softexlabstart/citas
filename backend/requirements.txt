@@ -21,3 +21,4 @@ django-axes==6.2.0 # For brute-force attack protection
 django-csp==3.7 # For Content-Security-Policy
 bleach==6.1.0 # For HTML sanitization and XSS prevention
 twilio==9.0.4 # For WhatsApp notifications via Twilio
+psutil==5.9.8 # For system resource monitoring
