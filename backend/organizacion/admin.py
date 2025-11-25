@@ -14,7 +14,7 @@ class SedeInline(admin.TabularInline):
     """Inline para ver sedes de la organización"""
     model = Sede
     extra = 0
-    fields = ('nombre', 'direccion', 'telefono', 'email')
+    fields = ('nombre', 'direccion', 'telefono')
     can_delete = False
     show_change_link = True
 
