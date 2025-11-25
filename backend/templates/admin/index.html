@@ -1,0 +1,32 @@
+{% extends "admin/index.html" %}
+{% load static %}
+
+{% block content %}
+{{ block.super }}
+
+{% if user.is_superuser or user.is_staff %}
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <h2 style="margin: 0 0 10px 0; font-size: 1.5em;">📊 Dashboard de Administración</h2>
+    <p style="margin: 0 0 15px 0; opacity: 0.9;">
+        Vista centralizada de todas las organizaciones, métricas del sistema y alertas en tiempo real.
+    </p>
+    <a href="{% url 'admin_dashboard' %}"
+       style="background: white;
+              color: #667eea;
+              padding: 12px 24px;
+              border-radius: 6px;
+              text-decoration: none;
+              font-weight: 600;
+              display: inline-block;
+              transition: all 0.3s ease;">
+        Ver Dashboard Completo →
+    </a>
+</div>
+{% endif %}
+
+{% endblock %}
