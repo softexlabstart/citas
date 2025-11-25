@@ -18,6 +18,9 @@ from .permissions import IsAdminOrSedeAdminOrReadOnly, IsOwnerOrAdminForCita, Is
 from .mixins import SedeFilteredMixin
 from .pagination import StandardResultsSetPagination
 from django.shortcuts import render
+import logging
+
+logger = logging.getLogger(__name__)
 from django import forms
 from organizacion.models import Sede
 from django.db.models import Count, Case, When, IntegerField, Sum, Value, DecimalField, F, Prefetch
@@ -215,6 +218,8 @@ class ServicioViewSet(viewsets.ModelViewSet):
             colaborador = Colaborador.all_objects.get(usuario=user)
             org = colaborador.sede.organizacion
 
+            logger.info(f"[SERVICIOS] Colaborador: {user.username}, Sede: {colaborador.sede.id} ({colaborador.sede.nombre})")
+
             # Obtener sedes a las que tiene acceso
             # Prioridad: perfil.sedes > colaborador.sede
             sedes_acceso = []
@@ -223,20 +228,27 @@ class ServicioViewSet(viewsets.ModelViewSet):
                 # SECURITY: Usar Django ORM en lugar de SQL raw
                 # Las relaciones ManyToMany no pasan por OrganizationManager
                 sedes_acceso = list(perfil.sedes.values_list('id', flat=True))
+                logger.info(f"[SERVICIOS] Sedes del perfil: {sedes_acceso}")
 
                 if not sedes_acceso and perfil.sede:
                     sedes_acceso = [perfil.sede.id]
+                    logger.info(f"[SERVICIOS] Usando sede del perfil: {sedes_acceso}")
 
             # FIX: Si el perfil no tiene sedes, usar la sede del colaborador
             if not sedes_acceso:
                 sedes_acceso = [colaborador.sede.id]
+                logger.info(f"[SERVICIOS] Usando sede del colaborador: {sedes_acceso}")
+
+            logger.info(f"[SERVICIOS] Sedes finales de acceso: {sedes_acceso}, Sede solicitada: {sede_id}")
 
             # Si tiene sedes específicas asignadas, mostrar solo servicios de esas sedes
             if sedes_acceso:
                 if sede_id:
                     # Validar que la sede solicitada esté en sus sedes asignadas
                     if int(sede_id) in sedes_acceso:
+                        logger.info(f"[SERVICIOS] Acceso permitido a sede {sede_id}")
                         return queryset.filter(sede_id=sede_id)
+                    logger.warning(f"[SERVICIOS] Acceso DENEGADO a sede {sede_id}. Sedes permitidas: {sedes_acceso}")
                     return Servicio.all_objects.none()
                 # Sin sede_id, mostrar servicios de todas sus sedes asignadas
                 return queryset.filter(sede_id__in=sedes_acceso)
