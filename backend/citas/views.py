@@ -210,12 +210,13 @@ class ServicioViewSet(viewsets.ModelViewSet):
                         queryset = queryset.filter(sede_id=sede_id)
                     return queryset
 
-        # COLABORADOR: servicios de sus sedes asignadas o su organización
+        # COLABORADOR: servicios de su sede o sedes asignadas en el perfil
         if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
             colaborador = Colaborador.all_objects.get(usuario=user)
             org = colaborador.sede.organizacion
 
-            # Obtener sedes a las que tiene acceso desde su perfil
+            # Obtener sedes a las que tiene acceso
+            # Prioridad: perfil.sedes > colaborador.sede
             sedes_acceso = []
             perfil = get_perfil_or_first(user)
             if perfil:
@@ -225,6 +226,10 @@ class ServicioViewSet(viewsets.ModelViewSet):
 
                 if not sedes_acceso and perfil.sede:
                     sedes_acceso = [perfil.sede.id]
+
+            # FIX: Si el perfil no tiene sedes, usar la sede del colaborador
+            if not sedes_acceso:
+                sedes_acceso = [colaborador.sede.id]
 
             # Si tiene sedes específicas asignadas, mostrar solo servicios de esas sedes
             if sedes_acceso:
@@ -236,7 +241,7 @@ class ServicioViewSet(viewsets.ModelViewSet):
                 # Sin sede_id, mostrar servicios de todas sus sedes asignadas
                 return queryset.filter(sede_id__in=sedes_acceso)
 
-            # Si no tiene sedes específicas, mostrar servicios de toda su organización (comportamiento anterior)
+            # Fallback: Si aún no tiene sedes (no debería pasar), mostrar servicios de toda su organización
             queryset = queryset.filter(sede__organizacion=org)
             if sede_id:
                 queryset = queryset.filter(sede_id=sede_id)
