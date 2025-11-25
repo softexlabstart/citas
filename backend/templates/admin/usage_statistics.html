@@ -1,0 +1,325 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Estadísticas de Uso - Administración{% endblock %}
+
+{% block extrastyle %}
+<style>
+    .usage-container {
+        padding: 20px;
+    }
+
+    .stats-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .summary-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .summary-value {
+        font-size: 2.5em;
+        font-weight: bold;
+        color: #417690;
+        margin: 10px 0;
+    }
+
+    .summary-label {
+        color: #666;
+        font-size: 0.9em;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .usage-table {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .usage-table table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .usage-table th {
+        background: #417690;
+        color: white;
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid #2d5468;
+    }
+
+    .usage-table td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .usage-table tr:hover {
+        background: #f9f9f9;
+    }
+
+    .org-name {
+        font-weight: 600;
+        color: #417690;
+    }
+
+    .metric-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: 600;
+    }
+
+    .badge-high {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge-medium {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .badge-low {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .badge-neutral {
+        background: #e2e3e5;
+        color: #383d41;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #e9ecef;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 5px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: #417690;
+        transition: width 0.3s ease;
+    }
+
+    .section-title {
+        font-size: 1.5em;
+        font-weight: 600;
+        color: #333;
+        margin: 30px 0 15px 0;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #417690;
+    }
+
+    .error-message {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 10px;
+        border-radius: 4px;
+        font-size: 0.85em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="usage-container">
+    <h1>📊 Estadísticas de Uso por Organización</h1>
+    <p style="color: #666; margin-bottom: 30px;">
+        Análisis detallado del uso de recursos y actividad por organización
+    </p>
+
+    <!-- Resumen Global -->
+    <div class="stats-summary">
+        <div class="summary-card">
+            <div class="summary-label">Citas (7 días)</div>
+            <div class="summary-value">{{ total_citas_7d }}</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">Mensajes (7 días)</div>
+            <div class="summary-value">{{ total_messages_7d }}</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">Usuarios Activos</div>
+            <div class="summary-value">{{ total_active_users }}</div>
+        </div>
+    </div>
+
+    <!-- Tabla de Organizaciones -->
+    <h2 class="section-title">Detalle por Organización</h2>
+
+    <div class="usage-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Organización</th>
+                    <th>Usuarios</th>
+                    <th>Engagement</th>
+                    <th>Citas (7d / 30d / Total)</th>
+                    <th>Promedio Diario</th>
+                    <th>WhatsApp (7d / 30d)</th>
+                    <th>Storage</th>
+                    <th>Sedes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for org in organizations_stats %}
+                <tr>
+                    <td>
+                        <div class="org-name">{{ org.nombre }}</div>
+                        <div style="color: #999; font-size: 0.85em;">
+                            Creada: {{ org.created_at|date:"d/m/Y" }}
+                        </div>
+                        {% if org.error %}
+                        <div class="error-message">
+                            Error: {{ org.error }}
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <div>
+                            <strong>{{ org.total_users }}</strong> total
+                        </div>
+                        <div style="font-size: 0.85em; color: #666;">
+                            ✅ {{ org.active_users }} activos
+                            <br>
+                            ❌ {{ org.inactive_users }} inactivos
+                            <br>
+                            🔄 {{ org.recently_active }} activos (7d)
+                            <br>
+                            ⚠️ {{ org.never_logged_in }} nunca iniciaron
+                        </div>
+                    </td>
+
+                    <td>
+                        <div>
+                            {% if org.engagement_rate >= 50 %}
+                            <span class="metric-badge badge-high">{{ org.engagement_rate }}%</span>
+                            {% elif org.engagement_rate >= 25 %}
+                            <span class="metric-badge badge-medium">{{ org.engagement_rate }}%</span>
+                            {% else %}
+                            <span class="metric-badge badge-low">{{ org.engagement_rate }}%</span>
+                            {% endif %}
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ org.engagement_rate }}%;"></div>
+                        </div>
+                        <div style="font-size: 0.75em; color: #999; margin-top: 3px;">
+                            Tasa de engagement
+                        </div>
+                    </td>
+
+                    <td>
+                        <div style="font-weight: 600; color: #28a745;">
+                            {{ org.citas_7d }} últimos 7 días
+                        </div>
+                        <div style="font-size: 0.85em; color: #666;">
+                            {{ org.citas_30d }} últimos 30 días
+                            <br>
+                            {{ org.citas_total }} total
+                        </div>
+                    </td>
+
+                    <td>
+                        <div>
+                            📅 <strong>{{ org.avg_citas_per_day }}</strong> citas/día
+                        </div>
+                    </td>
+
+                    <td>
+                        <div style="font-weight: 600; color: #25D366;">
+                            💬 {{ org.messages_7d }} (7d)
+                        </div>
+                        <div style="font-size: 0.85em; color: #666;">
+                            {{ org.messages_30d }} (30d)
+                            <br>
+                            {{ org.messages_total }} total
+                            <br>
+                            📊 {{ org.avg_messages_per_day }}/día
+                        </div>
+                    </td>
+
+                    <td>
+                        {% if org.storage_mb > 10 %}
+                        <span class="metric-badge badge-medium">{{ org.storage_mb }} MB</span>
+                        {% elif org.storage_mb > 0 %}
+                        <span class="metric-badge badge-neutral">{{ org.storage_mb }} MB</span>
+                        {% else %}
+                        <span class="metric-badge badge-neutral">0 MB</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <span class="metric-badge badge-neutral">{{ org.sedes_count }}</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 40px; color: #999;">
+                        No hay organizaciones registradas
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Análisis de Uso -->
+    <h2 class="section-title">Análisis de Uso</h2>
+
+    <div style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3 style="margin-top: 0; color: #417690;">Interpretación de Métricas</h3>
+
+        <div style="margin-bottom: 15px;">
+            <strong>Engagement Rate:</strong>
+            <ul style="margin: 5px 0; padding-left: 20px; color: #666;">
+                <li><span class="metric-badge badge-high">Alto (≥50%)</span> - Usuarios muy activos, buena adopción</li>
+                <li><span class="metric-badge badge-medium">Medio (25-49%)</span> - Uso moderado, oportunidad de mejora</li>
+                <li><span class="metric-badge badge-low">Bajo (<25%)</span> - Requiere atención, posible onboarding</li>
+            </ul>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <strong>Usuarios que nunca iniciaron sesión:</strong>
+            <p style="margin: 5px 0; padding-left: 20px; color: #666;">
+                Indica cuentas creadas pero no activadas. Considerar enviar recordatorios o revisar proceso de registro.
+            </p>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <strong>Promedio de citas diarias:</strong>
+            <p style="margin: 5px 0; padding-left: 20px; color: #666;">
+                Métrica clave para identificar organizaciones "heavy users" y planear facturación por volumen.
+            </p>
+        </div>
+
+        <div>
+            <strong>Storage:</strong>
+            <p style="margin: 5px 0; padding-left: 20px; color: #666;">
+                Actualmente solo incluye logos. Considerar agregar: archivos adjuntos, documentos, imágenes de servicios.
+            </p>
+        </div>
+    </div>
+
+    <!-- Volver -->
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+        <a href="{% url 'admin_dashboard' %}" style="color: #417690; text-decoration: none;">
+            ← Volver al Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

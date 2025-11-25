@@ -40,6 +40,12 @@ def admin_dashboard(request):
         try:
             # Contar usuarios de esta organización
             users_count = org.perfiles.filter(usuario__is_active=True).count()
+            inactive_users_count = org.perfiles.filter(usuario__is_active=False).count()
+
+            # Usuarios activos en los últimos 7 días
+            active_users_7d = org.perfiles.filter(
+                usuario__last_login__gte=last_7_days
+            ).count()
 
             # Contar sedes
             sedes_count = org.sedes.count()
@@ -91,6 +97,8 @@ def admin_dashboard(request):
                 'nombre': org.nombre,
                 'schema': org.schema_name,
                 'users_count': users_count,
+                'inactive_users_count': inactive_users_count,
+                'active_users_7d': active_users_7d,
                 'sedes_count': sedes_count,
                 'citas_7d': citas_7d,
                 'messages_7d': messages_7d,

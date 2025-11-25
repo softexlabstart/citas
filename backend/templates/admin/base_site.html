@@ -40,8 +40,32 @@
               background: rgba(255,255,255,0.2);
               border-radius: 4px;
               display: inline-block;
-              transition: all 0.3s ease;">
+              transition: all 0.3s ease;
+              margin-right: 10px;">
         📋 Logs
+    </a>
+    <a href="{% url 'usage_stats' %}"
+       style="color: white;
+              text-decoration: none;
+              font-weight: 600;
+              padding: 8px 16px;
+              background: rgba(255,255,255,0.2);
+              border-radius: 4px;
+              display: inline-block;
+              transition: all 0.3s ease;
+              margin-right: 10px;">
+        📊 Estadísticas de Uso
+    </a>
+    <a href="{% url 'realtime_activity' %}"
+       style="color: white;
+              text-decoration: none;
+              font-weight: 600;
+              padding: 8px 16px;
+              background: rgba(255,255,255,0.2);
+              border-radius: 4px;
+              display: inline-block;
+              transition: all 0.3s ease;">
+        ⚡ Actividad en Tiempo Real
     </a>
 </div>
 {% endblock %}
