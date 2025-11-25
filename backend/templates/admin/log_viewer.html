@@ -1,0 +1,393 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Visor de Logs - Administración{% endblock %}
+
+{% block extrastyle %}
+<style>
+    .logs-container {
+        padding: 20px;
+    }
+
+    .filters-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .filter-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #417690;
+    }
+
+    .filter-group input,
+    .filter-group select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .stats-bar {
+        display: flex;
+        gap: 20px;
+        padding: 15px;
+        background: #f6f6f6;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .stat-value {
+        font-size: 1.5em;
+        font-weight: bold;
+    }
+
+    .stat-label {
+        color: #666;
+        font-size: 0.9em;
+    }
+
+    .logs-table {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .log-row {
+        border-bottom: 1px solid #eee;
+        padding: 15px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .log-row:hover {
+        background: #f9f9f9;
+    }
+
+    .log-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 8px;
+    }
+
+    .log-level {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: 600;
+    }
+
+    .log-level-DEBUG {
+        background: #e2e3e5;
+        color: #383d41;
+    }
+
+    .log-level-INFO {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .log-level-WARNING {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .log-level-ERROR {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .log-level-CRITICAL {
+        background: #721c24;
+        color: white;
+    }
+
+    .log-time {
+        color: #666;
+        font-size: 0.9em;
+    }
+
+    .log-org {
+        background: #e7f3ff;
+        color: #004085;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.85em;
+    }
+
+    .log-message {
+        color: #333;
+        margin-bottom: 5px;
+    }
+
+    .log-details {
+        display: none;
+        background: #f9f9f9;
+        padding: 15px;
+        margin-top: 10px;
+        border-left: 4px solid #417690;
+        border-radius: 4px;
+    }
+
+    .log-row.expanded .log-details {
+        display: block;
+    }
+
+    .log-traceback {
+        background: #2d2d2d;
+        color: #f8f8f2;
+        padding: 15px;
+        border-radius: 4px;
+        overflow-x: auto;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85em;
+        white-space: pre-wrap;
+        margin-top: 10px;
+    }
+
+    .detail-row {
+        margin: 5px 0;
+    }
+
+    .detail-label {
+        font-weight: 600;
+        color: #417690;
+        display: inline-block;
+        min-width: 150px;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .pagination a,
+    .pagination span {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        text-decoration: none;
+        color: #417690;
+    }
+
+    .pagination .current {
+        background: #417690;
+        color: white;
+        border-color: #417690;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-primary {
+        background: #417690;
+        color: white;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="logs-container">
+    <h1>📋 Visor de Logs</h1>
+    <p style="color: #666; margin-bottom: 20px;">
+        Logs de aplicación centralizados
+    </p>
+
+    <!-- Estadísticas -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div>
+                <div class="stat-value">{{ stats.total }}</div>
+                <div class="stat-label">Total Logs</div>
+            </div>
+        </div>
+        <div class="stat-item">
+            <div>
+                <div class="stat-value" style="color: #dc3545;">{{ stats.errors }}</div>
+                <div class="stat-label">Errores</div>
+            </div>
+        </div>
+        <div class="stat-item">
+            <div>
+                <div class="stat-value" style="color: #ffc107;">{{ stats.warnings }}</div>
+                <div class="stat-label">Advertencias</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters-card">
+        <h3 style="margin-top: 0;">Filtros</h3>
+        <form method="get" action="">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label>Nivel</label>
+                    <select name="level">
+                        <option value="">Todos</option>
+                        {% for value, label in level_choices %}
+                        <option value="{{ value }}" {% if filters.level == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Organización</label>
+                    <select name="org_id">
+                        <option value="">Todas</option>
+                        {% for org in organizations %}
+                        <option value="{{ org.id }}" {% if filters.org_id|stringformat:"s" == org.id|stringformat:"s" %}selected{% endif %}>
+                            {{ org.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Logger</label>
+                    <select name="logger">
+                        <option value="">Todos</option>
+                        {% for logger in unique_loggers %}
+                        <option value="{{ logger }}" {% if filters.logger_name == logger %}selected{% endif %}>
+                            {{ logger }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Buscar</label>
+                    <input type="text" name="search" value="{{ filters.search }}" placeholder="Buscar en mensaje, traceback...">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" class="btn btn-primary">🔍 Filtrar</button>
+                <a href="{% url 'log_viewer' %}" class="btn btn-secondary">🔄 Limpiar</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabla de logs -->
+    <div class="logs-table">
+        {% for log in page_obj %}
+        <div class="log-row" onclick="toggleDetails(this)">
+            <div class="log-header">
+                <span class="log-level log-level-{{ log.level }}">{{ log.level }}</span>
+                <span class="log-time">{{ log.created_at|date:"d/m/Y H:i:s" }}</span>
+                {% if log.organizacion %}
+                <span class="log-org">{{ log.organizacion.nombre }}</span>
+                {% endif %}
+                <span style="color: #999; font-size: 0.85em;">{{ log.logger_name }}</span>
+            </div>
+            <div class="log-message">{{ log.short_message }}</div>
+
+            <div class="log-details">
+                <div class="detail-row">
+                    <span class="detail-label">Mensaje completo:</span>
+                    <div style="margin-top: 5px;">{{ log.message }}</div>
+                </div>
+
+                {% if log.pathname %}
+                <div class="detail-row">
+                    <span class="detail-label">Archivo:</span>
+                    {{ log.pathname }}:{{ log.lineno }} ({{ log.func_name }})
+                </div>
+                {% endif %}
+
+                {% if log.user_username %}
+                <div class="detail-row">
+                    <span class="detail-label">Usuario:</span>
+                    {{ log.user_username }} (ID: {{ log.user_id }})
+                </div>
+                {% endif %}
+
+                {% if log.request_path %}
+                <div class="detail-row">
+                    <span class="detail-label">Request:</span>
+                    {{ log.request_method }} {{ log.request_path }}
+                </div>
+                {% endif %}
+
+                {% if log.exc_info %}
+                <div class="detail-row">
+                    <span class="detail-label">Traceback:</span>
+                    <div class="log-traceback">{{ log.exc_info }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div style="padding: 40px; text-align: center; color: #999;">
+            No se encontraron logs con los filtros seleccionados
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Paginación -->
+    {% if page_obj.has_other_pages %}
+    <div class="pagination">
+        {% if page_obj.has_previous %}
+        <a href="?page=1{% if filters.level %}&level={{ filters.level }}{% endif %}{% if filters.org_id %}&org_id={{ filters.org_id }}{% endif %}{% if filters.search %}&search={{ filters.search }}{% endif %}{% if filters.logger_name %}&logger={{ filters.logger_name }}{% endif %}">« Primera</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if filters.level %}&level={{ filters.level }}{% endif %}{% if filters.org_id %}&org_id={{ filters.org_id }}{% endif %}{% if filters.search %}&search={{ filters.search }}{% endif %}{% if filters.logger_name %}&logger={{ filters.logger_name }}{% endif %}">‹ Anterior</a>
+        {% endif %}
+
+        <span class="current">
+            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+        </span>
+
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if filters.level %}&level={{ filters.level }}{% endif %}{% if filters.org_id %}&org_id={{ filters.org_id }}{% endif %}{% if filters.search %}&search={{ filters.search }}{% endif %}{% if filters.logger_name %}&logger={{ filters.logger_name }}{% endif %}">Siguiente ›</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if filters.level %}&level={{ filters.level }}{% endif %}{% if filters.org_id %}&org_id={{ filters.org_id }}{% endif %}{% if filters.search %}&search={{ filters.search }}{% endif %}{% if filters.logger_name %}&logger={{ filters.logger_name }}{% endif %}">Última »</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Volver -->
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+        <a href="{% url 'admin_dashboard' %}" style="color: #417690; text-decoration: none;">
+            ← Volver al Dashboard
+        </a>
+    </div>
+</div>
+
+<script>
+function toggleDetails(element) {
+    element.classList.toggle('expanded');
+}
+</script>
+{% endblock %}

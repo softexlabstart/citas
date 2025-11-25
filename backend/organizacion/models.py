@@ -249,3 +249,6 @@ class Sede(models.Model):  # type: ignore
     def __str__(self) -> str:
         # The string representation will be more informative with the organization name
         return f"{self.organizacion.nombre} - {self.nombre}" if self.organizacion else self.nombre
+
+# Import log model
+from .models_logs import ApplicationLog
