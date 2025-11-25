@@ -272,6 +272,7 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'x-organization-id',  # Multi-tenant header
 ]
 
 CORS_ALLOW_CREDENTIALS = True
