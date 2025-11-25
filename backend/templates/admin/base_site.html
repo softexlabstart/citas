@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></h1>
+{% endblock %}
+
+{% block nav-global %}
+<div style="background: #417690; padding: 10px 20px; margin-bottom: 20px;">
+    <a href="{% url 'admin_dashboard' %}"
+       style="color: white;
+              text-decoration: none;
+              font-weight: 600;
+              padding: 8px 16px;
+              background: rgba(255,255,255,0.2);
+              border-radius: 4px;
+              display: inline-block;
+              transition: all 0.3s ease;">
+        📊 Dashboard Principal
+    </a>
+</div>
+{% endblock %}
