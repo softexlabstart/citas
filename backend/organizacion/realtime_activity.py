@@ -37,8 +37,8 @@ def activity_stream(request):
                 # Enviar datos en formato SSE (debe ser bytes)
                 yield f"data: {json.dumps(data)}\n\n".encode('utf-8')
 
-                # Actualizar cada 3 segundos
-                time.sleep(3)
+                # Actualizar cada 10 segundos (optimizado, antes era 3)
+                time.sleep(10)
 
             except Exception as e:
                 # En caso de error, enviar mensaje de error
@@ -58,6 +58,7 @@ def activity_stream(request):
 def get_realtime_metrics():
     """
     Obtiene métricas en tiempo real de todas las organizaciones.
+    Optimizado para reducir queries a la base de datos.
     """
     now = timezone.now()
     last_minute = now - timedelta(minutes=1)
@@ -84,8 +85,25 @@ def get_realtime_metrics():
     ).count()
     metrics['global']['users_online'] = users_online
 
+    # Optimización: Cargar organizaciones una sola vez con prefetch de perfiles
+    from django.db.models import Prefetch
+    from usuarios.models import PerfilUsuario
+
+    organizations = Organizacion.objects.filter(is_active=True).prefetch_related(
+        Prefetch(
+            'perfiles',
+            queryset=PerfilUsuario.objects.select_related('usuario').filter(
+                usuario__last_login__gte=last_5_minutes,
+                usuario__is_active=True
+            )
+        )
+    ).order_by('nombre')
+
+    # Recopilar actividades recientes de todas las orgs en una sola pasada
+    recent_activities = []
+
     # Por cada organización
-    for org in Organizacion.objects.filter(is_active=True).order_by('nombre'):
+    for org in organizations:
         try:
             org_data = {
                 'id': org.id,
@@ -97,49 +115,24 @@ def get_realtime_metrics():
                 'users_online': 0,
             }
 
-            # Citas recientes
+            # Optimización: Una sola query para todos los counts de citas y mensajes
             with connection.cursor() as cursor:
-                # Citas en el último minuto
                 cursor.execute(f"""
-                    SELECT COUNT(*)
-                    FROM "{org.schema_name}"."citas_cita"
-                    WHERE created_at >= %s
-                """, [last_minute])
+                    SELECT
+                        (SELECT COUNT(*) FROM "{org.schema_name}"."citas_cita" WHERE created_at >= %s) as citas_minute,
+                        (SELECT COUNT(*) FROM "{org.schema_name}"."citas_cita" WHERE created_at >= %s) as citas_hour,
+                        (SELECT COUNT(*) FROM "{org.schema_name}"."citas_whatsapp_message" WHERE created_at >= %s) as messages_minute,
+                        (SELECT COUNT(*) FROM "{org.schema_name}"."citas_whatsapp_message" WHERE created_at >= %s) as messages_hour
+                """, [last_minute, last_hour, last_minute, last_hour])
+
                 result = cursor.fetchone()
                 org_data['citas_last_minute'] = result[0] if result else 0
+                org_data['citas_last_hour'] = result[1] if result else 0
+                org_data['messages_last_minute'] = result[2] if result else 0
+                org_data['messages_last_hour'] = result[3] if result else 0
 
-                # Citas en la última hora
-                cursor.execute(f"""
-                    SELECT COUNT(*)
-                    FROM "{org.schema_name}"."citas_cita"
-                    WHERE created_at >= %s
-                """, [last_hour])
-                result = cursor.fetchone()
-                org_data['citas_last_hour'] = result[0] if result else 0
-
-                # Mensajes WhatsApp en el último minuto
-                cursor.execute(f"""
-                    SELECT COUNT(*)
-                    FROM "{org.schema_name}"."citas_whatsapp_message"
-                    WHERE created_at >= %s
-                """, [last_minute])
-                result = cursor.fetchone()
-                org_data['messages_last_minute'] = result[0] if result else 0
-
-                # Mensajes WhatsApp en la última hora
-                cursor.execute(f"""
-                    SELECT COUNT(*)
-                    FROM "{org.schema_name}"."citas_whatsapp_message"
-                    WHERE created_at >= %s
-                """, [last_hour])
-                result = cursor.fetchone()
-                org_data['messages_last_hour'] = result[0] if result else 0
-
-            # Usuarios online de esta organización
-            org_data['users_online'] = org.perfiles.filter(
-                usuario__last_login__gte=last_5_minutes,
-                usuario__is_active=True
-            ).count()
+            # Usuarios online de esta organización (usar prefetch ya cargado)
+            org_data['users_online'] = len(org.perfiles.all())
 
             # Actualizar métricas globales
             metrics['global']['citas_last_minute'] += org_data['citas_last_minute']
@@ -147,42 +140,40 @@ def get_realtime_metrics():
             metrics['global']['messages_last_minute'] += org_data['messages_last_minute']
             metrics['global']['messages_last_hour'] += org_data['messages_last_hour']
 
+            # Recopilar actividades recientes de esta org (en el mismo loop)
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(f"""
+                        SELECT
+                            id,
+                            created_at,
+                            estado
+                        FROM "{org.schema_name}"."citas_cita"
+                        ORDER BY created_at DESC
+                        LIMIT 5
+                    """)
+
+                    for row in cursor.fetchall():
+                        cita_id, created_at, estado = row
+                        recent_activities.append({
+                            'type': 'cita',
+                            'org_nombre': org.nombre,
+                            'org_id': org.id,
+                            'cita_id': cita_id,
+                            'timestamp': created_at.isoformat() if created_at else None,
+                            'estado': estado,
+                        })
+            except:
+                pass
+
             # Solo agregar si tiene actividad
             if (org_data['citas_last_hour'] > 0 or
                 org_data['messages_last_hour'] > 0 or
                 org_data['users_online'] > 0):
                 metrics['organizations'].append(org_data)
 
-        except Exception as e:
+        except Exception:
             # Si hay error en esta org, continuar con las demás
-            continue
-
-    # Actividades recientes (últimas 10 citas creadas en cualquier organización)
-    recent_activities = []
-    for org in Organizacion.objects.filter(is_active=True):
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(f"""
-                    SELECT
-                        id,
-                        created_at,
-                        estado
-                    FROM "{org.schema_name}"."citas_cita"
-                    ORDER BY created_at DESC
-                    LIMIT 5
-                """)
-
-                for row in cursor.fetchall():
-                    cita_id, created_at, estado = row
-                    recent_activities.append({
-                        'type': 'cita',
-                        'org_nombre': org.nombre,
-                        'org_id': org.id,
-                        'cita_id': cita_id,
-                        'timestamp': created_at.isoformat() if created_at else None,
-                        'estado': estado,
-                    })
-        except:
             continue
 
     # Ordenar por timestamp y tomar las 10 más recientes

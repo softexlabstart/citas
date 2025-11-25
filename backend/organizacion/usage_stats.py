@@ -6,6 +6,7 @@ from django.shortcuts import render
 from django.db import connection
 from django.utils import timezone
 from datetime import timedelta
+from django.db.models import Count, Q
 from organizacion.models import Organizacion
 from usuarios.models import User
 import os
@@ -22,80 +23,47 @@ def usage_statistics(request):
     last_7_days = today - timedelta(days=7)
     last_30_days = today - timedelta(days=30)
 
+    # Optimización: Usar annotate para obtener todos los counts en una sola query
+    organizations = Organizacion.objects.annotate(
+        total_users=Count('perfiles__id', distinct=True),
+        active_users=Count('perfiles__id', filter=Q(perfiles__usuario__is_active=True), distinct=True),
+        inactive_users=Count('perfiles__id', filter=Q(perfiles__usuario__is_active=False), distinct=True),
+        recently_active=Count('perfiles__id', filter=Q(perfiles__usuario__last_login__gte=last_7_days), distinct=True),
+        never_logged_in=Count('perfiles__id', filter=Q(perfiles__usuario__last_login__isnull=True), distinct=True),
+        sedes_count=Count('sedes__id', distinct=True)
+    ).order_by('-created_at')
+
     organizations_stats = []
 
-    for org in Organizacion.objects.all().order_by('-created_at'):
+    for org in organizations:
         try:
-            # ===== USUARIOS =====
-            total_users = org.perfiles.count()
-            active_users = org.perfiles.filter(usuario__is_active=True).count()
-            inactive_users = org.perfiles.filter(usuario__is_active=False).count()
+            # Usar los valores anotados directamente
+            total_users = org.total_users
+            active_users = org.active_users
+            inactive_users = org.inactive_users
+            recently_active = org.recently_active
+            never_logged_in = org.never_logged_in
 
-            # Usuarios que han iniciado sesión en últimos 7 días
-            recently_active = org.perfiles.filter(
-                usuario__last_login__gte=last_7_days
-            ).count()
-
-            # Usuarios que nunca han iniciado sesión
-            never_logged_in = org.perfiles.filter(
-                usuario__last_login__isnull=True
-            ).count()
-
-            # ===== CITAS =====
+            # ===== CITAS Y MENSAJES =====
+            # Optimización: Una sola query para obtener todos los counts de citas y mensajes
             with connection.cursor() as cursor:
-                # Total citas (últimos 30 días)
                 cursor.execute(f"""
-                    SELECT COUNT(*)
-                    FROM "{org.schema_name}"."citas_cita"
-                    WHERE created_at >= %s
-                """, [last_30_days])
-                result = cursor.fetchone()
-                citas_30d = result[0] if result else 0
+                    SELECT
+                        (SELECT COUNT(*) FROM "{org.schema_name}"."citas_cita" WHERE created_at >= %s) as citas_7d,
+                        (SELECT COUNT(*) FROM "{org.schema_name}"."citas_cita" WHERE created_at >= %s) as citas_30d,
+                        (SELECT COUNT(*) FROM "{org.schema_name}"."citas_cita") as citas_total,
+                        (SELECT COUNT(*) FROM "{org.schema_name}"."citas_whatsapp_message" WHERE created_at >= %s) as messages_7d,
+                        (SELECT COUNT(*) FROM "{org.schema_name}"."citas_whatsapp_message" WHERE created_at >= %s) as messages_30d,
+                        (SELECT COUNT(*) FROM "{org.schema_name}"."citas_whatsapp_message") as messages_total
+                """, [last_7_days, last_30_days, last_7_days, last_30_days])
 
-                # Total citas (últimos 7 días)
-                cursor.execute(f"""
-                    SELECT COUNT(*)
-                    FROM "{org.schema_name}"."citas_cita"
-                    WHERE created_at >= %s
-                """, [last_7_days])
                 result = cursor.fetchone()
                 citas_7d = result[0] if result else 0
-
-                # Total citas (all time)
-                cursor.execute(f"""
-                    SELECT COUNT(*)
-                    FROM "{org.schema_name}"."citas_cita"
-                """)
-                result = cursor.fetchone()
-                citas_total = result[0] if result else 0
-
-            # ===== MENSAJES WHATSAPP =====
-            with connection.cursor() as cursor:
-                # Total mensajes (últimos 30 días)
-                cursor.execute(f"""
-                    SELECT COUNT(*)
-                    FROM "{org.schema_name}"."citas_whatsapp_message"
-                    WHERE created_at >= %s
-                """, [last_30_days])
-                result = cursor.fetchone()
-                messages_30d = result[0] if result else 0
-
-                # Total mensajes (últimos 7 días)
-                cursor.execute(f"""
-                    SELECT COUNT(*)
-                    FROM "{org.schema_name}"."citas_whatsapp_message"
-                    WHERE created_at >= %s
-                """, [last_7_days])
-                result = cursor.fetchone()
-                messages_7d = result[0] if result else 0
-
-                # Total mensajes (all time)
-                cursor.execute(f"""
-                    SELECT COUNT(*)
-                    FROM "{org.schema_name}"."citas_whatsapp_message"
-                """)
-                result = cursor.fetchone()
-                messages_total = result[0] if result else 0
+                citas_30d = result[1] if result else 0
+                citas_total = result[2] if result else 0
+                messages_7d = result[3] if result else 0
+                messages_30d = result[4] if result else 0
+                messages_total = result[5] if result else 0
 
             # ===== STORAGE =====
             # Tamaño de logos y archivos
@@ -145,7 +113,7 @@ def usage_statistics(request):
                 'storage_mb': round(storage_mb, 2),
 
                 # Sedes
-                'sedes_count': org.sedes.count(),
+                'sedes_count': org.sedes_count,
             })
 
         except Exception as e:

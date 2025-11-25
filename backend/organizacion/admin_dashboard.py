@@ -34,49 +34,31 @@ def admin_dashboard(request):
     total_users = User.objects.filter(is_active=True).count()
 
     # ===== ESTADÍSTICAS DE ORGANIZACIONES =====
+    # Optimización: Usar annotate para obtener counts en una sola query
+    organizations = Organizacion.objects.annotate(
+        users_count=Count('perfiles__id', filter=Q(perfiles__usuario__is_active=True), distinct=True),
+        inactive_users_count=Count('perfiles__id', filter=Q(perfiles__usuario__is_active=False), distinct=True),
+        active_users_7d=Count('perfiles__id', filter=Q(perfiles__usuario__last_login__gte=last_7_days), distinct=True),
+        sedes_count=Count('sedes__id', distinct=True)
+    ).order_by('-created_at')
+
     organizations_data = []
 
-    for org in Organizacion.objects.all().order_by('-created_at'):
+    for org in organizations:
         try:
-            # Contar usuarios de esta organización
-            users_count = org.perfiles.filter(usuario__is_active=True).count()
-            inactive_users_count = org.perfiles.filter(usuario__is_active=False).count()
-
-            # Usuarios activos en los últimos 7 días
-            active_users_7d = org.perfiles.filter(
-                usuario__last_login__gte=last_7_days
-            ).count()
-
-            # Contar sedes
-            sedes_count = org.sedes.count()
-
-            # Estadísticas de citas (últimos 7 días) - usando SQL raw
+            # Estadísticas de citas y mensajes WhatsApp en UNA SOLA query por org
             with connection.cursor() as cursor:
                 cursor.execute(f"""
-                    SELECT COUNT(*)
-                    FROM "{org.schema_name}"."citas_cita"
-                    WHERE created_at >= %s
-                """, [last_7_days])
-                citas_7d = cursor.fetchone()[0]
+                    SELECT
+                        (SELECT COUNT(*) FROM "{org.schema_name}"."citas_cita" WHERE created_at >= %s) as citas_7d,
+                        (SELECT COUNT(*) FROM "{org.schema_name}"."citas_whatsapp_message" WHERE created_at >= %s) as messages_7d,
+                        (SELECT COUNT(*) FROM "{org.schema_name}"."citas_whatsapp_message" WHERE created_at >= %s AND status = 'failed') as failed_7d
+                """, [last_7_days, last_7_days, last_7_days])
 
-            # Estadísticas de WhatsApp (últimos 7 días)
-            with connection.cursor() as cursor:
-                # Total mensajes
-                cursor.execute(f"""
-                    SELECT COUNT(*)
-                    FROM "{org.schema_name}"."citas_whatsapp_message"
-                    WHERE created_at >= %s
-                """, [last_7_days])
-                messages_7d = cursor.fetchone()[0]
-
-                # Mensajes fallidos
-                cursor.execute(f"""
-                    SELECT COUNT(*)
-                    FROM "{org.schema_name}"."citas_whatsapp_message"
-                    WHERE created_at >= %s
-                    AND status = 'failed'
-                """, [last_7_days])
-                failed_7d = cursor.fetchone()[0]
+                result = cursor.fetchone()
+                citas_7d = result[0] if result else 0
+                messages_7d = result[1] if result else 0
+                failed_7d = result[2] if result else 0
 
             # Calcular tasa de error
             error_rate = (failed_7d / messages_7d * 100) if messages_7d > 0 else 0
@@ -96,10 +78,10 @@ def admin_dashboard(request):
                 'id': org.id,
                 'nombre': org.nombre,
                 'schema': org.schema_name,
-                'users_count': users_count,
-                'inactive_users_count': inactive_users_count,
-                'active_users_7d': active_users_7d,
-                'sedes_count': sedes_count,
+                'users_count': org.users_count,
+                'inactive_users_count': org.inactive_users_count,
+                'active_users_7d': org.active_users_7d,
+                'sedes_count': org.sedes_count,
                 'citas_7d': citas_7d,
                 'messages_7d': messages_7d,
                 'failed_7d': failed_7d,
@@ -139,43 +121,49 @@ def admin_dashboard(request):
     warning_orgs = [org for org in organizations_data if org['health_status'] == 'warning']
 
     # ===== ERRORES RECIENTES =====
+    # Optimización: Obtener errores de todas las orgs en un batch
     recent_errors = []
 
-    for org in Organizacion.objects.all():
+    # Construir una sola query UNION ALL para todos los schemas
+    union_queries = []
+    params = []
+
+    for org in organizations:
+        union_queries.append(f"""
+            SELECT
+                '{org.nombre}' as org_name,
+                {org.id} as org_id,
+                id,
+                recipient_name,
+                recipient_phone,
+                message_type,
+                error_message,
+                created_at
+            FROM "{org.schema_name}"."citas_whatsapp_message"
+            WHERE status = 'failed'
+            AND created_at >= %s
+        """)
+        params.append(last_7_days)
+
+    if union_queries:
         try:
             with connection.cursor() as cursor:
-                cursor.execute(f"""
-                    SELECT
-                        id,
-                        recipient_name,
-                        recipient_phone,
-                        message_type,
-                        error_message,
-                        created_at
-                    FROM "{org.schema_name}"."citas_whatsapp_message"
-                    WHERE status = 'failed'
-                    AND created_at >= %s
-                    ORDER BY created_at DESC
-                    LIMIT 5
-                """, [last_7_days])
+                full_query = " UNION ALL ".join(union_queries) + " ORDER BY created_at DESC LIMIT 20"
+                cursor.execute(full_query, params)
 
                 for row in cursor.fetchall():
                     recent_errors.append({
-                        'org_name': org.nombre,
-                        'org_id': org.id,
-                        'message_id': row[0],
-                        'recipient_name': row[1],
-                        'recipient_phone': row[2],
-                        'message_type': row[3],
-                        'error_message': row[4],
-                        'created_at': row[5],
+                        'org_name': row[0],
+                        'org_id': row[1],
+                        'message_id': row[2],
+                        'recipient_name': row[3],
+                        'recipient_phone': row[4],
+                        'message_type': row[5],
+                        'error_message': row[6],
+                        'created_at': row[7],
                     })
-        except Exception:
-            pass
-
-    # Ordenar errores por fecha (más reciente primero)
-    recent_errors.sort(key=lambda x: x['created_at'], reverse=True)
-    recent_errors = recent_errors[:20]  # Mostrar solo los últimos 20
+        except Exception as e:
+            logger.error(f"Error fetching recent errors: {str(e)}")
 
     # ===== ACTIVIDAD RECIENTE =====
     recent_users = User.objects.filter(
