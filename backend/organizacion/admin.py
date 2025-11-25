@@ -147,7 +147,7 @@ class OrganizacionAdmin(admin.ModelAdmin):
             with connection.cursor() as cursor:
                 cursor.execute(f"""
                     SELECT COUNT(*)
-                    FROM "{obj.schema_name}"."citas_whatsappmessage"
+                    FROM "{obj.schema_name}"."citas_whatsapp_message"
                     WHERE organizacion_id = %s
                     AND created_at >= %s
                 """, [obj.id, thirty_days_ago])
@@ -265,7 +265,7 @@ class OrganizacionAdmin(admin.ModelAdmin):
                 # Contar todos los mensajes
                 cursor.execute(f"""
                     SELECT COUNT(*)
-                    FROM "{obj.schema_name}"."citas_whatsappmessage"
+                    FROM "{obj.schema_name}"."citas_whatsapp_message"
                     WHERE organizacion_id = %s
                     AND created_at >= %s
                 """, [obj.id, thirty_days_ago])
@@ -277,7 +277,7 @@ class OrganizacionAdmin(admin.ModelAdmin):
                 # Contar por estado
                 cursor.execute(f"""
                     SELECT status, COUNT(*)
-                    FROM "{obj.schema_name}"."citas_whatsappmessage"
+                    FROM "{obj.schema_name}"."citas_whatsapp_message"
                     WHERE organizacion_id = %s
                     AND created_at >= %s
                     GROUP BY status
