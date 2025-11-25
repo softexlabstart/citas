@@ -1,6 +1,10 @@
-from django.db import models
+from django.db import models, connection
 from django.utils.text import slugify
+from django.core.management import call_command
 from .managers import OrganizacionManager
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Organizacion(models.Model):  # type: ignore
     """
@@ -147,6 +151,9 @@ class Organizacion(models.Model):  # type: ignore
         if not self.slug:
             self.slug = slugify(self.nombre)
 
+        # Detectar si es una nueva organización
+        is_new = self.pk is None
+
         # Generar schema_name automáticamente si no existe
         if not self.schema_name:
             # tenant_1, tenant_2, etc.
@@ -157,6 +164,47 @@ class Organizacion(models.Model):  # type: ignore
             self.schema_name = f"tenant_{base_name}_{unique_suffix}"
 
         super().save(*args, **kwargs)
+
+        # Si es una nueva organización, crear el schema y ejecutar migraciones
+        if is_new:
+            self._setup_tenant_schema()
+
+    def _setup_tenant_schema(self):
+        """
+        Crea el schema de PostgreSQL y ejecuta las migraciones para este tenant.
+        Se ejecuta automáticamente cuando se crea una nueva organización.
+        """
+        try:
+            logger.info(f"[TENANT SETUP] Creando schema {self.schema_name} para {self.nombre}")
+
+            with connection.cursor() as cursor:
+                # Crear el schema
+                cursor.execute(f'CREATE SCHEMA IF NOT EXISTS "{self.schema_name}"')
+                logger.info(f"[TENANT SETUP] Schema {self.schema_name} creado exitosamente")
+
+                # Establecer el search_path al nuevo schema
+                cursor.execute(f'SET search_path TO "{self.schema_name}"')
+
+            # Ejecutar migraciones en el nuevo schema
+            logger.info(f"[TENANT SETUP] Ejecutando migraciones en schema {self.schema_name}")
+
+            # Cambiar temporalmente el search_path
+            with connection.cursor() as cursor:
+                cursor.execute(f'SET search_path TO "{self.schema_name}"')
+
+            # Ejecutar migrate con --run-syncdb para crear todas las tablas
+            call_command('migrate', '--run-syncdb', verbosity=0)
+
+            # Restaurar el search_path al public
+            with connection.cursor() as cursor:
+                cursor.execute('SET search_path TO public')
+
+            logger.info(f"[TENANT SETUP] Tenant {self.nombre} configurado exitosamente")
+
+        except Exception as e:
+            logger.error(f"[TENANT SETUP] Error configurando tenant {self.nombre}: {str(e)}", exc_info=True)
+            # No lanzar la excepción para no bloquear la creación de la organización
+            # El admin puede ver el problema en el Panel de Salud
 
     def __str__(self):
         return self.nombre
