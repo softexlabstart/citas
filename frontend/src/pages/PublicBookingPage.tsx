@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { CheckCircleFill } from 'react-bootstrap-icons';
+import { CheckCircleFill, PersonFill, CalendarCheck, ClockFill, InfoCircleFill } from 'react-bootstrap-icons';
 import { createPublicBooking, getServicios, getDisponibilidad, PublicBookingData } from '../api';
 import { useApi } from '../hooks/useApi';
 import { useAppointmentForm } from '../hooks/useAppointmentForm';
+import './PublicBookingPage.css';
 
 const PublicBookingPage: React.FC = () => {
     const navigate = useNavigate();
@@ -124,263 +125,356 @@ const PublicBookingPage: React.FC = () => {
         }
     };
 
+    // Determinar paso actual
+    const getCurrentStep = () => {
+        if (!nombre || !email || !telefono) return 1;
+        if (!selectedSede || !selectedServicios.length || !selectedRecurso) return 2;
+        if (!date || !selectedSlot) return 3;
+        return 3;
+    };
+
+    const currentStep = getCurrentStep();
+
     if (checkingPermission || loadingSedes) {
         return (
-            <Container className="mt-5 text-center">
-                <Spinner animation="border" />
-                <p className="mt-3">Cargando...</p>
-            </Container>
+            <div className="public-booking-page">
+                <Container>
+                    <Row className="justify-content-center">
+                        <Col md={8}>
+                            <div className="loading-overlay">
+                                <div className="loading-spinner"></div>
+                                <p className="loading-text">Cargando información...</p>
+                            </div>
+                        </Col>
+                    </Row>
+                </Container>
+            </div>
         );
     }
 
     if (success) {
-        const successButtonStyle: React.CSSProperties = branding ? {
-            backgroundColor: branding.color_primario,
-            borderColor: branding.color_primario,
-            color: '#ffffff'
-        } : {};
-
         return (
-            <Container className="mt-5">
-                <Row className="justify-content-center">
-                    <Col md={6}>
-                        <Alert variant="success" className="text-center">
-                            <CheckCircleFill size={64} className="mb-3 text-success" />
-                            <h3>¡Reserva Confirmada!</h3>
-                            <p className="mt-3">
-                                Hemos enviado un enlace a <strong>{email}</strong> para que puedas ver tus citas.
-                            </p>
-                            <p>
-                                El enlace es válido por 15 minutos. Revisa tu bandeja de entrada.
-                            </p>
-                            <hr />
-                            <Button
-                                variant={branding ? undefined : "primary"}
-                                onClick={() => setSuccess(false)}
-                                style={branding ? successButtonStyle : undefined}
-                            >
-                                Hacer Otra Reserva
-                            </Button>
-                        </Alert>
-                    </Col>
-                </Row>
-            </Container>
+            <div className="public-booking-page">
+                <Container>
+                    <Row className="justify-content-center">
+                        <Col md={8} lg={6}>
+                            <Card className="booking-card">
+                                <Card.Body className="booking-card-body">
+                                    <div className="success-screen">
+                                        <div className="success-icon">
+                                            <CheckCircleFill />
+                                        </div>
+                                        <h2 className="success-title">¡Reserva Confirmada!</h2>
+                                        <div className="success-message">
+                                            <p>
+                                                Hemos enviado un enlace de confirmación a<br />
+                                                <strong>{email}</strong>
+                                            </p>
+                                            <div className="info-box">
+                                                <InfoCircleFill className="info-box-icon" />
+                                                <span className="info-box-text">
+                                                    El enlace es válido por 15 minutos. Revisa tu bandeja de entrada.
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            className="submit-button"
+                                            onClick={() => {
+                                                setSuccess(false);
+                                                setNombre('');
+                                                setEmail('');
+                                                setTelefono('');
+                                                setSelectedServicios([]);
+                                                setDate('');
+                                                setSelectedSlot('');
+                                                setComentario('');
+                                            }}
+                                        >
+                                            Hacer Otra Reserva
+                                        </Button>
+                                    </div>
+                                </Card.Body>
+                            </Card>
+                        </Col>
+                    </Row>
+                </Container>
+            </div>
         );
     }
 
     const organizacionNombre = sedes && sedes.length > 0 ? sedes[0].organizacion_nombre : null;
 
-    // Estilos dinámicos basados en branding
-    const containerStyle: React.CSSProperties = branding ? {
-        backgroundColor: branding.color_fondo
-    } : {};
-
-    const cardStyle: React.CSSProperties = branding ? {
-        border: `2px solid ${branding.color_primario}`,
-        backgroundColor: branding.color_fondo
-    } : {};
-
-    const titleStyle: React.CSSProperties = branding ? {
-        color: branding.color_primario
-    } : {};
-
-    const textStyle: React.CSSProperties = branding ? {
-        color: branding.color_texto
-    } : {};
-
-    const buttonStyle: React.CSSProperties = branding ? {
-        backgroundColor: branding.color_primario,
-        borderColor: branding.color_primario,
-        color: '#ffffff'
-    } : {};
-
     return (
-        <Container className="mt-5" style={containerStyle}>
-            <Row className="justify-content-center">
-                <Col md={8}>
-                    <Card style={cardStyle}>
-                        <Card.Body>
-                            {/* Logo personalizado */}
+        <div className="public-booking-page">
+            <Container>
+                <Row className="justify-content-center">
+                    <Col md={10} lg={8}>
+                        {/* Header */}
+                        <div className="booking-header">
                             {branding?.logo_url && (
-                                <div className="text-center mb-4">
-                                    <img
-                                        src={branding.logo_url}
-                                        alt={organizacionNombre || 'Logo'}
-                                        style={{ maxHeight: '80px', maxWidth: '200px', objectFit: 'contain' }}
-                                    />
-                                </div>
+                                <img
+                                    src={branding.logo_url}
+                                    alt={organizacionNombre || 'Logo'}
+                                    className="booking-logo"
+                                />
                             )}
+                            <h1 className="booking-title">Agenda tu Cita</h1>
+                            {organizacionNombre && (
+                                <h2 className="booking-subtitle">{organizacionNombre}</h2>
+                            )}
+                            <p className="booking-description">
+                                {branding?.texto_bienvenida || 'Completa el formulario para reservar tu cita de manera rápida y sencilla'}
+                            </p>
+                        </div>
 
-                            <Card.Title className="text-center mb-4">
-                                <h2 style={titleStyle}>Agenda tu Cita</h2>
-                                {organizacionNombre && (
-                                    <h4 style={titleStyle}>{organizacionNombre}</h4>
+                        {/* Main Card */}
+                        <Card className="booking-card">
+                            <Card.Body className="booking-card-body">
+                                {/* Step Indicator */}
+                                <div className="step-indicator">
+                                    <div className={`step-item ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'completed' : ''}`}>
+                                        <div className="step-number">
+                                            {currentStep > 1 ? '✓' : '1'}
+                                        </div>
+                                        <div className="step-label">Tus Datos</div>
+                                    </div>
+                                    <div className={`step-item ${currentStep >= 2 ? 'active' : ''} ${currentStep > 2 ? 'completed' : ''}`}>
+                                        <div className="step-number">
+                                            {currentStep > 2 ? '✓' : '2'}
+                                        </div>
+                                        <div className="step-label">Servicio</div>
+                                    </div>
+                                    <div className={`step-item ${currentStep >= 3 ? 'active' : ''}`}>
+                                        <div className="step-number">3</div>
+                                        <div className="step-label">Fecha y Hora</div>
+                                    </div>
+                                </div>
+
+                                {error && (
+                                    <Alert variant="danger" className="mb-4">
+                                        <strong>Error:</strong> {error}
+                                    </Alert>
                                 )}
-                                {branding?.texto_bienvenida ? (
-                                    <p style={textStyle}>{branding.texto_bienvenida}</p>
-                                ) : (
-                                    <p className="text-muted">Completa el formulario para reservar</p>
-                                )}
-                            </Card.Title>
 
-                            {error && <Alert variant="danger">{error}</Alert>}
+                                <Form onSubmit={handleSubmit}>
+                                    {/* Información Personal */}
+                                    <div className="section-header">
+                                        <div className="section-icon">
+                                            <PersonFill />
+                                        </div>
+                                        <h3 className="section-title">Información Personal</h3>
+                                    </div>
 
-                            <Form onSubmit={handleSubmit}>
-                                {/* Información Personal */}
-                                <h5 className="mb-3" style={titleStyle}>Información Personal</h5>
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Nombre Completo *</Form.Label>
-                                    <Form.Control
-                                        type="text"
-                                        value={nombre}
-                                        onChange={(e) => setNombre(e.target.value)}
-                                        required
-                                        placeholder="Juan Pérez"
-                                    />
-                                </Form.Group>
+                                    <Row>
+                                        <Col md={12} className="form-group-enhanced">
+                                            <Form.Label className="form-label-enhanced">
+                                                Nombre Completo
+                                                <span className="required-indicator">*</span>
+                                            </Form.Label>
+                                            <Form.Control
+                                                type="text"
+                                                value={nombre}
+                                                onChange={(e) => setNombre(e.target.value)}
+                                                required
+                                                placeholder="Juan Pérez"
+                                                className="form-control-enhanced"
+                                            />
+                                        </Col>
+                                    </Row>
 
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Email *</Form.Label>
-                                    <Form.Control
-                                        type="email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        required
-                                        placeholder="tu@email.com"
-                                    />
-                                    <Form.Text className="text-muted">
-                                        Recibirás un enlace para ver tu cita
-                                    </Form.Text>
-                                </Form.Group>
+                                    <Row>
+                                        <Col md={6} className="form-group-enhanced">
+                                            <Form.Label className="form-label-enhanced">
+                                                Email
+                                                <span className="required-indicator">*</span>
+                                            </Form.Label>
+                                            <Form.Control
+                                                type="email"
+                                                value={email}
+                                                onChange={(e) => setEmail(e.target.value)}
+                                                required
+                                                placeholder="tu@email.com"
+                                                className="form-control-enhanced"
+                                            />
+                                            <Form.Text className="text-muted">
+                                                <small>Recibirás confirmación por email</small>
+                                            </Form.Text>
+                                        </Col>
 
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Teléfono *</Form.Label>
-                                    <Form.Control
-                                        type="tel"
-                                        value={telefono}
-                                        onChange={(e) => setTelefono(e.target.value)}
-                                        required
-                                        placeholder="+57 123 456 7890"
-                                    />
-                                </Form.Group>
+                                        <Col md={6} className="form-group-enhanced">
+                                            <Form.Label className="form-label-enhanced">
+                                                Teléfono
+                                                <span className="required-indicator">*</span>
+                                            </Form.Label>
+                                            <Form.Control
+                                                type="tel"
+                                                value={telefono}
+                                                onChange={(e) => setTelefono(e.target.value)}
+                                                required
+                                                placeholder="+57 123 456 7890"
+                                                className="form-control-enhanced"
+                                            />
+                                        </Col>
+                                    </Row>
 
-                                <hr />
+                                    {/* Detalles de la Cita */}
+                                    <div className="section-header">
+                                        <div className="section-icon">
+                                            <CalendarCheck />
+                                        </div>
+                                        <h3 className="section-title">Detalles de la Cita</h3>
+                                    </div>
 
-                                {/* Detalles de la Cita */}
-                                <h5 className="mb-3" style={titleStyle}>Detalles de la Cita</h5>
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Sede *</Form.Label>
-                                    <Form.Control
-                                        as="select"
-                                        value={selectedSede}
-                                        onChange={(e) => setSelectedSede(e.target.value)}
-                                        required
-                                    >
-                                        <option value="">Selecciona una sede</option>
-                                        {sedes.map((sede) => (
-                                            <option key={sede.id} value={sede.id}>{sede.nombre}</option>
-                                        ))}
-                                    </Form.Control>
-                                </Form.Group>
+                                    <Row>
+                                        <Col md={6} className="form-group-enhanced">
+                                            <Form.Label className="form-label-enhanced">
+                                                Sede
+                                                <span className="required-indicator">*</span>
+                                            </Form.Label>
+                                            <Form.Control
+                                                as="select"
+                                                value={selectedSede}
+                                                onChange={(e) => setSelectedSede(e.target.value)}
+                                                required
+                                                className="form-control-enhanced"
+                                            >
+                                                <option value="">Selecciona una sede</option>
+                                                {sedes.map((sede) => (
+                                                    <option key={sede.id} value={sede.id}>{sede.nombre}</option>
+                                                ))}
+                                            </Form.Control>
+                                        </Col>
 
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Servicios *</Form.Label>
-                                    <Form.Control
-                                        as="select"
-                                        multiple
-                                        value={selectedServicios}
-                                        onChange={(e) => {
-                                            const selected = Array.from((e.target as unknown as HTMLSelectElement).selectedOptions, option => option.value);
-                                            setSelectedServicios(selected);
-                                        }}
-                                        required
-                                        style={{ height: '120px' }}
-                                    >
-                                        {servicios.map((servicio) => (
-                                            <option key={servicio.id} value={servicio.id}>
-                                                {servicio.nombre} - ${servicio.precio}
-                                            </option>
-                                        ))}
-                                    </Form.Control>
-                                    <Form.Text className="text-muted">
-                                        Mantén Ctrl (Cmd en Mac) para seleccionar múltiples
-                                    </Form.Text>
-                                </Form.Group>
+                                        <Col md={6} className="form-group-enhanced">
+                                            <Form.Label className="form-label-enhanced">
+                                                Colaborador
+                                                <span className="required-indicator">*</span>
+                                            </Form.Label>
+                                            <Form.Control
+                                                as="select"
+                                                value={selectedRecurso}
+                                                onChange={(e) => setSelectedRecurso(e.target.value)}
+                                                required
+                                                disabled={!selectedSede}
+                                                className="form-control-enhanced"
+                                            >
+                                                <option value="">Selecciona un colaborador</option>
+                                                {recursos.map((recurso) => (
+                                                    <option key={recurso.id} value={recurso.id}>{recurso.nombre}</option>
+                                                ))}
+                                            </Form.Control>
+                                        </Col>
+                                    </Row>
 
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Colaborador *</Form.Label>
-                                    <Form.Control
-                                        as="select"
-                                        value={selectedRecurso}
-                                        onChange={(e) => setSelectedRecurso(e.target.value)}
-                                        required
-                                        disabled={!selectedSede}
-                                    >
-                                        <option value="">Selecciona un colaborador</option>
-                                        {recursos.map((recurso) => (
-                                            <option key={recurso.id} value={recurso.id}>{recurso.nombre}</option>
-                                        ))}
-                                    </Form.Control>
-                                </Form.Group>
+                                    <div className="form-group-enhanced">
+                                        <Form.Label className="form-label-enhanced">
+                                            Servicios
+                                            <span className="required-indicator">*</span>
+                                        </Form.Label>
+                                        <div className="services-grid">
+                                            {servicios.map((servicio) => (
+                                                <div
+                                                    key={servicio.id}
+                                                    className={`service-card ${selectedServicios.includes(servicio.id.toString()) ? 'selected' : ''}`}
+                                                    onClick={() => {
+                                                        const servicioId = servicio.id.toString();
+                                                        if (selectedServicios.includes(servicioId)) {
+                                                            setSelectedServicios(selectedServicios.filter(id => id !== servicioId));
+                                                        } else {
+                                                            setSelectedServicios([...selectedServicios, servicioId]);
+                                                        }
+                                                    }}
+                                                >
+                                                    <div className="service-card-header">
+                                                        <Form.Check
+                                                            type="checkbox"
+                                                            checked={selectedServicios.includes(servicio.id.toString())}
+                                                            onChange={() => {}}
+                                                            className="service-checkbox"
+                                                        />
+                                                        <div className="service-name">{servicio.nombre}</div>
+                                                    </div>
+                                                    <div className="service-price">${servicio.precio}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
 
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Fecha *</Form.Label>
-                                    <Form.Control
-                                        type="date"
-                                        value={date}
-                                        onChange={(e) => setDate(e.target.value)}
-                                        min={new Date().toISOString().split('T')[0]}
-                                        required
-                                        disabled={!selectedRecurso || selectedServicios.length === 0}
-                                    />
-                                </Form.Group>
+                                    {/* Fecha y Hora */}
+                                    <div className="section-header">
+                                        <div className="section-icon">
+                                            <ClockFill />
+                                        </div>
+                                        <h3 className="section-title">Fecha y Hora</h3>
+                                    </div>
 
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Hora *</Form.Label>
-                                    <Form.Control
-                                        as="select"
-                                        value={selectedSlot}
-                                        onChange={(e) => setSelectedSlot(e.target.value)}
-                                        required
-                                        disabled={!date || availableSlots.length === 0}
-                                    >
-                                        <option value="">Selecciona una hora</option>
-                                        {availableSlots.map((slot) => (
-                                            <option key={slot.start} value={slot.start}>
-                                                {new Date(slot.start).toLocaleTimeString('es-ES', {
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })}
-                                            </option>
-                                        ))}
-                                    </Form.Control>
-                                    {date && availableSlots.length === 0 && (
-                                        <Form.Text className="text-danger">
-                                            No hay horarios disponibles para esta fecha
-                                        </Form.Text>
+                                    <Row>
+                                        <Col md={12} className="form-group-enhanced">
+                                            <Form.Label className="form-label-enhanced">
+                                                Fecha
+                                                <span className="required-indicator">*</span>
+                                            </Form.Label>
+                                            <Form.Control
+                                                type="date"
+                                                value={date}
+                                                onChange={(e) => setDate(e.target.value)}
+                                                min={new Date().toISOString().split('T')[0]}
+                                                required
+                                                disabled={!selectedRecurso || selectedServicios.length === 0}
+                                                className="form-control-enhanced"
+                                            />
+                                        </Col>
+                                    </Row>
+
+                                    {date && availableSlots.length > 0 && (
+                                        <div className="form-group-enhanced">
+                                            <Form.Label className="form-label-enhanced">
+                                                Horarios Disponibles
+                                                <span className="required-indicator">*</span>
+                                            </Form.Label>
+                                            <div className="time-slots-grid">
+                                                {availableSlots.map((slot) => (
+                                                    <button
+                                                        key={slot.start}
+                                                        type="button"
+                                                        className={`time-slot-btn ${selectedSlot === slot.start ? 'selected' : ''}`}
+                                                        onClick={() => setSelectedSlot(slot.start)}
+                                                    >
+                                                        {new Date(slot.start).toLocaleTimeString('es-ES', {
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                     )}
-                                </Form.Group>
 
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Comentarios (Opcional)</Form.Label>
-                                    <Form.Control
-                                        as="textarea"
-                                        rows={3}
-                                        value={comentario}
-                                        onChange={(e) => setComentario(e.target.value)}
-                                        placeholder="Información adicional..."
-                                    />
-                                </Form.Group>
+                                    {date && availableSlots.length === 0 && (
+                                        <Alert variant="warning" className="mt-3">
+                                            <InfoCircleFill className="me-2" />
+                                            No hay horarios disponibles para esta fecha. Por favor, selecciona otra fecha.
+                                        </Alert>
+                                    )}
 
-                                <hr />
+                                    <div className="form-group-enhanced">
+                                        <Form.Label className="form-label-enhanced">
+                                            Comentarios (Opcional)
+                                        </Form.Label>
+                                        <Form.Control
+                                            as="textarea"
+                                            rows={3}
+                                            value={comentario}
+                                            onChange={(e) => setComentario(e.target.value)}
+                                            placeholder="¿Algo que debamos saber?"
+                                            className="form-control-enhanced"
+                                        />
+                                    </div>
 
-                                <div className="d-grid gap-2">
                                     <Button
-                                        variant={branding ? undefined : "primary"}
                                         type="submit"
-                                        disabled={loading}
-                                        size="lg"
-                                        style={branding ? buttonStyle : undefined}
+                                        disabled={loading || !selectedSlot}
+                                        className="submit-button"
                                     >
                                         {loading ? (
                                             <>
@@ -396,19 +490,19 @@ const PublicBookingPage: React.FC = () => {
                                             'Confirmar Reserva'
                                         )}
                                     </Button>
-                                </div>
-                            </Form>
 
-                            <div className="text-center mt-4">
-                                <p className="text-muted">
-                                    ¿Ya tienes cuenta? <Link to="/login">Iniciar Sesión</Link>
-                                </p>
-                            </div>
-                        </Card.Body>
-                    </Card>
-                </Col>
-            </Row>
-        </Container>
+                                    <div className="text-center mt-4">
+                                        <p className="text-muted">
+                                            ¿Ya tienes cuenta? <Link to="/login">Iniciar Sesión</Link>
+                                        </p>
+                                    </div>
+                                </Form>
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                </Row>
+            </Container>
+        </div>
     );
 };
 
