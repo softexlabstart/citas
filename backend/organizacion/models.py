@@ -148,6 +148,11 @@ class Organizacion(models.Model):  # type: ignore
         # Esta tabla SIEMPRE va en el schema 'public' (shared)
 
     def save(self, *args, **kwargs):
+        # ARQUITECTURA: Forzar search_path a public para guardar organizaciones
+        from django.db import connection as db_conn
+        with db_conn.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         if not self.slug:
             self.slug = slugify(self.nombre)
 
