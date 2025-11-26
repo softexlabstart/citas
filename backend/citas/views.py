@@ -237,9 +237,16 @@ class ServicioViewSet(viewsets.ModelViewSet):
 
             print(f"[SERVICIOS] Colaborador: {user.username}, Sede asignada: {colaborador.sede.id} ({colaborador.sede.nombre}), Org: {org.nombre} (ID: {org.id})", flush=True)
 
+            # DEBUG: Ver todos los servicios sin filtro
+            print(f"[SERVICIOS] Total servicios sin filtrar: {queryset.count()}", flush=True)
+            if queryset.count() > 0:
+                print(f"[SERVICIOS] Primeros 3 servicios: {list(queryset.values('id', 'nombre', 'sede_id', 'sede__organizacion_id')[:3])}", flush=True)
+
             # Filtrar servicios por organización
             queryset = queryset.filter(sede__organizacion=org)
             print(f"[SERVICIOS] Después de filtrar por org {org.id}: {queryset.count()} servicios", flush=True)
+            if queryset.count() > 0:
+                print(f"[SERVICIOS] Servicios encontrados: {list(queryset.values('id', 'nombre', 'sede_id')[:3])}", flush=True)
 
             # Si se solicita una sede específica, filtrar por ella
             if sede_id:
