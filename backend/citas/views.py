@@ -183,7 +183,7 @@ class ServicioViewSet(viewsets.ModelViewSet):
         sede_id = self.request.query_params.get('sede_id')
         queryset = Servicio.all_objects.select_related('sede', 'sede__organizacion')
 
-        logger.info(f"[SERVICIOS] Usuario: {user.username if user.is_authenticated else 'Anónimo'}, sede_id: {sede_id}")
+        print(f"[SERVICIOS] Usuario: {user.username if user.is_authenticated else 'Anónimo'}, sede_id: {sede_id}", flush=True)
 
         # SUPERUSUARIO: puede ver todos los servicios
         if user.is_authenticated and user.is_superuser:
