@@ -235,6 +235,16 @@ class ServicioViewSet(viewsets.ModelViewSet):
 
             print(f"[SERVICIOS] Colaborador: {user.username}, Sede asignada: {colaborador.sede.id} ({colaborador.sede.nombre})", flush=True)
 
+            # DEBUG: Verificar search_path actual
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("SHOW search_path;")
+                search_path = cursor.fetchone()[0]
+                print(f"[SERVICIOS] PostgreSQL search_path: {search_path}", flush=True)
+
+            # DEBUG: Ver todos los servicios sin filtro
+            print(f"[SERVICIOS] Total servicios en queryset (sin filtrar): {queryset.count()}", flush=True)
+
             # Los colaboradores pueden ver servicios de TODA su organización (ya filtrado por search_path)
             # Si se solicita una sede específica, filtrar por ella
             if sede_id:
