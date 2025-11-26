@@ -181,9 +181,10 @@ class ServicioViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         sede_id = self.request.query_params.get('sede_id')
-        # IMPORTANTE: Usar objects (con filtrado por tenant) en lugar de all_objects
-        # En arquitectura database-per-tenant, el search_path de PostgreSQL ya filtra por tenant
-        queryset = Servicio.objects.select_related('sede', 'sede__organizacion')
+        # ARQUITECTURA: Este sistema usa schema-per-tenant pero con tablas en public
+        # Los datos se filtran por organizacion_id, NO por search_path
+        # Por eso usamos all_objects y filtramos manualmente
+        queryset = Servicio.all_objects.select_related('sede', 'sede__organizacion')
 
         print(f"[SERVICIOS] Usuario: {user.username if user.is_authenticated else 'Anónimo'}, sede_id: {sede_id}", flush=True)
 
@@ -227,29 +228,24 @@ class ServicioViewSet(viewsets.ModelViewSet):
                 print(f"[SERVICIOS] Usuario no es OWNER/ADMIN/SEDE_ADMIN, continuando a siguiente verificación", flush=True)
 
         # COLABORADOR: puede ver servicios de TODAS las sedes de su organización
-        # En arquitectura database-per-tenant, el search_path ya filtra por organización
+        # Filtrar por organizacion_id manualmente
         print(f"[SERVICIOS] Verificando si es COLABORADOR...", flush=True)
-        if user.is_authenticated and Colaborador.objects.filter(usuario=user).exists():
+        if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
             print(f"[SERVICIOS] SÍ es COLABORADOR", flush=True)
-            colaborador = Colaborador.objects.get(usuario=user)
+            colaborador = Colaborador.all_objects.get(usuario=user)
+            org = colaborador.sede.organizacion
 
-            print(f"[SERVICIOS] Colaborador: {user.username}, Sede asignada: {colaborador.sede.id} ({colaborador.sede.nombre})", flush=True)
+            print(f"[SERVICIOS] Colaborador: {user.username}, Sede asignada: {colaborador.sede.id} ({colaborador.sede.nombre}), Org: {org.nombre} (ID: {org.id})", flush=True)
 
-            # DEBUG: Verificar search_path actual
-            from django.db import connection
-            with connection.cursor() as cursor:
-                cursor.execute("SHOW search_path;")
-                search_path = cursor.fetchone()[0]
-                print(f"[SERVICIOS] PostgreSQL search_path: {search_path}", flush=True)
+            # Filtrar servicios por organización
+            queryset = queryset.filter(sede__organizacion=org)
+            print(f"[SERVICIOS] Después de filtrar por org {org.id}: {queryset.count()} servicios", flush=True)
 
-            # DEBUG: Ver todos los servicios sin filtro
-            print(f"[SERVICIOS] Total servicios en queryset (sin filtrar): {queryset.count()}", flush=True)
-
-            # Los colaboradores pueden ver servicios de TODA su organización (ya filtrado por search_path)
             # Si se solicita una sede específica, filtrar por ella
             if sede_id:
                 print(f"[SERVICIOS] Filtrando por sede solicitada: {sede_id}", flush=True)
                 queryset = queryset.filter(sede_id=sede_id)
+                print(f"[SERVICIOS] Después de filtrar por sede: {queryset.count()} servicios", flush=True)
 
             print(f"[SERVICIOS] Retornando {queryset.count()} servicios", flush=True)
             return queryset
