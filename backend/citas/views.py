@@ -181,9 +181,14 @@ class ServicioViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         sede_id = self.request.query_params.get('sede_id')
+
         # ARQUITECTURA: Este sistema usa schema-per-tenant pero con tablas en public
-        # Los datos se filtran por organizacion_id, NO por search_path
-        # Por eso usamos all_objects y filtramos manualmente
+        # El TenantSchemaMiddleware configura search_path al schema del tenant,
+        # pero los servicios están en public. Necesitamos forzar búsqueda en public.
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         queryset = Servicio.all_objects.select_related('sede', 'sede__organizacion')
 
         print(f"[SERVICIOS] Usuario: {user.username if user.is_authenticated else 'Anónimo'}, sede_id: {sede_id}", flush=True)
