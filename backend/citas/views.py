@@ -236,11 +236,16 @@ class ServicioViewSet(viewsets.ModelViewSet):
 
             # Los colaboradores pueden ver servicios de TODA su organización
             queryset = queryset.filter(sede__organizacion=org)
+            print(f"[SERVICIOS] Después de filtrar por org {org.id}: {queryset.count()} servicios", flush=True)
 
             # Si se solicita una sede específica, filtrar por ella
             if sede_id:
                 print(f"[SERVICIOS] Filtrando por sede solicitada: {sede_id}", flush=True)
                 queryset = queryset.filter(sede_id=sede_id)
+                print(f"[SERVICIOS] Después de filtrar por sede {sede_id}: {queryset.count()} servicios", flush=True)
+
+            # DEBUG: Mostrar SQL query
+            print(f"[SERVICIOS] SQL Query: {queryset.query}", flush=True)
 
             print(f"[SERVICIOS] Retornando {queryset.count()} servicios", flush=True)
             return queryset
