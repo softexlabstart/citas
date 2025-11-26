@@ -359,6 +359,11 @@ class CitaViewSet(viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
+        # ARQUITECTURA: Forzar search_path a public donde están los datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         user = self.request.user
 
         # CRITICAL FIX: Use Prefetch with _base_manager to bypass OrganizacionManager
@@ -446,11 +451,18 @@ class CitaViewSet(viewsets.ModelViewSet):
         return queryset.distinct().order_by('fecha')
 
     def create(self, request, *args, **kwargs):
+        # ARQUITECTURA: Forzar search_path a public antes de validar el serializer
+        # El serializer valida que existan los servicios, colaboradores y sede
+        # consultando sus querysets, que deben buscar en el schema public
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         data = request.data.copy()
         recurso_id = data.get('recurso_id') or data.get('colaborador_id')
         if recurso_id and 'colaboradores_ids' not in data:
             data['colaboradores_ids'] = [recurso_id]
-        
+
         # Ensure servicios_ids is a list of integers
         servicios_ids = data.get('servicios_ids')
         if isinstance(servicios_ids, str):

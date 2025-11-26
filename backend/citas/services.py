@@ -164,6 +164,11 @@ def get_available_slots(colaborador_id, fecha_str, servicio_ids):
     Obtiene los slots de tiempo disponibles para un colaborador en una fecha específica,
     considerando la duración del servicio.
     """
+    # ARQUITECTURA: Forzar search_path a public donde están los datos
+    from django.db import connection
+    with connection.cursor() as cursor:
+        cursor.execute("SET search_path TO public;")
+
     try:
         fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
         colaborador = Colaborador._base_manager.get(id=colaborador_id)
