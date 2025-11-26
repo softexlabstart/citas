@@ -181,7 +181,9 @@ class ServicioViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         sede_id = self.request.query_params.get('sede_id')
-        queryset = Servicio.all_objects.select_related('sede', 'sede__organizacion')
+        # IMPORTANTE: Usar objects (con filtrado por tenant) en lugar de all_objects
+        # En arquitectura database-per-tenant, el search_path de PostgreSQL ya filtra por tenant
+        queryset = Servicio.objects.select_related('sede', 'sede__organizacion')
 
         print(f"[SERVICIOS] Usuario: {user.username if user.is_authenticated else 'Anónimo'}, sede_id: {sede_id}", flush=True)
 
@@ -225,27 +227,19 @@ class ServicioViewSet(viewsets.ModelViewSet):
                 print(f"[SERVICIOS] Usuario no es OWNER/ADMIN/SEDE_ADMIN, continuando a siguiente verificación", flush=True)
 
         # COLABORADOR: puede ver servicios de TODAS las sedes de su organización
-        # Esto permite que los colaboradores agenden citas para clientes en cualquier sede
+        # En arquitectura database-per-tenant, el search_path ya filtra por organización
         print(f"[SERVICIOS] Verificando si es COLABORADOR...", flush=True)
-        if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
+        if user.is_authenticated and Colaborador.objects.filter(usuario=user).exists():
             print(f"[SERVICIOS] SÍ es COLABORADOR", flush=True)
-            colaborador = Colaborador.all_objects.get(usuario=user)
-            org = colaborador.sede.organizacion
+            colaborador = Colaborador.objects.get(usuario=user)
 
-            print(f"[SERVICIOS] Colaborador: {user.username}, Sede asignada: {colaborador.sede.id} ({colaborador.sede.nombre}), Org: {org.nombre}", flush=True)
+            print(f"[SERVICIOS] Colaborador: {user.username}, Sede asignada: {colaborador.sede.id} ({colaborador.sede.nombre})", flush=True)
 
-            # Los colaboradores pueden ver servicios de TODA su organización
-            queryset = queryset.filter(sede__organizacion=org)
-            print(f"[SERVICIOS] Después de filtrar por org {org.id}: {queryset.count()} servicios", flush=True)
-
+            # Los colaboradores pueden ver servicios de TODA su organización (ya filtrado por search_path)
             # Si se solicita una sede específica, filtrar por ella
             if sede_id:
                 print(f"[SERVICIOS] Filtrando por sede solicitada: {sede_id}", flush=True)
                 queryset = queryset.filter(sede_id=sede_id)
-                print(f"[SERVICIOS] Después de filtrar por sede {sede_id}: {queryset.count()} servicios", flush=True)
-
-            # DEBUG: Mostrar SQL query
-            print(f"[SERVICIOS] SQL Query: {queryset.query}", flush=True)
 
             print(f"[SERVICIOS] Retornando {queryset.count()} servicios", flush=True)
             return queryset
