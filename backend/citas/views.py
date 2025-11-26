@@ -52,6 +52,11 @@ class ColaboradorViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrSedeAdminOrReadOnly]
 
     def get_queryset(self):
+        # ARQUITECTURA: Forzar search_path a public donde están los datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         user = self.request.user
         sede_id = self.request.query_params.get('sede_id')
         queryset = Colaborador.all_objects.select_related('sede', 'sede__organizacion')
@@ -310,6 +315,11 @@ class BloqueoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminOrSedeAdminOrReadOnly] # Only admins can block time
 
     def get_queryset(self):
+        # ARQUITECTURA: Forzar search_path a public donde están los datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         user = self.request.user
         sede_id = self.request.query_params.get('sede_id')
         queryset = Bloqueo.all_objects.select_related('colaborador__sede').all()
@@ -817,6 +827,11 @@ class AppointmentReportView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
+        # ARQUITECTURA: Forzar search_path a public donde están los datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
         servicio_ids_str = request.query_params.get('servicio_ids')
@@ -918,6 +933,11 @@ class SedeReportView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
+        # ARQUITECTURA: Forzar search_path a public donde están los datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         user = request.user
         administered_sedes = None
 
@@ -1195,6 +1215,11 @@ class RecursoViewSet(viewsets.ModelViewSet):
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
+        # ARQUITECTURA: Forzar search_path a public donde están los datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         user = self.request.user
         sede_id = self.request.query_params.get('sede_id')
         queryset = Colaborador.all_objects.select_related('sede', 'sede__organizacion')
