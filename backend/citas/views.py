@@ -183,8 +183,11 @@ class ServicioViewSet(viewsets.ModelViewSet):
         sede_id = self.request.query_params.get('sede_id')
         queryset = Servicio.all_objects.select_related('sede', 'sede__organizacion')
 
+        logger.info(f"[SERVICIOS] Usuario: {user.username if user.is_authenticated else 'Anónimo'}, sede_id: {sede_id}")
+
         # SUPERUSUARIO: puede ver todos los servicios
         if user.is_authenticated and user.is_superuser:
+            logger.info(f"[SERVICIOS] Usuario es SUPERUSER")
             if sede_id:
                 return queryset.filter(sede_id=sede_id)
             return queryset
@@ -193,8 +196,11 @@ class ServicioViewSet(viewsets.ModelViewSet):
         if user.is_authenticated:
             perfil = get_perfil_or_first(user)
             if perfil:
+                logger.info(f"[SERVICIOS] Perfil encontrado: role={perfil.role}, org={perfil.organizacion.nombre if perfil.organizacion else 'None'}")
+
                 # OWNER/ADMIN: todos los servicios de su organización
                 if perfil.role in ['owner', 'admin'] and perfil.organizacion:
+                    logger.info(f"[SERVICIOS] Usuario es OWNER/ADMIN")
                     queryset = queryset.filter(sede__organizacion=perfil.organizacion)
                     if sede_id:
                         queryset = queryset.filter(sede_id=sede_id)
@@ -207,11 +213,14 @@ class ServicioViewSet(viewsets.ModelViewSet):
                 sedes_admin_ids = list(perfil.sedes_administradas.values_list('id', flat=True))
 
                 if sedes_admin_ids:
+                    logger.info(f"[SERVICIOS] Usuario es SEDE_ADMIN, sedes: {sedes_admin_ids}")
                     queryset = queryset.filter(sede_id__in=sedes_admin_ids)
                     if sede_id:
                         # Validar que la sede pertenece a las sedes administradas
                         queryset = queryset.filter(sede_id=sede_id)
                     return queryset
+
+                logger.info(f"[SERVICIOS] Usuario no es OWNER/ADMIN/SEDE_ADMIN, continuando a siguiente verificación")
 
         # COLABORADOR: puede ver servicios de TODAS las sedes de su organización
         # Esto permite que los colaboradores agenden citas para clientes en cualquier sede
@@ -234,6 +243,7 @@ class ServicioViewSet(viewsets.ModelViewSet):
 
         # CLIENTE: servicios de sus sedes asignadas o sede principal
         if user.is_authenticated:
+            logger.info(f"[SERVICIOS] Verificando como CLIENTE")
             # Obtener las sedes a las que tiene acceso el usuario
             sedes_acceso = []
 
@@ -247,18 +257,24 @@ class ServicioViewSet(viewsets.ModelViewSet):
                 if not sedes_acceso and perfil.sede:
                     sedes_acceso.append(perfil.sede.id)
 
+            logger.info(f"[SERVICIOS] CLIENTE - sedes_acceso: {sedes_acceso}, sede_id solicitada: {sede_id}")
+
             # Si se proporciona sede_id, validar que tenga acceso
             if sede_id:
                 if int(sede_id) in sedes_acceso or not sedes_acceso:
+                    logger.info(f"[SERVICIOS] CLIENTE - Acceso permitido a sede {sede_id}")
                     return queryset.filter(sede_id=sede_id)
                 # Si no tiene acceso a esa sede, no mostrar servicios
+                logger.warning(f"[SERVICIOS] CLIENTE - Acceso DENEGADO a sede {sede_id}")
                 return Servicio.all_objects.none()
 
             # Sin sede_id, mostrar servicios de todas sus sedes
             if sedes_acceso:
+                logger.info(f"[SERVICIOS] CLIENTE - Retornando servicios de sedes: {sedes_acceso}")
                 return queryset.filter(sede_id__in=sedes_acceso)
 
             # Si no tiene sedes asignadas, no ve servicios
+            logger.warning(f"[SERVICIOS] CLIENTE - Sin sedes asignadas, retornando vacío")
             return Servicio.all_objects.none()
 
         # ANÓNIMO: debe proporcionar sede_id
