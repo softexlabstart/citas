@@ -225,6 +225,13 @@ def find_next_available_slots(servicio_ids, sede_id, limit=5, days_to_check=90):
     if not servicio_ids:
         raise ValueError("Debe proporcionar al menos un ID de servicio.")
 
+    # ARQUITECTURA: Forzar search_path a public donde están los datos
+    # El TenantSchemaMiddleware configura search_path al schema del tenant,
+    # pero los servicios y sedes están en el schema public
+    from django.db import connection
+    with connection.cursor() as cursor:
+        cursor.execute("SET search_path TO public;")
+
     try:
         sede = Sede._base_manager.get(id=sede_id)
     except Sede.DoesNotExist:
