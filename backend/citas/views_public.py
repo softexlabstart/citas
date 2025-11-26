@@ -56,6 +56,13 @@ class PublicCitaViewSet(viewsets.ModelViewSet):
         """
         Crea una cita para un invitado y envía un magic link por email.
         """
+        # ARQUITECTURA: Forzar search_path a public antes de validar el serializer
+        # El serializer valida que existan los servicios, colaboradores y sede
+        # consultando sus querysets, que deben buscar en el schema public
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -170,6 +177,11 @@ class InvitadoCitaView(APIView):
 
     def get(self, request, cita_id):
         """Obtener detalles de una cita de invitado"""
+        # ARQUITECTURA: Forzar search_path a public donde están los datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         token = request.query_params.get('token')
 
         if not token:
@@ -196,6 +208,11 @@ class InvitadoCitaView(APIView):
 
     def delete(self, request, cita_id):
         """Cancelar cita de invitado"""
+        # ARQUITECTURA: Forzar search_path a public donde están los datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         token = request.query_params.get('token')
 
         if not token:
