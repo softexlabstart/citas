@@ -1128,6 +1128,11 @@ class ColaboradorCitaViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsColaboradorUser]
 
     def get_queryset(self):
+        # ARQUITECTURA: Forzar search_path a public donde están los datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         user = self.request.user
         try:
             colaborador = Colaborador.all_objects.get(usuario=user)
