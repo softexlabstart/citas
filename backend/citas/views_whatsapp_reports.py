@@ -46,6 +46,11 @@ class WhatsAppReportsViewSet(viewsets.ViewSet):
         Query params:
             - days: Número de días hacia atrás (default: 30)
         """
+        # ARQUITECTURA: Forzar search_path a public donde están los datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         org = self.get_user_organization(request)
         days = int(request.query_params.get('days', 30))
 
@@ -139,6 +144,11 @@ class WhatsAppReportsViewSet(viewsets.ViewSet):
             - status: Filtrar por estado (pending, sent, delivered, failed)
             - message_type: Filtrar por tipo
         """
+        # ARQUITECTURA: Forzar search_path a public donde están los datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         org = self.get_user_organization(request)
 
         # Parámetros de paginación
@@ -210,6 +220,11 @@ class WhatsAppReportsViewSet(viewsets.ViewSet):
 
         GET /api/citas/whatsapp-reports/delivery-performance/
         """
+        # ARQUITECTURA: Forzar search_path a public donde están los datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         org = self.get_user_organization(request)
         days = int(request.query_params.get('days', 30))
         start_date = timezone.now() - timedelta(days=days)
