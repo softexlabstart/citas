@@ -187,7 +187,7 @@ class ServicioViewSet(viewsets.ModelViewSet):
 
         # SUPERUSUARIO: puede ver todos los servicios
         if user.is_authenticated and user.is_superuser:
-            logger.info(f"[SERVICIOS] Usuario es SUPERUSER")
+            print(f"[SERVICIOS] Usuario es SUPERUSER", flush=True)
             if sede_id:
                 return queryset.filter(sede_id=sede_id)
             return queryset
@@ -195,12 +195,13 @@ class ServicioViewSet(viewsets.ModelViewSet):
         # OWNER y ADMIN: pueden ver todos los servicios de su organización
         if user.is_authenticated:
             perfil = get_perfil_or_first(user)
+            print(f"[SERVICIOS] Perfil obtenido: {perfil}", flush=True)
             if perfil:
-                logger.info(f"[SERVICIOS] Perfil encontrado: role={perfil.role}, org={perfil.organizacion.nombre if perfil.organizacion else 'None'}")
+                print(f"[SERVICIOS] Perfil encontrado: role={perfil.role}, org={perfil.organizacion.nombre if perfil.organizacion else 'None'}", flush=True)
 
                 # OWNER/ADMIN: todos los servicios de su organización
                 if perfil.role in ['owner', 'admin'] and perfil.organizacion:
-                    logger.info(f"[SERVICIOS] Usuario es OWNER/ADMIN")
+                    print(f"[SERVICIOS] Usuario es OWNER/ADMIN", flush=True)
                     queryset = queryset.filter(sede__organizacion=perfil.organizacion)
                     if sede_id:
                         queryset = queryset.filter(sede_id=sede_id)
@@ -211,39 +212,42 @@ class ServicioViewSet(viewsets.ModelViewSet):
                 # Reemplazado: cursor.execute("SELECT sede_id FROM usuarios_perfilusuario_sedes_administradas...")
                 # Las relaciones ManyToMany no pasan por OrganizationManager
                 sedes_admin_ids = list(perfil.sedes_administradas.values_list('id', flat=True))
+                print(f"[SERVICIOS] sedes_admin_ids: {sedes_admin_ids}", flush=True)
 
                 if sedes_admin_ids:
-                    logger.info(f"[SERVICIOS] Usuario es SEDE_ADMIN, sedes: {sedes_admin_ids}")
+                    print(f"[SERVICIOS] Usuario es SEDE_ADMIN, sedes: {sedes_admin_ids}", flush=True)
                     queryset = queryset.filter(sede_id__in=sedes_admin_ids)
                     if sede_id:
                         # Validar que la sede pertenece a las sedes administradas
                         queryset = queryset.filter(sede_id=sede_id)
                     return queryset
 
-                logger.info(f"[SERVICIOS] Usuario no es OWNER/ADMIN/SEDE_ADMIN, continuando a siguiente verificación")
+                print(f"[SERVICIOS] Usuario no es OWNER/ADMIN/SEDE_ADMIN, continuando a siguiente verificación", flush=True)
 
         # COLABORADOR: puede ver servicios de TODAS las sedes de su organización
         # Esto permite que los colaboradores agenden citas para clientes en cualquier sede
+        print(f"[SERVICIOS] Verificando si es COLABORADOR...", flush=True)
         if user.is_authenticated and Colaborador.all_objects.filter(usuario=user).exists():
+            print(f"[SERVICIOS] SÍ es COLABORADOR", flush=True)
             colaborador = Colaborador.all_objects.get(usuario=user)
             org = colaborador.sede.organizacion
 
-            logger.info(f"[SERVICIOS] Colaborador: {user.username}, Sede asignada: {colaborador.sede.id} ({colaborador.sede.nombre}), Org: {org.nombre}")
+            print(f"[SERVICIOS] Colaborador: {user.username}, Sede asignada: {colaborador.sede.id} ({colaborador.sede.nombre}), Org: {org.nombre}", flush=True)
 
             # Los colaboradores pueden ver servicios de TODA su organización
             queryset = queryset.filter(sede__organizacion=org)
 
             # Si se solicita una sede específica, filtrar por ella
             if sede_id:
-                logger.info(f"[SERVICIOS] Filtrando por sede solicitada: {sede_id}")
+                print(f"[SERVICIOS] Filtrando por sede solicitada: {sede_id}", flush=True)
                 queryset = queryset.filter(sede_id=sede_id)
 
-            logger.info(f"[SERVICIOS] Retornando {queryset.count()} servicios")
+            print(f"[SERVICIOS] Retornando {queryset.count()} servicios", flush=True)
             return queryset
 
         # CLIENTE: servicios de sus sedes asignadas o sede principal
+        print(f"[SERVICIOS] Verificando como CLIENTE", flush=True)
         if user.is_authenticated:
-            logger.info(f"[SERVICIOS] Verificando como CLIENTE")
             # Obtener las sedes a las que tiene acceso el usuario
             sedes_acceso = []
 
