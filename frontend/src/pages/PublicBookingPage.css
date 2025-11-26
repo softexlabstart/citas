@@ -2,7 +2,7 @@
 
 .public-booking-page {
     min-height: 100vh;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background: var(--brand-background, #ffffff);
     padding: 40px 0;
 }
 
@@ -35,14 +35,14 @@
 .booking-title {
     font-size: 2.5rem;
     font-weight: 700;
-    color: #2d3748;
+    color: var(--brand-text, #2d3748);
     margin-bottom: 0.5rem;
 }
 
 .booking-subtitle {
     font-size: 1.5rem;
     font-weight: 600;
-    color: #4a5568;
+    color: var(--brand-text, #4a5568);
     margin-bottom: 0.75rem;
 }
 
@@ -134,7 +134,7 @@
 }
 
 .step-item.active .step-number {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--brand-primary, #667eea) 0%, var(--brand-secondary, #764ba2) 100%);
     color: white;
     transform: scale(1.1);
     box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
@@ -153,7 +153,7 @@
 }
 
 .step-item.active .step-label {
-    color: #667eea;
+    color: var(--brand-primary, #667eea);
 }
 
 .step-item.completed .step-label {
@@ -173,7 +173,7 @@
     width: 40px;
     height: 40px;
     border-radius: 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--brand-primary, #667eea) 0%, var(--brand-secondary, #764ba2) 100%);
     color: white;
     display: flex;
     align-items: center;
@@ -185,7 +185,7 @@
 .section-title {
     font-size: 1.3rem;
     font-weight: 700;
-    color: #2d3748;
+    color: var(--brand-text, #2d3748);
     margin: 0;
 }
 
@@ -216,7 +216,7 @@
 }
 
 .form-control-enhanced:focus {
-    border-color: #667eea;
+    border-color: var(--brand-primary, #667eea);
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -243,13 +243,13 @@
 }
 
 .service-card:hover {
-    border-color: #667eea;
+    border-color: var(--brand-primary, #667eea);
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(102, 126, 234, 0.15);
 }
 
 .service-card.selected {
-    border-color: #667eea;
+    border-color: var(--brand-primary, #667eea);
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
 }
 
@@ -265,12 +265,12 @@
 
 .service-name {
     font-weight: 600;
-    color: #2d3748;
+    color: var(--brand-text, #2d3748);
     font-size: 1rem;
 }
 
 .service-price {
-    color: #667eea;
+    color: var(--brand-primary, #667eea);
     font-weight: 700;
     font-size: 1.1rem;
 }
@@ -296,14 +296,14 @@
 }
 
 .time-slot-btn:hover:not(:disabled) {
-    border-color: #667eea;
+    border-color: var(--brand-primary, #667eea);
     background: rgba(102, 126, 234, 0.05);
     transform: translateY(-2px);
 }
 
 .time-slot-btn.selected {
-    border-color: #667eea;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: var(--brand-primary, #667eea);
+    background: linear-gradient(135deg, var(--brand-primary, #667eea) 0%, var(--brand-secondary, #764ba2) 100%);
     color: white;
 }
 
@@ -320,7 +320,7 @@
     font-weight: 700;
     border: none;
     border-radius: 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--brand-primary, #667eea) 0%, var(--brand-secondary, #764ba2) 100%);
     color: white;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -386,14 +386,14 @@
 /* ====== INFO BOX ====== */
 .info-box {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-    border-left: 4px solid #667eea;
+    border-left: 4px solid var(--brand-primary, #667eea);
     padding: 1rem;
     border-radius: 8px;
     margin: 1rem 0;
 }
 
 .info-box-icon {
-    color: #667eea;
+    color: var(--brand-primary, #667eea);
     margin-right: 0.5rem;
 }
 
@@ -468,7 +468,7 @@
     width: 60px;
     height: 60px;
     border: 5px solid #e2e8f0;
-    border-top-color: #667eea;
+    border-top-color: var(--brand-primary, #667eea);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
