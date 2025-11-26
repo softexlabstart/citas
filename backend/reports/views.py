@@ -232,6 +232,11 @@ class FinancialSummaryView(APIView):
         - Superusuarios: ven todas las citas
         - Administradores: ven solo citas de su organización
         """
+        # ARQUITECTURA: Forzar search_path a public donde están los datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         # Obtener queryset base usando all_objects para bypass de OrganizacionManager
         queryset = Cita.all_objects.select_related(
             'sede',
