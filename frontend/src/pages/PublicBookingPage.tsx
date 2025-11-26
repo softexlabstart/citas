@@ -79,6 +79,26 @@ const PublicBookingPage: React.FC = () => {
         }
     }, [date, selectedRecurso, selectedSede, selectedServicios, fetchAvailableSlots]);
 
+    // Aplicar estilos de branding dinámicamente
+    useEffect(() => {
+        if (branding) {
+            const root = document.documentElement;
+            root.style.setProperty('--brand-primary', branding.color_primario || '#667eea');
+            root.style.setProperty('--brand-secondary', branding.color_secundario || '#764ba2');
+            root.style.setProperty('--brand-text', branding.color_texto || '#2d3748');
+            root.style.setProperty('--brand-background', branding.color_fondo || '#ffffff');
+        }
+
+        // Cleanup: restaurar colores por defecto al desmontar
+        return () => {
+            const root = document.documentElement;
+            root.style.removeProperty('--brand-primary');
+            root.style.removeProperty('--brand-secondary');
+            root.style.removeProperty('--brand-text');
+            root.style.removeProperty('--brand-background');
+        };
+    }, [branding]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -151,26 +171,6 @@ const PublicBookingPage: React.FC = () => {
             </div>
         );
     }
-
-    // Aplicar estilos de branding dinámicamente
-    useEffect(() => {
-        if (branding) {
-            const root = document.documentElement;
-            root.style.setProperty('--brand-primary', branding.color_primario || '#667eea');
-            root.style.setProperty('--brand-secondary', branding.color_secundario || '#764ba2');
-            root.style.setProperty('--brand-text', branding.color_texto || '#2d3748');
-            root.style.setProperty('--brand-background', branding.color_fondo || '#ffffff');
-        }
-
-        // Cleanup: restaurar colores por defecto al desmontar
-        return () => {
-            const root = document.documentElement;
-            root.style.removeProperty('--brand-primary');
-            root.style.removeProperty('--brand-secondary');
-            root.style.removeProperty('--brand-text');
-            root.style.removeProperty('--brand-background');
-        };
-    }, [branding]);
 
     if (success) {
         return (
