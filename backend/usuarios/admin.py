@@ -84,7 +84,10 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
     def get_otros_perfiles(self, obj):
         """Muestra si hay otros usuarios con el mismo email"""
         email = obj.user.email
-        count = User.objects.filter(email=email).count()
+        # Si no tiene email, no contar como duplicado
+        if not email or email.strip() == '':
+            return "Sin email"
+        count = User.objects.filter(email=email).exclude(email='').count()
         if count > 1:
             return f"⚠️ {count} cuentas"
         return "✓ Única"
@@ -93,7 +96,12 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
     def get_otros_perfiles_detalle(self, obj):
         """Muestra detalles de otros perfiles con el mismo email"""
         email = obj.user.email
-        otros_users = User.objects.filter(email=email).exclude(id=obj.user.id)
+
+        # Si no tiene email, no mostrar duplicados
+        if not email or email.strip() == '':
+            return "Usuario sin email - no se buscan duplicados."
+
+        otros_users = User.objects.filter(email=email).exclude(email='').exclude(id=obj.user.id)
 
         if not otros_users.exists():
             return "Este es el único perfil para este email."
