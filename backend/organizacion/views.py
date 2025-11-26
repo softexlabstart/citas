@@ -32,6 +32,11 @@ class OrganizacionPublicView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request: Request, slug: str, *args: Any, **kwargs: Any) -> Response:
+        # ARQUITECTURA: Forzar search_path a public donde están los datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         try:
             organizacion = Organizacion.objects.get(slug=slug, is_active=True)
 
@@ -80,6 +85,11 @@ class BrandingConfigView(APIView):
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Obtener configuración de branding de la organización del usuario."""
         try:
+            # ARQUITECTURA: Forzar search_path a public donde están los datos
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("SET search_path TO public;")
+
             perfil = get_perfil_or_first(request.user)
             if not perfil or not perfil.organizacion:
                 return Response({
@@ -99,6 +109,11 @@ class BrandingConfigView(APIView):
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Actualizar configuración de branding (solo admin/propietario)."""
         try:
+            # ARQUITECTURA: Forzar search_path a public donde están los datos
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("SET search_path TO public;")
+
             perfil = get_perfil_or_first(request.user)
             if not perfil or not perfil.organizacion:
                 return Response({
@@ -144,6 +159,11 @@ class SedeViewSet(viewsets.ModelViewSet):  # type: ignore
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):  # type: ignore
+        # ARQUITECTURA: Forzar search_path a public donde están los datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SET search_path TO public;")
+
         user = self.request.user
         organizacion_slug = self.request.query_params.get('organizacion_slug')
 
