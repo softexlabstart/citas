@@ -13,5 +13,8 @@ export interface Appointment {
   user: User;
   estado: 'Pendiente' | 'Confirmada' | 'Cancelada' | 'Asistio' | 'No Asistio';
   sede: Sede;
+  comentario?: string;
+  email_cliente?: string;
+  telefono_cliente?: string;
 }
 

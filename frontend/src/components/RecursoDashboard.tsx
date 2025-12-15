@@ -55,6 +55,7 @@ const RecursoDashboard = () => {
                     <tr>
                         <th>Cliente</th>
                         <th>Servicio</th>
+                        <th>Comentario</th>
                         <th>Fecha y Hora</th>
                         <th>Estado</th>
                         <th>Acciones</th>
@@ -65,6 +66,7 @@ const RecursoDashboard = () => {
                         <tr key={appointment.id}>
                             <td>{appointment.nombre}</td>
                             <td>{appointment.servicios.map(s => s.nombre).join(', ')}</td>
+                            <td>{appointment.comentario || ''}</td>
                             <td>{new Date(appointment.fecha).toLocaleString()}</td>
                             <td>
                                 <Badge bg={appointment.estado === 'Asistio' ? 'success' : appointment.estado === 'No Asistio' ? 'danger' : 'secondary'}>
